@@ -1,0 +1,128 @@
+<template>
+	<div class="main jy_all_top jy_task_bao"> 
+		<div class="header">
+			<div class="top">
+				<Back class="left"><i class="iconfont">&#xe613;</i></Back>
+				<p>我的邀请</p>
+			</div>
+		</div>
+		<p class="jy_tasklist_p">邀请人数: {{count||0}}</p>
+		<myScroller :style="$store.state.isBrowser?'padding:2.79rem 0 0;':'padding:3.69rem 0 0;'" :noDataText="noDataText" :infinite="infinite" :refresh="refresh" :loadRefresh="loadRefresh" :loadInfinite="loadInfinite" ref="myScroller" :showbg="showbg">
+		<ul class="jy_tasklist_list">
+			<template v-if="taskList&&taskList.length>0">
+				<li v-for="item,index in taskList"><i :style="'background-image:url('+$utils.getFullPath(item.img)+');'"></i><h3>{{item.name}}</h3><p>{{item.creatDate}}</p><em>{{item.state==1?'已关注':'未关注'}}</em></li>
+			</template>
+		</ul>
+		</myScroller>
+	</div>
+</template>
+<script>
+import Back from '@other/back.vue';
+import myScroller from '@other/myScroller.vue';
+export default {
+	name: 'task',
+	data() {
+		return {
+			taskList:null,
+			count:null,
+			pageNo:1,
+			isRead:false,
+			isEnd:false,
+			loadRefresh:true,//下拉刷新
+			loadInfinite:true, //上拉加载
+			isRefresh:false,
+			noDataText:"",
+			showbg:true,
+		}
+	},
+	computed: {},
+	components: {
+		Back,
+		myScroller,
+	},
+	watch: {
+
+	},
+	async mounted() {
+		const t = this;
+	},
+	destroyed() {
+		
+	},
+	methods: {
+		async myInvitedWx(){
+			const t=this;
+			if(t.isRead){
+				return false;
+			}
+			t.isRead=true;
+			t.noDataText='正在加载...';
+			if(t.isRefresh){
+				t.pageNo=1;	
+			}
+			try{
+				let isRefresh={};
+				if(t.isRefresh){
+					isRefresh={isRefresh:true};
+				}
+				const result = await t.$server.myInvitedWx({
+					openid:t.$store.state.openId,
+					rows: t.$store.state.pageSize,
+					taskId:t.$route.query.taskId,
+					page:t.pageNo,
+					...isRefresh,
+				});
+				if(!t.taskList||t.pageNo==1){
+					t.taskList=[];
+				}
+				console.log(JSON.stringify(result.data.list));
+				t.count=result.data.count||0;
+				if(result.data.list){
+					t.showbg=false;
+					t.taskList.push(...result.data.list);
+				}
+				if(result.data.count<=t.$store.state.pageSize*t.pageNo||result.data.list.length<t.$store.state.pageSize){//判断是否最后一页
+					t.noDataText='已加载全部数据';
+					t.isEnd=true;
+				}else{
+					t.isEnd=false;
+					//t.$refs.myScroller.finishInfinite(false);
+				}
+				t.pageNo++;
+			}catch(e){
+				console.log(JSON.stringify(e));
+				t.noDataText='加载异常,请重试';
+				t.isEnd=true;
+			}
+			t.isRead=false;
+			t.isRefresh=false;
+		},
+		infinite(done) {//上拉加载(防止初始内容不满一屏会无限加载)
+			const t=this;
+			if(t.isEnd){
+				done(true);
+				return false;
+			}
+			if(t.isRead){
+				return false;
+			}
+			console.log("加载");
+			t.myInvitedWx().then(()=>{
+				if(t.isEnd){
+					done(true);
+				}else{
+					done();
+				}
+			});
+		},
+		refresh(done) {//下拉刷新
+			const t=this;
+			console.log("刷新");
+			t.isRefresh=true;
+			t.myInvitedWx().then((res)=>{
+				done();
+			});
+		},
+	}
+}
+</script>

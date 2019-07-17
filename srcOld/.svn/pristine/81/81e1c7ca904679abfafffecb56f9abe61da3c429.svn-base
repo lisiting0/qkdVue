@@ -1,0 +1,638 @@
+<template>
+	<div class="main jy_all_top" :class="{'jy_userInfo':true,showActInfo:datingId}"  v-if="userInfo">
+		<Loading v-if="isloading"></Loading>
+		<div class="header" :class="{backgroundColorheader:opacity>0.2}" :style="{'background-color':'rgba(255,255,255,'+opacity+')'}">
+			<div class="top">
+				<Back class="left" v-if="!datingId"><i class="iconfont">&#xe613;</i></Back>
+				<a v-else class="left" @click="hiddenInfo"><i class="iconfont">&#xe613;</i></a>
+				<a class="right" @click="clickShare" v-if="!datingId&$store.state.userInfo.id!=id"><i class="iconfont">&#xe679;</i></a>
+        <router-link :to="{name:'modifyData'}" class="right" style="font-size: 0.44rem" v-else-if="$store.state.userInfo.id==id"><i class="iconfont">&#xe635;</i></router-link>
+        <p>{{userNickName}}</p>
+			</div>
+		</div>
+    <share :show="showShare" @changeShow="changeShow"></share>
+    <div class="scroll_div" @scroll="myscroll($event)">
+        <div style="padding-bottom: 2rem">
+          <div class="swiper_container user_info_swiper" id="swiper_container">
+            <swiper loop auto :show-dots="false" height="10.80rem" v-model="currIndex">
+              <template v-if="coverimgAttachement&&coverimgAttachement.length>0">
+                <swiper-item v-for="item in coverimgAttachement" :key="item">
+                  <i class="backImageCover" :style="'background-image:url('+getFullPath(item)+');width:100%;padding-bottom:100% !important'"></i>
+                </swiper-item>
+              </template>
+			   <template v-else-if="userInfo.headimgAttachmentId">
+                <swiper-item>
+                  <i class="backImageCover" :style="'background-image:url('+getFullPath(userInfo.headimgAttachmentId)+');width:100%;padding-bottom:100% !important'"></i>
+                </swiper-item>
+              </template>
+            </swiper>
+            <p class="swiper_count" v-if="coverimgAttachement.length>0">{{(currIndex+1)}} / {{coverimgAttachement.length}}</p>
+			 <p class="swiper_count" v-else-if="userInfo.headimgAttachmentId">1 / 1</p>
+            <p class="swiper_count" v-else>0 / 0</p>
+            <p class="rz spyrz" v-if="userInfo.videoStatus==1"><i class="spyrz_icon"></i>视频已认证</p>
+            <p class="rz yjbzj"><i class="yjbzj_icon"></i>已交保证金</p>
+            <p class="jy_number">乾坤号:{{userInfo.jyNumber}}</p>
+          </div>
+          <div class="jy_info_desc">
+            <div class="jy_info_desc_t">
+              <div class="jy_info">
+                <span class="aliasName">{{userInfo.aliasName}} </span><span class="gz_count"><i class="iconfont">&#xe642;</i>{{userInfo.followCount}}</span>
+                <p class="jy_info_ico"><em class="jy_auth_age" :style="{'background-color':(userInfo.sex==1?'':'rgb(0, 180, 255)')}">{{userInfo.sex==1?'&#xe64a;':'&#xe605;'}}{{userInfo.age}}</em><em class="jy_xz">{{userInfo.userExt.constellation}}</em></p>
+                <div class="pp_val" v-if="$store.state.userInfo.id!=id && userInfo.matchAgree>0">
+                  <i class="iconfont">&#xe612;</i>
+                  <span>{{userInfo.matchAgree}}%</span>
+                </div>
+              </div>
+            </div>
+            <p class="jy_info_qm">{{userInfo.selfLabel?userInfo.selfLabel:'这个家伙很懒，什么都没有留下'}}</p>
+          </div>
+          <div class="jy_info_block">
+            <div class="jy_info_title">动态 <i class="iconfont" @click="linkToMoments('moments')">&#xe702;</i></div>
+            <div v-if="userInfo.dynamicList" class="bg_white jy_info_com">
+              <img :src="getFullPath(item.feedAttachment.split(',')[0])" v-for="(item,index) in userInfo.dynamicList" :key="item.id" v-if="item.feedAttachment"/>
+            </div>
+          </div>
+          <div class="jy_info_block">
+            <div class="jy_info_title">认证</div>
+            <div class="bg_white jy_info_rz">
+              <ul class="rz_list">
+                <template v-if="$store.state.userInfo.id!=id">
+                  <li :class="{ok:userInfo.idStatus==1}">
+                    <a> <img :src="imgs.idcard" class="idCard"/></a><div>实名</div>
+                  </li>
+                  <li :class="{ok:userInfo.carStatus==1}">
+                    <a> <img :src="imgs.car" class="car"/></a><div>车产</div>
+                  </li>
+                  <li :class="{ok:userInfo.videoStatus==1}">
+                    <a> <img :src="imgs.video" class="video"/></a><div>视频</div>
+                  </li>
+                  <li :class="{ok:userInfo.houseStatus==1}">
+                    <a> <img :src="imgs.house" class="house"/></a><div>房产</div>
+                  </li>
+                  <li :class="{ok:userInfo.healthyStatus==1}">
+                    <a> <img :src="imgs.health" class="health"/></a><div>健康</div>
+                  </li>
+                  <li class="ok">
+                    <a> <img src="../../images/phone_icon.png" class="health"/></a><div>手机</div>
+                  </li>
+                </template>
+                <template v-else>
+                  <li :class="{ok:userInfo.idStatus==1}" v-if="userInfo.idStatus==1 || userInfo.idStatus==2">
+                    <a> <img :src="imgs.idcard" class="idCard"/></a><div>实名</div>
+                  </li>
+                  <router-link :to="{name:'identityAuth'}" tag="li" v-else>
+                    <a> <img :src="imgs.idcard" class="idCard"/></a><div>实名</div>
+                  </router-link>
+                  <li :class="{ok:userInfo.carStatus==1}" v-if="userInfo.carStatus==1 || userInfo.carStatus==2">
+                    <a> <img :src="imgs.car" class="car"/></a><div>车产</div>
+                  </li>
+                  <router-link :to="{name:'carAuth'}" tag="li" v-else>
+                    <a> <img :src="imgs.car" class="car"/></a><div>车产</div>
+                  </router-link>
+                  <li :class="{ok:userInfo.videoStatus==1}" v-if="userInfo.videoStatus==1 || userInfo.videoStatus==2">
+                    <a> <img :src="imgs.video" class="video"/></a><div>视频</div>
+                  </li>
+                  <router-link :to="{name:'videoAuth'}" tag="li" v-else>
+                    <a> <img :src="imgs.video" class="video"/></a><div>视频</div>
+                  </router-link>
+                  <li :class="{ok:userInfo.houseStatus==1}" v-if="userInfo.houseStatus==1 || userInfo.houseStatus==2">
+                    <a> <img :src="imgs.house" class="house"/></a><div>房产</div>
+                  </li>
+                  <router-link :to="{name:'houseAuth'}" tag="li" v-else>
+                    <a> <img :src="imgs.house" class="house"/></a><div>房产</div>
+                  </router-link>
+                  <li :class="{ok:userInfo.healthyStatus==1}" v-if="userInfo.healthyStatus==1|| userInfo.healthyStatus==2">
+                    <a> <img :src="imgs.health" class="health"/></a><div>健康</div>
+                  </li>
+                  <router-link :to="{name:'healthyAuth'}" tag="li" v-else>
+                    <a> <img :src="imgs.health" class="health"/></a><div>健康</div>
+                  </router-link>
+                  <li class="ok">
+                    <a> <img src="../../images/phone_icon.png" class="health"/></a><div>手机</div>
+                  </li>
+                </template>
+              </ul>
+            </div>
+          </div>
+          <div class="jy_info_block">
+            <div class="jy_info_title">资料</div>
+            <div class="bg_white jy_info_detail" v-if="info">
+              <div class="detail_title gyw_title"><i class="iconfont">&#xe6b3;</i>关于我</div>
+              <div class="detail_info">
+                <p><span>年龄</span><span>{{userInfo.age}}</span></p>
+                <p><span>身高</span><span v-if="info.userExt.height">{{info.userExt.height}}cm</span><span v-else>{{$store.state.userInfo.id==id?'暂无':'保密'}}</span>
+                <p><span>学历</span><span v-if="info.userExt.education">{{educationTextArr[info.userExt.education]}}</span><span v-else>{{$store.state.userInfo.id==id?'暂无':'保密'}}</span></p>
+                <p><span>居住地</span><span v-if="info.userExt.liveCityName && info.userExt.liveAreaName">{{info.userExt.liveCityName}} {{info.userExt.liveAreaName}}</span><span v-else>{{$store.state.userInfo.id==id?'暂无':'保密'}}</span></p>
+                <p><span>毕业院校</span><span v-if="info.userExt.school">{{info.userExt.school}}</span><span v-else>{{$store.state.userInfo.id==id?'暂无':'保密'}}</span></p>
+                <p><span>职业</span><span v-if="info.userExt.profession">{{info.userExt.profession}}</span><span v-else>{{$store.state.userInfo.id==id?'暂无':'保密'}}</span></p>
+              </div>
+              <div class="detail_title zoyx_title"><i class="iconfont">&#xe641;</i>择偶意向</div>
+              <div class="detail_info">
+                <p v-if="info.userExt.chooseMateAgeStart && info.userExt.chooseMateAgeEnd">
+                  <span>年龄</span>
+                  <span v-if="info.userExt.chooseMateAgeStart==-1 && info.userExt.chooseMateAgeEnd==-1">无限</span>
+                  <span v-if="info.userExt.chooseMateAgeStart==-1 && info.userExt.chooseMateAgeEnd>=19">{{info.userExt.chooseMateAgeEnd + "岁以下"}}</span>
+                  <span v-if="info.userExt.chooseMateAgeStart>=19 && info.userExt.chooseMateAgeEnd==-1">{{info.userExt.chooseMateAgeStart + "岁以上"}}</span>
+                  <span v-if="info.userExt.chooseMateAgeStart>=19 && info.userExt.chooseMateAgeEnd>=19">{{info.userExt.chooseMateAgeStart + "-" + info.userExt.chooseMateAgeEnd}}</span>
+                </p>
+                <p v-else>
+                  <span>年龄</span>
+                  <span>{{$store.state.userInfo.id==id?'暂无':'保密'}}</span>
+                </p>
+                <p v-if="info.userExt.chooseMateHeightLowerLimit && info.userExt.chooseMateHeightUpperLimit">
+                  <span>身高</span>
+                  <span v-if="info.userExt.chooseMateHeightLowerLimit==-1 && info.userExt.chooseMateHeightUpperLimit==-1">不限</span>
+                  <span v-if="info.userExt.chooseMateHeightLowerLimit>=150 && info.userExt.chooseMateHeightUpperLimit==-1">{{info.userExt.chooseMateHeightLowerLimit + "cm以上"}}</span>
+                  <span v-if="info.userExt.chooseMateHeightLowerLimit>=150 && info.userExt.chooseMateHeightUpperLimit>=150">{{info.userExt.chooseMateHeightLowerLimit + "-" + info.userExt.chooseMateHeightUpperLimit+"cm"}}</span>
+                </p>
+                <p v-else>
+                  <span>身高</span>
+                  <span>{{$store.state.userInfo.id==id?'暂无':'保密'}}</span>
+                </p>
+                <p><span>学历</span><span v-if="info.userExt.chooseMateEducation">{{educationReTextArr[info.userExt.chooseMateEducation]}}</span><span v-else>{{$store.state.userInfo.id==id?'暂无':'保密'}}</span></p>
+                <p v-if="info.userExt.chooseMateIncomeLowerLimit && info.userExt.chooseMateIncomeUpperLimit">
+                  <span>收入情况</span>
+                  <span v-if="info.userExt.chooseMateIncomeLowerLimit==-1 && info.userExt.chooseMateIncomeUpperLimit==-1">不限</span>
+                  <span v-if="info.userExt.chooseMateIncomeLowerLimit>=2000 && info.userExt.chooseMateIncomeUpperLimit==-1">{{info.userExt.chooseMateIncomeLowerLimit + '元以上'}}</span>
+                  <span v-if="info.userExt.chooseMateIncomeLowerLimit==-1 && info.userExt.chooseMateIncomeUpperLimit>=2000">{{info.userExt.chooseMateIncomeUpperLimit + '元以下'}}</span>
+                  <span v-if="info.userExt.chooseMateIncomeLowerLimit>=2000 && info.userExt.chooseMateIncomeUpperLimit>=2000">{{info.userExt.chooseMateIncomeLowerLimit + '-' + info.userExt.chooseMateIncomeUpperLimit}}</span>
+                </p>
+                <p v-else>
+                  <span>收入情况</span>
+                  <span>{{$store.state.userInfo.id==id?'暂无':'保密'}}</span>
+                </p>
+                <p><span>是否吸烟</span><span v-if="info.userExt.chooseMateSmoke">{{smokingTextArr[info.userExt.chooseMateSmoke]}}</span><span v-else>{{$store.state.userInfo.id==id?'暂无':'保密'}}</span></p>
+                <p><span>是否喝酒</span><span v-if="info.userExt.chooseMateDrink">{{drinkTextArr[info.userExt.chooseMateDrink]}}</span><span v-else>{{$store.state.userInfo.id==id?'暂无':'保密'}}</span></p>
+                <p><span>住房情况</span><span v-if="info.userExt.chooseMateHousing">{{houseTextArr[info.userExt.chooseMateHousing]}}</span><span v-else>{{$store.state.userInfo.id==id?'暂无':'保密'}}</span></p>
+                <p><span>购车情况</span><span v-if="info.userExt.chooseMateCar">{{carTextArr[info.userExt.chooseMateCar]}}</span><span v-else>{{$store.state.userInfo.id==id?'暂无':'保密'}}</span></p>
+                <p><span>子女情况</span><span v-if="info.userExt.chooseMateChildren">{{childTextArr[info.userExt.chooseMateChildren]}}</span><span v-else>{{$store.state.userInfo.id==id?'暂无':'保密'}}</span></p>
+                <p><span>婚姻状况</span><span v-if="info.userExt.chooseMateMarried">{{maritalStatusTextArr[info.userExt.chooseMateMarried]}}</span><span v-else>{{$store.state.userInfo.id==id?'暂无':'保密'}}</span></p>
+                <p v-if="(info.userExt.chooseMateLiveCityId&&info.userExt.chooseMateLiveCityId!=0) && (info.userExt.chooseMateLiveAreaId&&info.userExt.chooseMateLiveAreaId!=0)">
+                  <span>居住地</span>
+                  <span v-if="info.userExt.chooseMateLiveCityId== -1 &&  info.userExt.chooseMateLiveAreaId==-1">不限</span>
+                  <span v-if="info.userExt.chooseMateLiveCityId>= 0 && info.userExt.chooseMateLiveAreaId==-1">{{info.userExt.chooseMateLiveCityName + '范围内'}}</span>
+                  <span v-if="info.userExt.chooseMateLiveCityId>= 0 && info.userExt.chooseMateLiveAreaId>0">{{info.userExt.chooseMateLiveCityName + " " + info.userExt.chooseMateLiveAreaName}}</span>
+                </p>
+                <p v-else>
+                  <span>居住地</span>
+                  <span>{{$store.state.userInfo.id==id?'暂无':'保密'}}</span>
+                </p>
+              </div>
+              <div class="detail_title "><i class="iconfont">&#xe626;</i>私密资料</div>
+              <div class="detail_info sm_info" v-if="$store.state.userInfo.id==id || userInfo.isSeePrivateInfo==1">
+                <p><span>真实姓名</span><span v-if="info.userName">{{info.userName}}</span><span v-else>{{$store.state.userInfo.id==id?'暂无':'保密'}}</span></p>
+                <p><span>家乡</span><span v-if="info.userExt.cityName&&info.userExt.areaName">{{info.userExt.cityName + " " + info.userExt.areaName}}</span><span v-else>{{$store.state.userInfo.id==id?'暂无':'保密'}}</span></p>
+                <p><span>婚姻状况</span><span v-if="info.userExt.married">{{maritalStatusTextArr[info.userExt.married]}}</span><span v-else>{{$store.state.userInfo.id==id?'暂无':'保密'}}</span></p>
+                <p v-if="info.userExt.incomeLowerLimit && info.userExt.incomeUpperLimit"><span>月收入</span>
+                  <span v-if="info.userExt.incomeLowerLimit>=2000 && info.userExt.incomeUpperLimit==-1">{{info.userExt.incomeLowerLimit + '元以上'}}</span>
+                  <span v-if="info.userExt.incomeLowerLimit==-1 && info.userExt.incomeUpperLimit>=2000">{{info.userExt.incomeUpperLimit + '元以下'}}</span>
+                  <span v-if="info.userExt.incomeLowerLimit>=2000 && info.userExt.incomeUpperLimit>=2000">{{info.userExt.incomeLowerLimit + '-' + info.userExt.incomeUpperLimit}}</span>
+                </p>
+                <p v-else><span>月收入</span><span>{{$store.state.userInfo.id==id?'暂无':'保密'}}</span></p>
+                <p><span>是否吸烟</span><span v-if="info.userExt.smoke">{{smokingTextArr[info.userExt.smoke]}}</span><span v-else>{{$store.state.userInfo.id==id?'暂无':'保密'}}</span></p>
+                <p><span>是否喝酒</span><span v-if="info.userExt.drink">{{drinkTextArr[info.userExt.drink]}}</span><span v-else>{{$store.state.userInfo.id==id?'暂无':'保密'}}</span></p>
+                <p><span>子女情况</span><span v-if="info.userExt.children">{{childTextArr[info.userExt.children]}}</span><span v-else>{{$store.state.userInfo.id==id?'暂无':'保密'}}</span></p>
+                <p><span>住房情况</span><span v-if="info.userExt.housing">{{houseTextArr[info.userExt.housing]}}</span><span v-else>{{$store.state.userInfo.id==id?'暂无':'保密'}}</span></p>
+                <p><span>购车情况</span><span v-if="info.userExt.car">{{carTextArr[info.userExt.car]}}</span><span v-else>{{$store.state.userInfo.id==id?'暂无':'保密'}}</span></p>
+                <p><span>家中排行</span><span v-if="info.userExt.ranking">{{rankingTextArr[info.userExt.ranking]}}</span><span v-else>{{$store.state.userInfo.id==id?'暂无':'保密'}}</span></p>
+              </div>
+              <div class="hazy_action" v-if="$store.state.userInfo.id!=id && userInfo.isSeePrivateInfo==0" @click="apply">申请查看更多资料</div>
+              <div class="hazy_action" v-else-if="$store.state.userInfo.id!=id && userInfo.isSeePrivateInfo==2">等待同意</div>
+            </div>
+          </div>
+
+
+        </div>
+    </div>
+    <p class="jy_info_gz" v-if="datingId&&$store.state.userInfo.id!=id&&select">
+      <em class="pink" @click="xySelect"><i class="iconfont">&#xe641;</i>确定选择</em>
+      <em v-if="userInfo.isFollow==0" @click="followFriend(id)"><i class="iconfont">&#xe642;</i>关注</em>
+      <em v-else-if="userInfo.isFollow==1" @click="unfollowFriend(id)"><i class="iconfont">&#xe642;</i>取消关注</em>
+      <template v-if="userInfo.sex!=$store.state.userInfo.sex">
+			<em class="sh" v-if="activityId&&userInfo.isGood==0" @click="addGood"><i class="iconfont" style="font-size: 0.5rem">&#xe79d;</i>好感</em>
+		  <em class="sh" v-else-if="activityId&&userInfo.isGood==1" @click="delGood"><i class="iconfont" style="font-size: 0.5rem">&#xe79d;</i>取消好感</em>
+	  </template>
+    </p>
+    <p class="jy_info_gz" v-else-if="$store.state.userInfo.id!=id">
+      <em class="dialogue" v-if="!datingId&&!$store.state.isBrowser" @click="intoChat(userInfo.id,userInfo.aliasName)"><i class="iconfont">&#xe644;</i>对话</em>
+      <em v-if="userInfo.isFollow==0" @click="followFriend(id)"><i class="iconfont">&#xe642;</i>关注</em>
+      <em v-else-if="userInfo.isFollow==1" @click="unfollowFriend(id)"><i class="iconfont">&#xe642;</i>取消关注</em>
+	  <template v-if="userInfo.sex!=$store.state.userInfo.sex">
+		<em class="sh" v-if="activityId&&userInfo.isGood==0&&$store.state.userInfo.identity!=1" @click="addGood"><i class="iconfont" style="font-size: 0.5rem">&#xe79d;</i>好感</em>
+		<em class="sh" v-else-if="activityId&&userInfo.isGood==1&&$store.state.userInfo.identity!=1" @click="delGood"><i class="iconfont" style="font-size: 0.5rem">&#xe79d;</i>取消好感</em>
+	   </template>
+    </p>
+	</div>
+</template>
+<script>
+  import car from '@/images/car.png'
+  import idcard from '@/images/idcard.png'
+  import video from '@/images/video_icon.png'
+  import house from '@/images/house.png'
+  import health from '@/images/health.png'
+	import Loading from '@other/loading.vue';
+	import Back from '@other/back.vue';
+  import { TransferDom, Popup,Swiper,SwiperItem} from 'vux';
+  import Share from '@/components/home/share.vue'
+  import Scroll from '@/components/betterscroll/scroll/scroll.vue'
+	export default {
+	  name: 'recharge',
+    directives: {
+      TransferDom
+    },
+	  props: ['select','actDatingId','userId',"actGetGoodDatingId"],
+    components: {
+      Loading,
+      Back,
+      Popup,
+      Swiper,
+      SwiperItem,
+      Share,
+      Scroll
+    },
+    data () {
+      return {
+        userNickName:'',
+        opacity:0,
+        opacityTrans:0,
+        ifinit:false,
+        userInfoScrollHeight:0,
+        isloading:false,
+        showBackgroundColor:false,
+        showShare:false,//分享弹出层
+        imgs: {car: car, idcard: idcard, house: house, health: health,video:video},
+        id:null,//用户id
+        datingId:this.$route.query.datingId||this.actDatingId,//选缘时使用
+        userInfo:null,
+        commentList:null,
+        currIndex:0,
+        coverimgAttachement:[],
+        info:null,
+        dynamic:[],
+        educationTextArr:{0:'大专以下',10:'大专',11:'本科',12:'硕士',13:'博士',14:'出国留学' },
+        maritalStatusTextArr:{1:'未婚',2:'离异',3:'其他','-1':'无要求'},
+        smokingTextArr:{1:'从不',2:'偶尔吸',3:'经常吸','-1':'无要求'},
+        drinkTextArr:{1:'从不',2:'偶尔喝',3:'经常喝','-1':'无要求'},
+        childTextArr:{1:'无',2:'有小孩归自已',3:'有小孩归对象','-1':'无要求'},
+        houseTextArr:{1:'已购房',2:'租房',3:'单位宿舍',4:'正打算购房',5:'和家人同住','-1':'无要求'},
+        carTextArr:{1:'已购车',2:'未购车',3:'正打算购车','-1':'无要求'},
+        rankingTextArr:{1:'独生子女',2:'老大',3:'老二',4:'老三',5:'老幺'},
+        educationReTextArr:{10:'大专及以上',11:'本科及以上',12:'硕士及以上',13:'博士及以上','-1':'无要求' },
+        activityId: null,
+      }
+    },
+    computed:{
+      fontSize() {
+        return 10*parseInt(document.documentElement.style.fontSize)
+      }
+    },
+    watch:{
+      opacityTrans(newv){
+        if(newv>0&&this.userNickName==''){
+          this.userNickName = this.userInfo.aliasName
+        }else if(newv==0){
+          this.userNickName = '';
+        }
+        this.opacity = newv;
+      }
+    },
+    destroyed () {
+      $("body").removeClass("lgray");
+    },
+    created(){
+      this.userInfoScrollHeight = document.body.clientHeight-1
+    },
+    mounted () {
+     $("body").addClass("lgray");
+		  const t=this;
+      t.id=t.userId||t.$route.query.id||t.$store.state.userInfo.id;
+	//  console.log(t.id+"dddd"+t.$store.state.userInfo.id)
+      t.activityId = t.$route.query.activityId||t.actGetGoodDatingId;
+      t.userMoney = t.$store.state.userInfo.userMoney;
+      if(!t.activityId){
+        t.overtime = true;
+      }
+      t.getUserInfo();
+      t.getComment();
+      t.$nextTick(()=>{
+        t.setBgImg();
+        this.ifinit = true;
+      });
+    },
+    methods :{
+      changeShow(val){
+        this.showShare=val;
+      },
+      myscroll (pos) {
+        let scrollTop = pos.target.scrollTop;
+        let height = this.fontSize;
+        this.opacityTrans=Math.ceil(scrollTop*100/height)/100;
+      },
+      clickShare() {
+        this.showShare = !this.showShare;
+      },
+      hiddenInfo(){
+        this.$emit('hiddenInfo');
+      },
+      linkTo (link) {
+        this.$router.push({
+          path: link,
+        })
+      },
+      linkToMoments (link) {
+        this.$router.push({
+          path: link,
+          query:{
+            id: this.id,
+            type: 'personal'
+          }
+        })
+      },
+      intoChat(id,name){
+        this.$router.push({
+          path: "/chatWindow",
+          query:{
+            id:id,
+            name:name,
+          }
+        })
+      },
+      getFullPath (path) {
+        return this.$utils.getFullPath(path)
+      },
+      setBgImg(){
+        $("a,i,em,li,div").each(function(){//加载背景图片
+          const bgimg=$(this).attr("bgImg");
+          if(bgimg){
+            $(this).css({"background-image":"url("+bgimg+")"});
+            $(this).attr("bgImg","");
+          }
+        });
+      },
+      event(index) {
+        this.isActive = !!index;
+      },
+      async getUserInfo() {
+        const _this = this;
+        _this.$vux.loading.show();
+        let newsResult = await _this.$server.userHomePage({userId:_this.id});
+		if(_this.$store.state.isLogin){
+			let result = await _this.$server.getUserInfo({userId: _this.id});
+			_this.info = result.data.data;
+		}
+        _this.userInfo = newsResult.data.data;
+        
+        _this.coverimgAttachement = (_this.userInfo.coverimgAttachementId&&_this.userInfo.coverimgAttachementId.split(','))||[];
+        _this.$vux.loading.hide();
+        _this.$nextTick(()=>{
+          _this.setBgImg();
+		      this.datingId&&this.$emit('openWin');
+        });
+      },
+      async followFriend(id){ //关注好友接口
+        this.$vux.loading.show()
+        await this.$server.followFriend(id);
+        this.$vux.loading.hide()
+        this.$vux.toast.show({
+          type: 'text',
+          text: '关注成功',
+          position: 'middle',
+          width: 'auto',
+        })
+        this.userInfo.isFollow=1;
+      },
+      async unfollowFriend(id){ //取消关注好友接口
+        this.$vux.loading.show()
+        await this.$server.unfollowFriend(id);
+        this.$vux.loading.hide();
+        this.$vux.toast.show({
+          type: 'text',
+          text: '取消关注成功',
+          position: 'middle',
+          width: 'auto',
+        })
+        this.userInfo.isFollow=0;
+      },
+      async xySelect(){
+        const t=this;
+        try{
+          const result =await t.$server.xySelect({
+            candidateId:t.id,
+            datingActivityId:t.datingId
+          });
+          t.hiddenInfo();
+        }catch(e){
+
+        }
+      },
+      async getComment(){
+        const t=this;
+        const result= await t.$server.commentList({
+          businessType:5,
+          rid:t.id,
+        })
+        if(!t.commentList){
+          t.commentList=[];
+        }
+        if(result.data.list){
+          t.commentList.push(...result.data.list);
+        }
+      },
+      onIndexChange(index){
+        this.index = index
+      },
+      async apply(){ //取消关注好友接口
+        this.$vux.loading.show()
+        await this.$server.applySeeUserPrivatedata(this.id);
+        this.$vux.loading.hide();
+        this.$vux.toast.show({
+          type: 'text',
+          text: '申请成功',
+          position: 'middle',
+          width: 'auto',
+        })
+        this.userInfo.isSeePrivateInfo=2;
+      },
+      async sendFlowers() {
+        this.$vux.loading.show();
+        const _this = this;
+        let data ={
+          "receiverUser.id":_this.id,
+          "giftId":"a54c058d71de42a88723faff7772c820",
+          "amount":1,//打赏数，默认是1
+        }
+        try {
+          let result = await _this.$server.giveGift(data);
+          this.$vux.toast.show({
+            type:"text",
+            text: "送花成功",
+            position:"middle",
+            width:"auto",
+          });
+          this.$vux.loading.hide();
+        }catch (e) {
+          if(e.status==1000008){
+            this.overtime = true;
+            this.$vux.loading.hide();
+          }
+        }
+      },
+      async addGood() { //添加好感好友接口
+        this.$vux.loading.show()
+        await this.$server.addGood({
+          likingUserId: this.id,
+        });
+       /* this.$vux.toast.show({
+          type: 'text',
+          text: '已好感',
+          position: 'middle',
+          width: 'auto',
+        })*/
+        this.$vux.loading.hide();
+        this.userInfo.isGood = 1;
+      },
+      async delGood() { //取消好感好友接口
+        this.$vux.loading.show()
+        await this.$server.deleteGood({
+          likingUserId: this.id,
+        });
+        /*this.$vux.toast.show({
+          type: 'text',
+          text: '取消好感',
+          position: 'middle',
+          width: 'auto',
+        })*/
+        this.$vux.loading.hide();
+        this.userInfo.isGood = 0;
+      },
+    }
+  }
+</script>
+<style scoped lang="scss">
+  .main {
+    padding-bottom: 0;
+    height: 100%;
+    overflow: hidden;
+    &:before {
+      content: "";
+      position: fixed;
+      display: block;
+      z-index: 99;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 0;
+      background-size: 100%;
+      background-color: rgba(0,0,0,0) !important;
+    }
+    .header{
+      top:0;
+      padding-top:0.75rem;
+    }
+    .header .top i.iconfont{
+      background-color: rgba(0,0,0,0.4);
+      display: inline-block;
+      width: 0.8rem;
+      height: 0.8rem;
+      line-height: 0.75rem;
+      color:#FFF !important;
+      border-radius: 50%;
+    }
+    .backgroundColorheader .top i.iconfont{
+      color:#000 !important;
+      background-color: rgba(0,0,0,0);
+    }
+    &.backgroundColor:before {
+      background-color: #fff !important;;
+    }
+    .backgroundColor{
+      background-color: #fff;
+    }
+    .scroll_div{
+      height: 100%;
+      overflow-x: hidden;
+      overflow-y: auto;
+      /*-webkit-overflow-scrolling: touch;*/
+    }
+    .swiper_container {
+      position: relative;
+	    background-image: url("../../images/userInfoBg.jpg");
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      .swiper_count {
+        position: absolute;
+        right: 0.2rem;
+        bottom: 0.54rem;
+        width: 1.2rem;
+        height: 0.6rem;
+        line-height: 0.6rem;
+        color: #fff;
+        font-size: 0.28rem;
+        border-radius: 0.3rem;
+        background-color:rgba(0,0,0,0.2);
+        text-align: center;
+      }
+      .backImageCover{
+        position: absolute;
+        bottom: 0;
+      }
+      .jy_number{
+        position: absolute;
+        bottom: 0.54rem;
+        left: 0.2rem;
+        height: 0.6rem;
+        line-height: 0.6rem;
+        color: #fff;
+        font-size: 0.28rem;
+        border-radius: 0.3rem;
+        background-color:rgba(0,0,0,0.2);
+        padding:0 0.2rem;
+      }
+      .rz{
+        position: absolute;
+        right: 0;
+        width: 2.6rem;
+        height: 0.7rem;
+        line-height: 0.75rem;
+        color: #fff;
+        font-size: 0.28rem;
+        border-radius: 0.2rem 0 0 0.2rem;
+        background-color:rgba(0,0,0,0.4);
+        text-align: center;
+        &.spyrz{
+          bottom: 7rem;
+          i{
+            display: inline-block;
+            vertical-align: middle;
+            width: 0.29rem;
+            height: 0.3rem;
+            background: url("../../images/spyyz_icon.png") no-repeat;
+            background-size: 100% 100%;
+            margin-right: 0.2rem;
+          }
+        }
+        &.yjbzj{
+          bottom: 6.2rem;
+          i{
+            display: inline-block;
+            vertical-align: middle;
+            width: 0.27rem;
+            height: 0.32rem;
+            background: url("../../images/bzj_icon.png") no-repeat;
+            background-size: 100% 100%;
+            margin-right: 0.2rem;
+          }
+        }
+      }
+    }
+  }
+  .jy_isBrowser{
+    .main{
+      .header{
+        padding-top:0;
+      }
+    }
+  }
+</style>
+

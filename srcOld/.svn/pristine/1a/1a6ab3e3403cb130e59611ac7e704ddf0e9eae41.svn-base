@@ -1,0 +1,143 @@
+<template>
+  <div class="main">
+    <div class="header">
+      <div class="top">
+        <a @click.stop="goback" class="left"><i class="iconfont">&#xe613;</i></a><p>用户协议</p>
+      </div>
+    </div>
+    <div class="content" :style="{height:scrollHeight+'px'}">
+      <p>乾坤岛软件许可及服务协议</p>
+      <p>欢迎您使用乾坤岛软件及服务！</p>
+      <p>为保证信息的真实、准确及保密性，文明交友，保障各方权益不受侵犯，自愿达成此协议。每位注册会员，请认真仔细阅读。此协议一旦签订，具有法律效力，如有违反必须承担其带来的一切民事及法律后果。</p>
+      <p class="title">一、总则</p>
+      <p class="item">1.1 管理平台的所有权和运营权归乾坤道科技(广州)有限公司所有。</p>
+      <p class="item">1.2 本协议由管理平台随时更新，用户应当及时关注并同意，平台不承担通知义务。</p>
+      <p class="title">二、会员须知</p>
+      <p class="item">2.1 会员须遵守法律法规，诚实守信，做一个有涵养及高素质的人。</p>
+      <p class="item">2.2 会员须严肃和负责交友，提供的一切资料须准确、真实完整，不得弄虚作假。</p>
+      <p class="item">2.3 会员在交友过程中须礼貌待人，用语文明。</p>
+      <p class="item">2.4 会员不得骚扰其他会员及泄露他人的个人信息。</p>
+      <p class="item">2.5 会员必须保证自己是单身，并有合法追求配偶的完全婚恋权，如有隐瞒由此产生的一切后果将自行承担（包括精神损失、民事赔偿及法律责任）。</p>
+      <p class="item">2.6 如由“乾坤岛”平台组织约见的双方，须守时到达，不得无故违约，在交谈过程中必须保证不伤害对方并有义务保护对方的身心安全。</p>
+      <p class="item">2.7 会员报名“乾坤岛”平台组织的相亲活动一经确认参与，请准时参加，同时须服从“乾坤岛”统一安排。</p>
+      <p class="title">三、用户帐号</p>
+      <p class="item">3.1 经平台完成注册程序并通过手机认证的用户即成为正式会员，可以获得会员用户所应享有的一切权限;未经认证仅享有规定的部分会员权限。管理平台有权对会员的权限设计进行变更。</p>
+      <p class="item">3.2 用户有义务保证密码和帐号的安全，用户利用该密码和帐号所进行的一切活动引起的任何损失或损害，由用户自行承担全部责任，本单位不承担任何责任。如用户发现账号遭到未授权的使用或发生其他任何安全问题，应立即修改账号密码并妥善保管，如有必要，请通知“乾坤岛”平台管理员。因黑客行为或用户的保管疏忽导致账号非法使用，本单位不承担任何责任。</p>
+      <p class="title">四、隐私保护</p>
+      <p class="item">4.1 本单位不对外公开或向第三方提供单个用户的注册资料及用户在使用网络服务时存储在本公司服务器的非公开内容，但下列情况除外：(1)事先获得用户的明确授权; (2)根据有关的法律法规要求;(3)按照相关政府主管部门的要求;(4)为维护社会公众的利益。</p>
+      <p class="item">4.2 本单位可能会与第三方合作向用户提供相关的网络服务，在此情况下，如该第三方同意承担与本单位同等的保护用户隐私的责任，则本单位有权将用户的注册资料等提供给该第三方。</p>
+      <p class="title">五、责任声明</p>
+      <p class="item">5.1 对于因不可抗力或本单位不能控制的原因造成的网络服务中断或其它缺陷，本单位不承担任何责任，但将尽力减少因此而给用户造成的损失和影响。</p>
+      <p class="item">5.2 本单位有权于任何时间暂时或永久修改或终止本服务(或其任何部分)，而无论其通知与否，本单位对用户和任何第三人均无需承担任何责任。</p>
+      <p class="title">六、附则</p>
+      <p class="item">6.1 本协议的订立、执行和解释及争议的解决均应适用中华人民共和国法律。</p>
+      <p class="item">6.2 如本协议中的任何条款无论因何种原因完全或部分无效或不具有执行力，本协议的其余条款仍应有效并且有约束力。</p>
+      <p class="item">6.3 本协议解释权及修订权归乾坤道科技(广州)有限公司所有。</p>
+      <p class="agree">我已认真阅读以上条款，并自觉遵守其所有规定，如有隐瞒造成的一切后果本人愿意承担一切经济赔偿及法律责任。</p>
+
+    </div>
+
+  </div>
+</template>
+<script>
+  export default {
+    name: 'agreement',
+    data () {
+      return {
+        scrollHeight:0
+      }
+    },
+    mounted () {
+        this.scrollHeight = document.body.clientHeight-(2.14)*parseInt(document.documentElement.style.fontSize)-3;
+        if(this.$store.state.isBrowser){
+          this.scrollHeight = document.body.clientHeight-(1.39)*parseInt(document.documentElement.style.fontSize)-3;
+        }
+    },
+    methods :{
+      goback(){
+        this.$emit('goback');
+      }
+    }
+  }
+</script>
+<style lang="scss" scoped>
+  .main{
+    &:before{
+      background-color:#3a3845 ;
+    }
+    position: absolute;
+    width: 100%;
+    background-color: #FFF;
+    top:0;
+    z-index: 10000;
+    padding-top: 2.14rem;
+    padding-bottom: 0;
+    .header{
+      .top{
+        background-color:#3a3845 ;
+        color:#FFF;
+        font-size: 0.52rem;
+        position: fixed;
+        top:0.75rem;
+        width: 100%;
+        i{
+          font-size: 0.52rem;
+        }
+        a{
+          position:absolute;
+          padding:3px;
+        }
+        .left{
+          left:0.325rem;
+        }
+        .right{
+          right:0.325rem;
+        }
+      }
+    }
+  }
+  .jy_isBrowser{
+    .main{
+      padding-top: 1.39rem!important;
+      .top{
+        top:0;
+      }
+    }
+  }
+  .content{
+    padding: 0 0.5rem;
+    overflow: scroll;
+    -webkit-overflow-scrolling: touch;
+    p{
+      margin-top: 0.6rem;
+    }
+    p:nth-of-type(1){
+      font-size: 0.48rem;
+      text-align: center;
+      font-weight: 500;
+    }
+    p:nth-of-type(2){
+      font-size: 0.32rem;
+      font-weight: 500;
+      text-indent:2em
+    }
+    p:nth-of-type(3){
+      font-size: 0.32rem;
+      font-weight: 500;
+      text-indent:2em
+    }
+    p.title{
+      font-size: 0.4rem;
+    }
+    p.item{
+      font-size: 0.32rem;
+      color:#767676;
+    }
+    p.agree{
+      text-indent:2em;
+      font-size: 0.36rem;
+      margin-bottom: 0.3rem;
+    }
+  }
+</style>
+

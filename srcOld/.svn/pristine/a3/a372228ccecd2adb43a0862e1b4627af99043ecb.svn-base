@@ -1,0 +1,102 @@
+<template>
+<div class="main jy_all_top jy_new_love jy_state_top">
+	<Loading v-if="isloading"></Loading>
+	<div class="header">
+		<div class="top">
+			<Back class="left"><i class="iconfont">&#xe613;</i></Back><a class="right">确定</a><p>筛选</p>
+		</div>
+	</div>
+	<div class="jy_setsort_list">
+		<p class="jy_setsort_tit">性别</p>
+		<div class="jy_setsort_ul">
+			<div class="jy_setsort_li jy_setsort_li_third cur"><i>不限</i></div>
+			<div class="jy_setsort_li jy_setsort_li_third onBorder"><i>男</i></div>
+			<div class="jy_setsort_li jy_setsort_li_third onBorder"><i>女</i></div>
+		</div>
+		
+		<p class="jy_setsort_tit">地区</p>
+		<div class="jy_setsort_ul">
+			<div class="jy_setsort_li jy_setsort_li_third cur"><i>不限</i></div>
+			<div class="jy_setsort_li jy_setsort_li_two jy_setsort_li_jt"><i>请选择地区</i></div>
+		</div>
+		<p class="jy_setsort_tit">时间</p>
+		<div class="jy_setsort_ul">
+			<div class="jy_setsort_li jy_setsort_li_third cur"><i>不限</i></div>
+			<div class="jy_setsort_li jy_setsort_li_two jy_setsort_li_jt"><i>请选择时间</i></div>
+		</div>
+		<p class="jy_setsort_tit">认证</p>
+		<div class="jy_setsort_ul">
+			<div class="jy_setsort_li jy_setsort_li_third cur"><i>不限</i></div>
+			<div class="jy_setsort_li jy_setsort_li_third"><i>&#xe69c;</i></div>
+			<div class="jy_setsort_li jy_setsort_li_third"><i>&#xe6a2;</i></div>
+			<div class="jy_setsort_li jy_setsort_li_third"><i>&#xe77e;</i></div>
+			<div class="jy_setsort_li jy_setsort_li_third"><i>&#xe699;</i></div>
+			
+		</div>
+		<p class="jy_setsort_tit">学历</p>
+		<div class="jy_setsort_ul">
+			<div class="jy_setsort_li jy_setsort_li_third cur"><i>不限</i></div>
+			<div class="jy_setsort_li jy_setsort_li_third"><i>高中及以上</i></div>
+			<div class="jy_setsort_li jy_setsort_li_third"><i>大专及以上</i></div>
+			<div class="jy_setsort_li jy_setsort_li_third"><i>本科及以上</i></div>
+			<div class="jy_setsort_li jy_setsort_li_third"><i>硕士及以上</i></div>
+			<div class="jy_setsort_li jy_setsort_li_third"><i>博士及以上</i></div>
+		</div>
+		<p class="jy_setsort_tit">身高要求</p>
+		<div class="jy_setsort_ul">
+			<div class="jy_setsort_li jy_setsort_li_five cur"><i>不限</i></div>
+			<div class="jy_setsort_li jy_setsort_li_five"><i>≥150</i></div>
+			<div class="jy_setsort_li jy_setsort_li_five"><i>≥155</i></div>
+			<div class="jy_setsort_li jy_setsort_li_five"><i>≥160</i></div>
+			<div class="jy_setsort_li jy_setsort_li_five"><i>≥165</i></div>
+			<div class="jy_setsort_li jy_setsort_li_five"><i>≥170</i></div>
+			<div class="jy_setsort_li jy_setsort_li_five"><i>≥175</i></div>
+			<div class="jy_setsort_li jy_setsort_li_five"><i>≥180</i></div>
+			<div class="jy_setsort_li jy_setsort_li_five"><i>≥185</i></div>
+			<div class="jy_setsort_li jy_setsort_li_five"><i>≥190</i></div>
+		</div>
+		<p class="jy_setsort_tit">年龄要求</p>
+		<div class="jy_setsort_ul">
+			<div class="jy_setsort_li jy_setsort_li_third cur"><i>不限</i></div>
+			<div class="jy_setsort_li jy_setsort_li_third"><i>18-23</i></div>
+			<div class="jy_setsort_li jy_setsort_li_third"><i>24-29</i></div>
+			<div class="jy_setsort_li jy_setsort_li_third"><i>30-35</i></div>
+			<div class="jy_setsort_li jy_setsort_li_third"><i>36-40</i></div>
+			<div class="jy_setsort_li jy_setsort_li_third"><i>41以上</i></div>
+		</div>
+	</div>
+</div>
+</template>
+<script>
+import Loading from '@other/loading.vue';
+import Back from '@other/back.vue';
+import myScroller from '@other/myScroller.vue';
+export default {
+	name: 'setSort',
+	data () {
+		return {
+			isloading:false,
+			
+		}
+	},
+	components: {
+		Loading,
+		Back,
+		myScroller,
+	},
+	watch:{	
+		
+	},
+	mounted () {
+		const t=this;
+		
+		
+	},
+	destroyed () {
+		
+	},
+	methods:{
+	
+	}
+}
+</script>

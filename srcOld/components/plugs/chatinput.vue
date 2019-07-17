@@ -1,0 +1,126 @@
+<template>
+  <div class="input-div" :class="{jy_act_input:onlyText}">
+    <div class="input">
+      <input :disabled="showBox" type="text" v-model="textInput" @blur="scrollTop"/>
+      <div v-if="textInput||onlyText" @click="sendText">发送</div>
+      <div v-else @click="!onlyText?showBox=!showBox:''">
+        <i v-if="!showBox"  class="iconfont">&#xe654;</i>
+        <i v-else class="iconfont">&#xe62a;</i>
+      </div>
+    </div>
+    <div v-show="showBox" class="box">
+      <div @click="send(1)"><img src="../../images/message/photo.png"><p>图片</p></div>
+      <div @click="send(2)"><img src="../../images/message/location.png"><p>位置</p></div>
+      <div @click="send(3)"><img src="../../images/message/gift.png"><p>礼物</p></div>
+    </div>
+  </div>
+</template>
+<script>
+const COMPONENT_NAME = "chatinput";
+
+export default {
+  name: COMPONENT_NAME,
+  props: {
+    type: {
+      type: String,
+      default: "text" //
+    },
+	onlyText: {//仅仅用于发文字
+      type: Boolean,
+      default: false //
+    },
+    value: {
+      type: null,
+      default: ""
+    },
+    myMethod: {
+      type: null,
+      default: null
+    },
+    placeholder: {
+      type: String,
+      default: "" //
+    }
+  },
+  data() {
+    return {
+      textInput: "",
+      showBox:false,
+    };
+  },
+  methods: {
+    scrollTop(){
+      setTimeout(function() {
+        let scrollHeight = document.documentElement.scrollTop || document.body.scrollTop || 0;
+        window.scrollTo(0, Math.max(scrollHeight - 1, 0));
+      }, 100);
+    },
+    close() {
+      this.$emit("close", false);
+    },
+    sendText(){
+      this.$emit('sendText',this.textInput)
+      this.textInput='';
+    },
+    send(index){
+      this.$emit('send',index)
+      this.showBox = false;
+    }
+  }
+};
+</script>
+<style scoped lang="scss">
+.input-div {
+  position: absolute;
+  bottom: 0px;
+  width: 100%;
+  border-top: 1px solid #cccccc;
+  background-color: #FFF;
+  .input{
+    display: flex;
+    height: 40px;
+    line-height: 40px;
+    align-items: center;
+    input {
+      height: 30px;
+      line-height: 30px;
+      margin: 0 5px;
+      flex-grow: 1;
+      font-size: 16px;
+    }
+    div {
+      width: 40px;
+      text-align: center;
+      font-size: 16px;
+      color: #9eea6a;
+      i {
+        color: #000;
+        font-size: 28px;
+        vertical-align: middle;
+      }
+    }
+  }
+  .box{
+    display: flex;
+    height: 90px;
+    align-items: center;
+    background-color: #f2f2f2;
+    div{
+      width: 50px;
+      height: 70px;
+      margin: 0 10px;
+      img{
+        width: 50px;
+        height: 50px;
+      }
+      p{
+        width: 50px;
+        height: 20px;
+        line-height: 20px;
+        font-size: 14px;
+        text-align: center;
+      }
+    }
+  }
+}
+</style>

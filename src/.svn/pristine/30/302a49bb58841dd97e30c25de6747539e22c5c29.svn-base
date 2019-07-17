@@ -1,0 +1,276 @@
+<template>
+  <div class="main jy_all_top">
+    <Loading v-if="isloading"></Loading>
+    <div class="header">
+      <div class="top">
+        <Back class="left"><i class="iconfont">&#xe613;</i></Back>情商培训
+      </div>
+    </div>
+    <myScroller :style="$store.state.isBrowser?'padding:1.4rem 0 0;':'padding:2.33rem 0 0;'" :infinite="infinite" :refresh="refresh" :loadRefresh="loadRefresh" :loadInfinite="loadInfinite" :touchmove="touchmove" ref="myScroller" :showbg="showbg">
+    <div class="videoScroll">
+        <div class="swiper_container" id="swiper_container">
+          <swiper loop auto :show-dots="false" height="3rem" v-model="currIndex">
+            <swiper-item v-for="(item,index) in swiperList" :key="index"><img src="../../images/video_bg.png"></swiper-item>
+          </swiper>
+        </div>
+        <dl class="video_panel">
+          <dt>
+            <ul>
+				<li :class="{cur:active==1}" @click="active!=1?getList(1):''">恋爱技巧</li>
+				<li :class="{cur:active==2}" @click="active!=2?getList(2):''">女生篇</li>
+				<li :class="{cur:active==3}" @click="active!=3?getList(3):''">男生篇</li>
+				<!--<li v-if="isFinishTask" :class="{cur:active==4}" @click="active!=4?getList(4):''">精品课堂</li>-->
+            </ul>
+          </dt>
+          <dd>
+            <ul class="video_ul" v-if="listArr">
+              <li @click="open(item.path.replace(/\\/g,'/'),item.cover.replace(/\\/g,'/'))" v-for="item in listArr" :style="'background-image:url('+getFullPath(item.cover.replace(/\\/g,'/'))+');'">
+                <div>{{item.name.replace(".mp4","")}}</div>
+              </li>
+            </ul>
+          </dd>
+        </dl>
+    </div>
+    </myScroller>
+    <div class="fixed" v-show="indexListFixed" :style="$store.state.isBrowser?'top:1.2rem;':'top:2rem;'">
+      <dl class="video_panel">
+        <dt>
+          <ul>
+            <li :class="{cur:active==1}" @click="active!=1?getList(1):''">恋爱技巧</li>
+            <li :class="{cur:active==2}" @click="active!=2?getList(2):''">女生篇</li>
+            <li :class="{cur:active==3}" @click="active!=3?getList(3):''">男生篇</li>
+			<!--<li v-if="isFinishTask" :class="{cur:active==4}" @click="active!=4?getList(4):''">精品课堂</li>-->
+          </ul>
+        </dt>
+      </dl>
+    </div>
+    <div v-transfer-dom>
+      <popup class="dialog-video" height="100%" :hide-on-blur="true" :popup-style="{zIndex:999}" v-model="showVideo">
+        <div class="video-panel new_video_con">
+			<div class="video_play">
+			  <video id="my_video" preload="auto" playsinline webkit-playsinline autoplay  x5-video-orientation="portraint" x5-video-player-type="h5" x5-video-player-fullscreen="true" controls src=""></video>
+			</div>
+			<div class="new_video_btn" @click="close">&#xe7de;</div>
+        </div>
+      </popup>
+    </div>
+  </div>
+</template>
+
+<script>
+  import Loading from '@other/loading.vue';
+  import Back from '@other/back.vue';
+  import {Swiper,SwiperItem,TransferDom,Popup} from 'vux';
+  import myScroller from '@other/myScroller.vue';
+  export default {
+    name: "videoList",
+    directives: {
+      TransferDom
+    },
+    components: {
+      Loading,
+      Back,
+      Swiper,
+      SwiperItem,
+      myScroller,
+      Popup,
+    },
+    data() {
+      return {
+        isloading: false,
+        marginTop: 0,
+        indexListFixed: false,
+        currIndex: 0,
+        swiperList:[
+          'http://192.168.0.250/userfiles/20181211/LVDZPGkK7DENX4QbKm2bK4knaLXqr1.jpg',
+        ],
+        active: 1,
+        videoSrc: '',
+        videoCover:'',
+        listArr:[],
+        showVideo: false,
+        //分页参数
+        pageNo: 1,
+        isRead: false,
+        isEnd: false,
+        loadRefresh:true,//下拉刷新
+        loadInfinite:true, //上拉加载
+		showbg:true,
+		//isFinishTask:false,//是否完成任务宝任务
+		isCheck:false,
+      }
+    },
+    computed: {
+    },
+    watch:{
+      isEnd(val) {
+        const t=this;
+        if(val){
+          t.$refs.myScroller.finishInfinite(true);
+        }else{
+          t.$refs.myScroller.finishInfinite(false);
+        }
+      },
+    },
+    created() {
+
+    },
+    beforeDestroy() {
+		this.close();
+    },
+    async mounted() {
+		const t=this;
+		
+    },
+    methods: {
+      getFullPath (path) {
+        return this.$utils.getFullPath(path+"?!w")
+      },
+      touchmove (left,mtop,zoom,height) {
+        let offsetTop = document.querySelector('#swiper_container').scrollHeight;
+        if (mtop>= offsetTop) {
+          this.indexListFixed = true;
+        } else {
+          this.indexListFixed = false;
+        }
+      },
+      async getList(active,flag) {
+        const _this = this;
+        _this.indexListFixed = false
+        if (_this.isRead) {
+          return false;
+        }
+        _this.isRead = true;
+        if (_this.isRefresh || flag || _this.active!=active) {
+          _this.pageNo = 1;
+          if (flag) {
+            _this.isloading = true;
+          }
+        }
+        try{
+          let data = null;
+          if (!_this.listArr || _this.isRefresh || flag || _this.active != active) {
+            _this.$refs.myScroller.scrollTo(1);
+            _this.listArr = [];
+            _this.active = active;
+          }
+          if(_this.active == 1){
+            data = {
+              url : 'media/恋爱心理',
+              page: _this.pageNo,
+              rows: _this.$store.state.pageSize
+            }
+          }else if(_this.active == 2){
+            data = {
+              url : "media/女生篇",
+              page: _this.pageNo,
+              rows: _this.$store.state.pageSize
+            }
+          }else if(_this.active == 3){
+            data = {
+              url : "media/男生篇",
+              page: _this.pageNo,
+              rows: _this.$store.state.pageSize
+            }
+          }/*else if(_this.active == 4){
+            data = {
+              url : "media/精品课堂",
+              page: _this.pageNo,
+              rows: _this.$store.state.pageSize
+            }
+          }*/
+		  //if(data&&data.url){
+		//	data.url=encodeURI(data.url);
+		 // }
+          let result = await _this.$server.searchMedia(data);
+          if(result.data.data.list){
+			_this.showbg=false;
+            _this.listArr.push(...result.data.data.list);
+            _this.videoSrc = _this.getFullPath(_this.listArr[0].path.replace(/\\/g,'/'));
+            _this.videoCover = _this.getFullPath(_this.listArr[0].cover.replace(/\\/g,'/'));
+          }
+          if (result.data.data.count <= _this.$store.state.pageSize * _this.pageNo || result.data.data.list.length < _this.$store.state.pageSize) {//判断是否最后一页
+            _this.isEnd = true;
+          } else {
+            _this.isEnd = false;
+            _this.$refs.myScroller.finishInfinite(false);
+          }
+        }catch (e) {
+			_this.isEnd=true;
+          console.log(e)
+        }
+        _this.isRead = false;
+        _this.isloading = false;
+        _this.isRefresh = false;
+        _this.pageNo++;
+      },
+      async infinite(done) {//上拉加载(防止初始内容不满一屏会无限加载)
+        const t=this;
+        if(t.isEnd){
+          done(true);
+          return false;
+        }
+        console.log("加载");
+		/*if(t.$route.query.taskId&&!t.isCheck){
+			let openId='';
+			if(t.$store.state.isLogin){
+				openId=t.$store.state.userInfo.openid;
+			}else{
+				openId=t.$store.state.otherLogin.openId;
+			}
+			if(openId){
+				try{
+					let result=await t.$server.getUnderWayTask({
+						openId:openId,
+						taskId:t.$route.query.taskId
+					});
+					t.isFinishTask=result.data.message==1?true:false;
+					t.isCheck=true;
+					if(t.isFinishTask){
+						//t.getList(4);
+						t.active=4;
+					}
+				}catch(e){
+					console.log("获取是否完成任务出错:"+JSON.stringify(e));
+				}
+			}
+		}*/
+        t.getList(t.active).then(()=>{
+          if(t.isEnd){
+            done(true);
+          }else{
+            done();
+          }
+        });
+      },
+      refresh(done) {//下拉刷新
+        const t=this;
+        console.log("刷新");
+        t.isRefresh=true;
+        t.getList(t.active).then((res)=>{
+          done();
+        });
+      },
+      open(url,cover){
+        this.showVideo = true;
+		let video=document.getElementById("my_video");
+		if(video){
+			video.src= this.getFullPath(url);//更改视频源
+			video.poster= this.getFullPath(cover);//更改视频源
+			video.play();
+		}
+      },
+      close(){
+        let video=document.getElementById("my_video");
+		if(video){
+			video.pause();
+			video.src= "";//更改视频源
+		}
+        this.showVideo=false;
+      }
+    }
+  }
+</script>
+<style scoped>
+
+</style>

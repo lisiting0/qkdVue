@@ -1,0 +1,85 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="maximum-scale=1.0, minimum-scale=1.0, user-scalable=0, initial-scale=1.0, width=device-width" />
+  <meta name="format-detection" content="telephone=no, email=no, date=no, address=no">
+  <title>相约乾坤岛</title>
+  <style type="text/css">
+    body,h1,h2,h3,p,div,ol,ul,input,button{margin:0;padding:0}body{overflow-x:hidden;max-width:100%;font-family:Arial,Helvetica,sans-serif;text-align:center;background:#f1f1f1;-webkit-text-size-adjust:none}ol,ul{list-style:none}a{text-decoration:none;-webkit-tap-highlight-color:rgba(0,0,0,0)}
+    .image_div {
+      font-size: 0;
+      overflow: hidden;
+      background-color: #FFF;
+    }
+    .image_div div{
+      background-position: center;
+      background-size: 100% 100%;
+      text-align: center;
+    }
+    .action_footer {
+      height: 1.2rem;
+      font-size: 0;
+      position: fixed;
+      bottom: 0.43rem;
+      width: 100%;
+      background-color: rgba(0, 0, 0, 0);
+    }
+    .action_footer div{
+      height: 1.2rem;
+      line-height: 1.2rem;
+      display: block;
+      width: 7.2rem !important;
+      border-radius: 0.6rem;
+      margin: 0 auto;
+      background-color: #ff0054!important;
+      vertical-align: auto;
+      box-shadow: 0 0.07rem rgba(0,0,0,0.3);
+      font-size: 0.48rem;
+      color:#FFF;
+    }
+  </style>
+  <script>
+    ;(function(){
+      var win_width=window.screen.width||document.documentElement.clientWidth||window.innerWidth,
+        FS=(win_width/1080>1?1:win_width/1080)*100;
+      document.documentElement.style.fontSize= FS+ 'px';
+    }());
+  </script>
+</head>
+
+<body>
+<div class="image_div">
+  <div style="background-image:url(img/static_02.jpg);height:10.98rem;width:100%">
+  </div>
+  <div style="background-image:url(img/static_03.jpg);height:6.45rem;width:100%">
+  </div>
+  <div style="background-image:url(img/static_04.jpg);height:8.11rem;width:100%">
+    <img style="width: 8.48rem;margin-top: 1.95rem" src="img/gif1.gif"/>
+  </div>
+  <div style="background-image:url(img/static_05.jpg);height:10.08rem;width:100%;">
+    <img style="width: 6.74rem;margin-top: 2.05rem" src="img/gif2.gif"/>
+  </div>
+  <div style="background-image:url(img/static_06.jpg);height:9.25rem;width:100%;">
+  </div>
+  <div style="background-image:url(img/static_07.jpg);height:10.76rem;width:100%;">
+  </div>
+  <div style="background-image:url(img/static_08.jpg);height:10.07rem;width:100%;">
+  </div>
+  <div style="background-image:url(img/static_09.jpg);height:9.15rem;width:100%;">
+  </div>
+  <div style="background-image:url(img/static_10.jpg);height:10.09rem;width:100%;">
+  </div>
+</div>
+<div class="action_footer">
+    <div class="ljbm" onclick="bmBlindDating()">立即报名</div>
+</div>
+</body>
+<script type="text/javascript">
+  function bmBlindDating(){
+    window.location.href='http://qkd.iceinfo.net/api/account/publicAddressLoginUrl?&state=activityDetailStatic__id_3b83087a23d2400d8279bec208dcfc4c_unionkey_zzrbPWC'
+  }
+</script>
+
+</html>

@@ -1,0 +1,139 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="maximum-scale=1.0, minimum-scale=1.0, user-scalable=0, initial-scale=1.0, width=device-width" />
+    <meta name="format-detection" content="telephone=no, email=no, date=no, address=no">
+    <title></title>
+    <link rel="stylesheet" type="text/css" href="api.css" />
+    <style type="text/css">
+        #header{
+            width: 100%;
+            height: 42px;
+            padding-top: 20px;
+        }
+        #footer {
+            width: auto;
+            height: 50px;
+            padding: 0 8px;
+            display: -webkit-box;
+            -webkit-box-orient: horizontal;
+            background-color: #424242;
+        }
+
+        .tab-item {
+            height: 50px;
+            -webkit-box-flex: 1;
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            -webkit-box-pack: center;
+            -webkit-box-align: center;
+        }
+
+        center {
+            color: #FFF;
+            margin-top: 3px;
+            font-size: 0.7em;
+        }
+
+        #back>div {
+            width: 48px;
+            height: 48px;
+            background: url(ic_back.png) no-repeat center;
+            background-size: 30px 30px;
+        }
+
+        #forward>div {
+            width: 48px;
+            height: 48px;
+            background: url(ic_forward.png) no-repeat center;
+            background-size: 30px 30px;
+        }
+
+        #refresh>div {
+            width: 48px;
+            height: 48px;
+            background: url(ic_refresh.png) no-repeat center;
+            background-size: 30px 30px;
+        }
+        .back {
+            width: 80px;
+            background: url(ic_arrow_left.png) no-repeat left;
+            background-size: 28px 30px;
+            font-size: 17px;
+            padding-left: 5px;
+            color: #FFF;
+            display: -webkit-box;
+            -webkit-box-pack: center;
+            -webkit-box-align: center;
+        }
+        .active {
+            background-color: #33B5E5;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="wrap">
+        <div id='header'>
+            <div class="back" tapmode="back-active" onclick="api.closeWin()">返回</div>
+            <h1 id='title'></h1>
+            <div class="adpt"></div>
+        </div>
+    </div>
+</body>
+<script type="text/javascript">
+    apiready = function() {
+        //使用margin布局，自动适应任何屏幕，适配带虚拟菜单栏的任意Android手机
+        let area = {
+            marginTop: 62, //标题栏高度44
+            marginBottom: 50 //下导航栏高度50
+        }
+      var map = api.require('bMap');
+      map.open({
+        rect: {
+          x: 0,
+          y: 62,
+          w: api.winWidth,
+          h: api.winHeight-62
+        },
+        center: {
+          lon: api.pageParam.lon,
+          lat: api.pageParam.lat
+        },
+        zoomLevel: 17,
+        showUserLocation: false,
+      }, function(ret) {
+        map.addAnnotations({
+          annotations: [{
+            id: 1,
+            lon: api.pageParam.lon,
+            lat: api.pageParam.lat
+          }],
+        }, function(ret) {
+          if (ret) {
+            api.toast({
+              msg: api.pageParam.poi,
+              duration: 5000,
+              location: 'middle'
+            });
+          }
+        });
+      });
+        //监听Android back键，回退历史记录
+        api.addEventListener({
+            name: 'keyback'
+        }, function(ret, err) {
+            console.log("main.html")
+            GoToHisBack();
+        });
+    };
+
+    //历史记录后退
+    function GoToHisBack() {
+       api.closeWin();
+    }
+</script>
+
+</html>

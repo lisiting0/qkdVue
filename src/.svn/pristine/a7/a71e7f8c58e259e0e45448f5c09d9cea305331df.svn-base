@@ -1,0 +1,891 @@
+<template>
+  <div>
+    <div class="main jy_all_top jy_new_love jy_state_top" @click="windowClick">
+      <Loading v-if="isloading"></Loading>
+      <div class="header">
+        <div class="top">
+          <Back class="left" v-if="$route.query.nearbydate"><i class="iconfont">&#xe613;</i></Back><a class="right"><i @click="showMyactivity" style="margin-right: 0.2rem;border-right: 1px solid #CDD2CB;padding-right: 0.2rem;" :style="{color:myactivity?'#00b4ff !important':''}" class="iconfont">&#xe648;</i><i @click="showPopoverm" class="iconfont">&#xe64d;</i></a><p class="tab">
+          <span class="underline" ref="underline" :style="{left:underlineLeft}"></span>
+          <span class="tab_index" @click="getOrderList(1)" :class="{active:active==1}"><i ref="tab_ref_1"></i>约会</span>
+          <span class="tab_index" @click="getOrderList(2)" :class="{active:active==2}"><i ref="tab_ref_2"></i>二次元</span>
+          <span class="tab_index" @click="getOrderList(3)" :class="{active:active==3}"><i ref="tab_ref_3"></i>相亲</span>
+        </p>
+        </div>
+      </div>
+      <div v-show="active==1" class="jy_new_love_t">
+        <ul class="jy_new_love_nav">
+          <li class="jy_new_love_n1" :class="{jy_new_love_n1s:datingThemes==''}" @click="getList('')"><p>全部</p></li>
+          <li class="jy_new_love_en2" :class="{jy_new_love_en2s:datingThemes==2}" @click="getList(2)"><p>吃饭</p></li>
+          <li class="jy_new_love_en3" :class="{jy_new_love_en3s:datingThemes==4}" @click="getList(4)"><p>唱歌</p></li>
+          <li class="jy_new_love_en4" :class="{jy_new_love_en4s:datingThemes==3}" @click="getList(3)"><p>电影</p></li>
+          <li class="jy_new_love_en5" :class="{jy_new_love_en5s:datingThemes==5}" @click="getList(5)"><p>运动</p></li>
+          <li class="jy_new_love_en6" :class="{jy_new_love_en6s:datingThemes==1}" @click="getList(1)"><p>旅行</p></li>
+        </ul>
+      </div>
+      <div v-show="active==2"  class="jy_new_love_t">
+        <ul class="jy_new_love_nav">
+          <li class="jy_new_love_n1" :class="{jy_new_love_n1s:activityMethod==null}" @click="getList(datingThemes,null,null,null,null,null,null,null,null,null)"><p>全部</p></li>
+          <li class="jy_new_love_n2" :class="{jy_new_love_n2s:activityMethod==1}" @click="getList(datingThemes,null,null,null,null,null,null,null,null,1)"><p>选缘</p></li>
+          <li class="jy_new_love_n3" :class="{jy_new_love_n3s:activityMethod==2}" @click="getList(datingThemes,null,null,null,null,null,null,null,null,2)"><p>抢缘</p></li>
+          <li class="jy_new_love_n4" :class="{jy_new_love_n4s:activityMethod==3}" @click="getList(datingThemes,null,null,null,null,null,null,null,null,3)"><p>竞缘</p></li>
+          <li class="jy_new_love_n5" :class="{jy_new_love_n5s:activityMethod==4}" @click="getList(datingThemes,null,null,null,null,null,null,null,null,4)"><p>中缘</p></li>
+          <li class="jy_new_love_n6" :class="{jy_new_love_n6s:activityMethod==5}" @click="getList(datingThemes,null,null,null,null,null,null,null,null,5)"><p>配缘</p></li>
+        </ul>
+        <ul class="jy_new_love_menu">
+          <li :class="{cur:datingThemes==''}" @click="getList('')"><a>全部</a></li>
+          <li :class="{cur:datingThemes==2}" @click="getList(2)"><a>吃饭</a></li>
+          <li :class="{cur:datingThemes==4}" @click="getList(4)"><a>K歌</a></li>
+          <li :class="{cur:datingThemes==1}" @click="getList(1)"><a>旅行</a></li>
+          <li :class="{cur:datingThemes==5}" @click="getList(5)"><a>运动</a></li>
+          <li :class="{cur:datingThemes==99}" @click="getList(99)"><a>其他</a></li>
+        </ul>
+      </div>
+      <div class="jy_new_love_con" :style="{'padding-top': active==1?'2.03rem':active==2?'3.23rem':'0rem'}">
+        <scroll v-show="active!=3" ref="scroll" :pullDownRefresh="pullDownRefreshObj" :pullUpLoad="pullUpLoadObj" @pullingDown="onPullingDown" @pullingUp="onPullingUp" :ifinit="ifinit" :style="{margin: '0.2rem 0 0 0',height:myScrollerHeight+'px','background-color': '#f5f7f8'}" :probeType="3" :listenScroll="true" @scroll="myscroll" :click="true" >
+          <ul class="jy_new_love_list" v-if="active!=3">
+            <router-link tag="li" v-for="item,index in showList" :key="index"  :to="{name:'act',query:{id:item.id}}" >
+              <div class="jy_new_love_list_t">
+                <i class="jy_new_love_list_timg" :style="'background-image:url('+$utils.getFullPath(item.jiaoyouUser.headimgAttachmentId)+')'"></i>
+                <h4>{{item.jiaoyouUser.aliasName}}</h4>
+                <p>
+                  <em v-if="item.activityMethod!=7&&item.activityMethod!=8" :class="'jy_new_love_tit_'+item.activityMethod">{{yuan(item.activityMethod)}}</em>
+                  <em :style="{'color':item.activityMethod==7?'#50cbff':'','border':item.activityMethod==7?'1px solid #50cbff':''}" v-else>{{item.activityMethod==7?'一对一':'多人'}}</em>
+                  <i class="jy_auth_age" :class="{jy_auth_age_man:item.jiaoyouUser.sex==2}">{{item.jiaoyouUser.sex==1?'&#xe64a;':'&#xe605;'}}{{item.jiaoyouUser.age}}</i>
+                  <i class="jy_auth_age" style="background-color: #fff;color:#9e9e9e;">{{$utils.formarDistance(item.distance)}}</i>
+                </p>
+              </div>
+              <!--<div v-if="item.showImg&&item.showImg.length==1" class="jy_new_love_list_b">-->
+                <!--<div class="jy_new_love_list_bimg">-->
+                  <!--<p><i :style="{'background-image':'url('+getFullPath(item.showImg[0])+')'}" @click.stop="showImage(0,item.id,$event)"></i></p>-->
+                <!--</div>-->
+                <!--<h3><em :class="'jy_new_love_tit_'+item.datingThemes">{{item.datingThemes==1?'旅行':item.datingThemes==2?'吃饭':item.datingThemes==3?'电影':item.datingThemes==4?'唱歌':item.datingThemes==5?'运动':'其他'}}</em>-->
+                 <!--<span class="jy_new_love_datingDesc"> {{item.datingDesc}}</span>-->
+                <!--</h3>-->
+                <!--<p class="jy_new_love_list_pos" :class="'jy_new_love_list_pos_'+item.datingThemes">{{item.datingLocation}}</p>-->
+                <!--<p class="jy_new_love_list_date">{{formatDate(item.activityStarttime.substr(0,16))}}</p>-->
+                <!--<p class="jy_new_love_list_tip">{{item.expectSex==1?"仅限女性":item.expectSex==2?"仅限男性":"不限男女"}} · {{item.payType==0?'AA':item.payType==1?'我请客':item.payType==2?'你买单':item.payType==3?'男A女免':item.payType==4?'视情况而定':''}}</p>-->
+              <!--</div>-->
+              <div class="jy_new_love_list_b">
+                <h3><em :class="'jy_new_love_tit_'+item.datingThemes">{{item.datingThemes==1?'旅行':item.datingThemes==2?'吃饭':item.datingThemes==3?'电影':item.datingThemes==4?'唱歌':item.datingThemes==5?'运动':'其他'}}</em><span class="jy_new_love_datingDesc"> {{item.datingDesc}}</span></h3>
+                <div class="jy_new_love_list_bimg" v-if="item.showImg">
+                  <p v-for="v,i in item.showImg" :key="i" >
+                    <i :style="{'background-image':'url('+getFullPath(v)+')'}" @click.stop="showImage(i,item.id,$event)"></i>
+                  </p>
+                </div>
+                <p class="jy_new_love_list_pos">{{item.datingLocation}}({{item.datingDetailsExt.extString}})</p>
+                <p class="jy_new_love_list_date">
+                  {{item.datingDetailsExt.extInt7==1?"不限时间":item.datingDetailsExt.extInt7==2?"平常周末":(item.activityStarttime.substr(0,16)+" "+(item.datingDetailsExt.extInt10==1?"左右":"准点"))}}
+                </p>
+                <p class="jy_new_love_list_tip">{{item.expectSex==1?"仅限女性":item.expectSex==2?"仅限男性":"不限男女"}} · {{item.payType==0?'AA':item.payType==1?'我请客':item.payType==2?'你买单':item.payType==3?'男A女免':item.payType==4?'视情况而定':''}}· {{item.payType==0?'每人'+item.enrollFee+"元":item.payType==1?'':item.payType==2?'':item.payType==3?'男士'+item.enrollFee+"元":item.payType==4?'':''}}{{item.datingDetailsExt.extInt6==1?"[多退少补]":''}}</p>
+
+                <div class="dodiv">
+                  <p>
+                    <span><i style="font-size: 0.6rem" class="iconfont">&#xe63b;</i>{{item.viewFrequency}}</span>
+                    <span><i style="font-size: 0.5rem" class="iconfont">&#xe603;</i>{{item.likeCount}}</span>
+                    <span><i style="font-size: 0.4rem" class="iconfont">&#xe79d;</i>{{item.followCount}}</span>
+                    <span><i style="font-size: 0.4rem" class="iconfont">&#xe6dc;</i>{{item.enrollCount}}{{item.activityMethod==8?"/"+item.datingDetailsExt.extInt11:""}}</span>
+                  </p>
+                  <div :ref="item.id">
+                    <transition v-on:before-enter="beforeEnter(item.id,1)" v-on:before-leave="beforeEnter(item.id,1)" v-on:after-enter="afterEnter(item.id,1)" v-on:after-leave="afterEnter(item.id,1)" enter-active-class="slideInRight" leave-active-class="slideOutRight">
+                          <span v-show="showCommentIndex==item.id">
+                             <span v-if="item.isLike==0" @click.stop="setFabulous(item.id,item.isLike)"><i class="iconfont">&#xe603;</i> 点赞</span>
+                            <span style="color:#ff3f63" v-if="item.isLike==1" @click.stop="setFabulous(item.id,item.isLike)"><i class="iconfont">&#xe603;</i> 已点赞</span>
+                             <span v-if="$store.state.userInfo.id!=item.jiaoyouUser.id" @click.stop="clickShowGift(item.jiaoyouUser.aliasName, item.jiaoyouUser.id,item.id)"><i class="iconfont">&#xe6e1;</i> 打赏</span>
+                             <span @click.stop="showComment(item.id,'',index)"><i class="iconfont">&#xe638;</i> 分享</span>
+                            <span v-if="item.isFollow==0" @click.stop="setGuanzhu(item.id,item.isFollow)"><i class="iconfont">&#xe79d;</i> 关注</span>
+                            <span style="color:#ff3f63" v-if="item.isFollow==1" @click.stop="setGuanzhu(item.id,item.isFollow)"><i class="iconfont">&#xe79d;</i> 已关注</span>
+                            <span v-if="item.isCandidate==0" @click.stop="candidate(item.id)"><i class="iconfont">&#xe6dc;</i> 参加</span>
+                            <span style="color:#ff3f63" v-if="item.isCandidate==1" @click.stop="cancelCandidate(item.id)"><i class="iconfont">&#xe6dc;</i> 退出</span>
+                          </span>
+                    </transition>
+                  </div>
+                  <span @click.stop="showCommentIndex==item.id?showCommentIndex=0:showCommentIndex=item.id"><i class="iconfont">&#xe679;</i></span>
+                </div>
+
+
+
+              </div>
+				<template v-if="item.showImg&&item.showImg.length>0">
+					<div v-transfer-dom>
+					  <previewer :list="getImage(item.showImg)" :ref="'previewer'+item.id" :options="options" @on-close="closeImg()"></previewer>
+					</div>
+				</template>
+			    
+            </router-link>
+          </ul>
+        </scroll>
+        <registration-activity :myactivity="myactivity" v-if="active==3" ref="registration">
+
+        </registration-activity>
+      </div>
+      <Routerlink></Routerlink>
+
+      <div v-transfer-dom>
+        <x-dialog v-model="showChooseThemes" hide-on-blur class="dialog-chooseThemes" :dialog-style="{'max-width': '100%', width: '100%','padding': '0.6rem 0', 'background-color': 'transparent'}">
+          <div class="chooseThemes">
+            <p>发起约会</p>
+            <div>
+              <div @click.stop="chooseThemes(2)">
+                <div>
+                  <img src="../../images/love/putong.png">
+                </div>
+                <p>约会</p>
+                <p>说明：{{appointment}}</p>
+              </div>
+              <div @click.stop="chooseThemes(1)">
+                <div>
+                  <img src="../../images/love/yuanfen.png">
+                </div>
+                <p>二次元约会</p>
+                <p>说明：{{twice_appoint}}</p>
+              </div>
+            </div>
+          </div>
+          <div class="arrow"></div>
+        </x-dialog>
+      </div>
+      <div class="publishButton" v-if="!$route.query.nearbydate&&!showPhotoStatus&&!showPopover&&active!=3"  @click.stop="showChooseThemes=!showChooseThemes"><i class="iconfont" :class="showChooseThemes?'rotate':''" >&#xe61f;</i></div>
+      <div class="publishButton" v-if="active==3&&!$store.state.isBrowser&&$store.state.userInfo.identity==1"  @click.stop="linkTo('publishBlindDate')"><i class="iconfont" >&#xe61f;</i></div>
+    </div>
+    <!--<transition enter-active-class="slideInUp" leave-active-class="slideOutDown">
+      <setSort v-show="showPopover" @close="closePopover" @makesure="makesure"></setSort>
+    </transition>-->
+	<transition enter-active-class="slideInUp" leave-active-class="slideOutDown">
+      <setSort v-show="showPopover" @shPlacePicker="placePicker" @shStartDate="shStartDate" @shEndDate="shEndDate" :showStartDate="showStartDate" :showEndDate="showEndDate" :placePicker="showPlacePicker" @close="closePopover" @makesure="makesure" :keytype="{sex:true,place:true,date:true,auth:true,edu:true,height:true,age:true}"></setSort>
+    </transition>
+  </div>
+
+</template>
+<script>
+import Back from '@other/back.vue';
+import Routerlink from '../routerlink.vue';
+import { TransferDom, Popup,XDialog,Previewer} from 'vux';
+import setSort from './setSort'
+import Loading from '@other/loading.vue';
+import Scroll from '@/components/betterscroll/scroll/scroll.vue'
+import routerBack from '@/plus/routerBack.js';
+import registrationActivity from '../blindDate/registrationActivity';
+	routerBack.init("love",{
+		showPhotoStatus:null,
+		showChooseThemes:null,
+		showStartDate:null,
+		showEndDate:null,
+		showPlacePicker:null,
+		showPopover:null,
+		showShare:null,	
+	});
+export default {
+	name: 'love',
+	mixins:[routerBack],
+	data () {
+		return {
+      showCommentIndex:0,
+      myactivity:false,
+
+			showStartDate:false,
+			showEndDate:false,
+			showPlacePicker:false,
+		  active:1,
+		  isloading:false,
+		  indexListFixed:false,
+		  title:"约会",
+		  menuFixed:false,
+		  showChooseThemes:false,
+		  pullDownRefresh: true,
+		  pullDownRefreshThreshold: 60,
+		  pullDownRefreshStop: 40,
+		  pullUpLoad: true,
+		  pullUpLoadThreshold: 0,
+		  ifinit:false,
+		  myScrollerHeight:0,
+		  scrollwidth:0,
+		  parentwidth:0,
+		  activity:{1:'旅行',2:'吃饭',3:'电影',4:'唱歌',5:'运动',99:'其他' },
+		  listArr:[],
+		  datingThemes: '',
+		  activityMethod:null,
+		  showPopover:false,
+		  showShare:false,
+		  //分页参数
+		  page:1,
+		  rows:20,
+		  searchResult:{
+			authentication:{}
+		  },
+		  twice_appoint:"",
+		  appointment:"",
+		   showPhotoStatus: false,
+		  options: {
+			  fullscreenEl: false,
+			  getThumbBoundsFn: () => {
+				let thumbnail = this._previewer.target
+				let pageYScroll = window.pageYOffset || document.documentElement.scrollTop
+				let rect = thumbnail.getBoundingClientRect()
+				return {x: rect.left, y: rect.top + pageYScroll, w: rect.width}
+			  }
+			},
+		}
+	},
+  directives: {
+    TransferDom
+  },
+  components: {
+    Routerlink,
+    Loading,
+    Scroll,
+    Popup,
+    XDialog,
+    setSort,
+	Back,
+	Previewer,
+    registrationActivity
+  },
+  computed: {
+    underlineLeft: function () {
+      if(this.active==1){
+        return  '0px'
+      }else if(this.active==2){
+        return (2.4)*parseFloat(document.documentElement.style.fontSize) + 'px'
+      }else{
+        return ((this.active - 1) * (2.4))*parseFloat(document.documentElement.style.fontSize) + 'px'
+      }
+    },
+	  yuan:function(){
+	    return function(index){
+	      return ['选缘','抢缘','竞缘','中缘','配缘'][index-1]
+      }
+    },
+	  showList:function(){
+		const t=this;
+	    return this.listArr.map(v=>{
+			let item=t.$utils.deepCopy(v);
+			if(item.showPic){
+				let showPic = item.showPic.split(",").filter((va,i)=>{
+						return va!='';
+					});
+				item.showImg=showPic;
+			}
+			return item
+		})
+    },
+    pullDownRefreshObj: function () {
+      return this.pullDownRefresh ? {
+        threshold: parseInt(this.pullDownRefreshThreshold),
+        stop: parseInt(this.pullDownRefreshStop)
+      } : false
+    },
+    pullUpLoadObj: function () {
+      return this.pullUpLoad ? {
+        threshold: parseInt(this.pullUpLoadThreshold)
+      } : false
+    },
+  },
+	watch:{
+		showPhotoStatus(val){
+			const t=this;
+			if(!val&&t.showImgID){
+				;((t.$refs)[t.showImgID])[0].close();
+				t.showImgID=null;
+			}
+			let status=val||t.showChooseThemes||t.showPopover||t.showShare;
+			t.$store.commit("CHANGEHANDLEROUTE", status);
+		}
+	},
+	async mounted () {
+		const t=this;
+		$("body").addClass("gray");
+		this.myScrollerHeight = document.body.clientHeight-$(".jy_new_love_t").height()-$(".menu").height()-$(".header").height()-1-(0.2)*parseInt(document.documentElement.style.fontSize);
+		if(window.api){
+		  this.myScrollerHeight = document.body.clientHeight-$(".jy_new_love_t").height()-$(".menu").height()-$(".header").height()-1-(0.95)*parseInt(document.documentElement.style.fontSize);
+		}
+		console.log(this.$store.state.publishActivity)
+		this.active = this.$store.state.publishActivity.active
+    this.isRefresh = this.$store.state.publishActivity.isRefresh;
+    this.getList('',null,this.$store.state.publishActivity.isRefresh)
+    this.$store.commit("UPDATAPUBLISHACTIVITY",{
+      isRefresh:false,
+      active:1,
+    })
+		this.$nextTick(function () {
+		  this.ifinit = true;
+		});
+		try{
+			let result = await t.$server.apiDict({type:"appointment_desc"});
+			console.log(result.data.data)
+			for(let i=result.data.data.length;i--;){
+				t.$set(t,result.data.data[i].value,result.data.data[i].remarks);
+			}
+		}catch(e){
+			console.log(JSON.stringify(e));
+		}
+	},
+	destroyed () {
+		$("body").removeClass("gray");
+	},
+	methods:{
+    windowClick() {
+      this.showCommentIndex = 0
+    },
+    async setFabulous(id,isLike){
+      await this.$server.pointLike({
+        datingId:id
+      })
+      let arr = this.$utils.deepCopy(this.listArr);
+      arr.map(v=>{
+        if(v.id==id){
+          v.isLike = isLike==0?1:0
+        }
+      })
+      this.listArr=arr;
+    },
+    async setGuanzhu(id,isFollow){
+      if(isFollow==1){
+        await this.$server.unfollowActivity(id);
+      }else{
+        await this.$server.followActivity(id);
+      }
+      let arr = this.$utils.deepCopy(this.listArr);
+      arr.map(v=>{
+        if(v.id==id){
+          v.isFollow = isFollow==0?1:0
+        }
+      })
+      this.listArr=arr;
+    },
+    beforeEnter(id) {
+      $((this.$refs)[id]).addClass('hidden')
+    },
+    afterEnter(id) {
+      $((this.$refs)[id]).removeClass('hidden')
+    },
+    showMyactivity(){
+      this.myactivity=!this.myactivity;
+    },
+    showPopoverm(){
+      if(this.active!=3){
+        this.showPopover=!this.showPopover
+      }else{
+        this.$refs.registration.showFilterm();
+      }
+    },
+    linkTo(link, act) {
+      let query = null;
+      if (act) {
+        query = {
+          act: act
+        }
+      }
+      this.$router.push({
+        path: link,
+        query: query
+      })
+    },
+		placePicker(val){
+			this.showPlacePicker=val;
+		},
+		shStartDate(val){
+			this.showStartDate=val;
+		},
+		shEndDate(val){
+			this.showEndDate=val;
+		},
+		showImage(index, id, e) {
+			let pid = 'previewer' + id
+			this._previewer = e;
+			this.showPhotoStatus=true;
+			this.showImgID=pid;
+			;((this.$refs)[pid])[0].show(index)
+		},
+		getImage(imageArr) {
+			return imageArr.map((item) => {
+				return {
+					src: this.getFullPath(item)
+				}
+			})
+		},
+		closeImg(){
+			this.showPhotoStatus=false;
+		},
+		formatDate(date){
+			if(date){
+				let endDate=date.split(" ")[0];
+				if(endDate){
+					let endTime=new Date(endDate.replace(/\-/g, "/")).getTime();
+					let nowTime=new Date(new Date().setHours(0, 0, 0, 0)).getTime();//今天凌晨
+					let dis=(endTime-nowTime)/(24*60*60*1000);
+					if(dis==0){
+						return "今天 "+date.split(" ")[1]
+					}else if(dis==1){
+						return "明天 "+date.split(" ")[1]
+					}
+				}
+			}
+			return date;
+		},
+    myscroll(pos) {
+      const newVal = pos.y;
+      if (!this.beforeIndexListFixedHeight) {
+        this.beforeIndexListFixedHeight = $(".yuan").height()+0.4*parseInt(document.documentElement.style.fontSize);
+      }
+      if (newVal > -this.beforeIndexListFixedHeight) {
+        if(this.indexListFixed){
+          $(".yuan").css("display","");
+          this.menuFixed = false;
+        }
+        this.indexListFixed = false
+        return
+      }
+      this.indexListFixed = true
+    },
+    clickShare() {
+      this.showShare = !this.showShare;
+    },
+    changeShow(val){
+      this.showShare=val;
+    },
+    showFilter(){
+      this.showPopover = !this.showPopover;
+    },
+    closePopover(){
+      this.showPopover = false;
+    },
+    makesure(result){
+      this.searchResult = result;
+      this.getList(this.datingThemes,null,true,null,null,null,null,null,null);
+      this.showPopover = false;
+    },
+    chooseThemes(index){
+      if(index==1){
+        this.$router.push({
+          path: '/publishAppointment',
+        })
+      }else{
+        this.$router.push({
+          path: '/publishDate',
+        })
+      }
+      return false;
+      let path = '/publish/main'
+      if(index==1){//旅行
+        path = '/travel/main'
+      }else if(index==2||index==4){
+
+      }else if(index==5||index==99){
+        path = '/other/main'
+      }else if(index==3){
+        path = '/movie/main'
+      }
+      this.showChooseThemes=false;
+      this.$router.push({
+        path: path,
+        query:{
+          datingThemes:index
+        }
+      })
+    },
+    getFullPath (path) {
+      return this.$utils.getFullPath(path)
+    },
+    async onPullingDown() {
+      // 模拟更新数据
+      console.log('下拉刷新')
+      this.$refs.scroll.openPullUp()
+	  this.isRefresh = true;
+      let totalPage = await this.getList(this.datingThemes,null,true)
+    },
+    async onPullingUp() {
+      // 更新数据
+      console.log('上拉加载')
+      let totalPage = await this.getList(this.datingThemes)
+
+    },
+    refresh(done) {//下拉刷新
+      console.log("刷新 ");
+      setTimeout(()=>{
+        console.log("刷新完成");
+        done();
+      },1000);
+    },
+    infinite(done){
+      console.log("加载 ");
+      setTimeout(()=>{
+        console.log("加载完成");
+        done(true);
+      },1000);
+    },
+    toLoveList(index){
+      console.log(index)
+      this.$router.push({
+        path: "/loveList",
+        query: {
+          listIndex: index
+        }
+      })
+    },
+    toListItem(id){
+      this.$router.push({
+        path: "/act",
+        query: {
+          id: id
+        }
+      })
+    },
+    clickShare() {
+      this.showShare = !this.showShare;
+    },
+    getOrderList(type){
+      this.active=type;
+      if(type!=3){
+        this.datingThemes='';
+        this.activityMethod=null;
+        this.listArr=[];
+        this.getList('',null,true)
+      }else{
+
+      }
+      console.log(type)
+      this.$refs["tab_ref_"+type].style.transition="all 300ms linear";
+      this.$refs["tab_ref_"+type].style.width="4rem";
+      this.$refs["tab_ref_"+type].style.height="4rem";
+      this.$refs["tab_ref_"+type].style.opacity="0";
+      setTimeout(()=>{
+        this.$refs["tab_ref_"+type].style.transition="all 0ms linear";
+        this.$refs["tab_ref_"+type].style.width="0";
+        this.$refs["tab_ref_"+type].style.height="0";
+        this.$refs["tab_ref_"+type].style.opacity="1";
+      },300)
+    },
+    async getList(datingThemes,search,PullingDown,sex,authentication,areaId,datingTime,startDate,endDate,activityMethod){
+      try{
+        const _this = this;
+        if(_this.indexListFixed){
+          $(".yuan").css("display","none");
+          _this.menuFixed = true;
+        }
+        if(_this.datingThemes!=datingThemes){
+          this.page = 1;
+          _this.listArr=[];
+          this.$refs.scroll.openPullUp()
+          console.log("打开上拉加载")
+        }
+        if(typeof(activityMethod) == "undefined"){
+          activityMethod = _this.activityMethod;
+        }
+        if(_this.activityMethod!=activityMethod){
+          this.page = 1;
+          _this.listArr=[];
+          this.$refs.scroll.openPullUp()
+          console.log("打开上拉加载")
+        }
+        if(PullingDown){
+          this.page = 1;
+        }
+        _this.datingThemes = datingThemes;
+        _this.activityMethod = activityMethod;
+		let isRefresh={};
+		  if(_this.isRefresh){
+			isRefresh={isRefresh:true};
+		}
+        let location = await _this.$store.dispatch("getMylocation");
+		  console.log(location)
+        let data = Object.assign({
+          latitude:location.lat==0?null:location.lat,
+          longitude: location.lon==0?null:location.lon,
+          datingThemes:_this.datingThemes,
+          activityMethod:activityMethod,
+          appointmentType:_this.active==1?0:1,
+          sex:_this.searchResult.sex,
+          idStatus:_this.searchResult.authentication.idcard,
+          houseStatus:_this.searchResult.authentication.house,
+          carStatus:_this.searchResult.authentication.car,
+          videoStatus:_this.searchResult.authentication.video,
+          areaId:_this.searchResult.areaId,
+          beginActivityStarttime:_this.searchResult.beginActivityStarttime?_this.searchResult.beginActivityStarttime+" 00:00:00":null,
+          endActivityStarttime:_this.searchResult.endActivityStarttime?_this.searchResult.endActivityStarttime+" 23:59:59":null,
+          page:this.page,
+          rows:this.rows,
+          education:_this.searchResult.education,
+          minHeight:_this.searchResult.minHeight,
+          minAge:_this.searchResult.minAge,
+          maxAge:_this.searchResult.maxAge,
+          filtNotQuali:2,
+		  ...isRefresh
+        },search)
+        if(_this.searchResult.lat!=null){
+          data =  Object.assign({
+            latitude1:_this.searchResult.lat,
+            longitude1: _this.searchResult.lon,
+          },data)
+        }
+        this.$vux.loading.show()
+        let result = await _this.$server.searchDatingList(data);
+        this.page++
+        if(PullingDown){
+          _this.listArr=[];
+        }
+        if(result.data.list){
+          _this.listArr.push(...result.data.list);
+        }
+        this.$vux.loading.hide()
+        this.$refs.scroll.forceUpdate()
+        if(this.page>result.data.totalPage){
+          console.log("关闭上拉加载")
+          this.$refs.scroll.closePullUp()
+        }
+
+        return Promise.resolve(result.data.totalPage)
+      }catch (e) {
+        console.log(e)
+        return Promise.reject("error")
+      }
+    },
+	}
+}
+</script>
+<style scoped lang="scss">
+  @keyframes slideInRight {
+    from {
+      transform: translate3d(100%, 0, 0);
+    }
+    to {
+      transform: translate3d(0, 0, 0);
+    }
+  }
+
+  @keyframes slideOutRight {
+    from {
+      transform: translate3d(0, 0, 0);
+    }
+    to {
+      transform: translate3d(100%, 0, 0);
+    }
+  }
+  .slideInRight {
+    animation-name: slideInRight;
+  }
+
+  .slideOutRight {
+    animation-name: slideOutRight;
+  }
+
+  .slideInRight, .slideOutRight{
+    animation-duration: 0.3s;
+  }
+  .dodiv {
+    p{
+      font-size: 0.4rem;
+      color: #9e9e9e;
+      padding: 0.13rem 0;
+      display: inline-block;
+      span{
+        padding: 0 0.15rem;
+        i{
+          margin-right: 0.1rem;
+        }
+      }
+    }
+    position: relative;
+    span {
+      height: 0.9rem;
+      line-height: 0.9rem;
+    }
+    div {
+      position: absolute;
+      right: 1.2rem;
+      top: 0.2rem;
+      & > span {
+        display: inline-block;
+        background-color: #4c5254;
+        color: #FFF;
+        font-size: 0.36rem;
+        border-radius: 3px;
+        & > span {
+          padding: 0 0.2rem;
+        }
+        i {
+          font-size: 0.36rem;
+        }
+      }
+    }
+    & > span:last-child {
+      position: absolute;
+      right: 0;
+      color: #fff;
+      i {
+        vertical-align: -0.25rem;
+        display: inline-block;
+        width: 1.1rem;
+        height: 0.7rem;
+        line-height: 0.7rem;
+        background-color: #c4c4c4;
+        text-align: center;
+        border-radius: 3px;
+      }
+    }
+  }
+  .hidden {
+    overflow: hidden;
+  }
+  .header{
+    .top{
+      padding: 0.4rem 0.3rem 0.06rem;
+      height: 0.93rem;
+      .tab{
+        position: relative;
+        text-align: left;
+        height: 0.83rem;
+        line-height: 0.83rem;
+        font-size: 0;
+        margin: 0 !important;
+        overflow: visible;
+        span{
+          width: 2.4rem;
+          height: 0.83rem;
+          display: inline-block;
+		      text-align:center;
+          color:#aeaeae;
+          font-size: 0.44rem;
+          &.active{
+            color:#ff3f63;
+            font-size: 0.52rem;
+          }
+        }
+        .tab_index{
+          position:relative;
+          overflow: hidden;
+          i{
+            position: absolute;
+            display: table;
+            width: 0;
+            height: 0;
+            margin: auto;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            top: 0;
+            background-color: #b7b7b7;
+            border-radius: 50%;
+          }
+        }
+        .underline {
+          position: absolute;
+          height: 0.83rem;
+          z-index: 1000;
+          text-align: center;
+          background-color: rgba(0, 0, 0, 0);
+          transition: 0.2s all linear;
+          &::before {
+            content: "";
+            position: absolute;
+            width: 25%;
+            bottom: -5px;
+            left: 0.9rem;
+            height: 3px;
+            background-color: #ff3f63;
+            border-radius: 5px;
+            display: inline-block;
+            box-sizing: border-box;
+            /*border-bottom: 3px solid #ff3f63;*/
+          }
+        }
+      }
+    }
+  }
+  .dialog-chooseThemes{
+    .chooseThemes{
+      background-color: #FFF;
+      width: 9.96rem;
+      margin: auto;
+      line-height: 1;
+      overflow: hidden;
+      border-radius: 10px;
+      &>p{
+        position: relative;
+        padding:0.64rem 0;
+        font-size: 0.5rem;
+        .iconfont{
+          position:absolute;
+          right: 5px;
+          top:5px;
+          font-size: 0.6rem;
+        }
+      }
+      &>div{
+        margin: 0 auto 1.2rem;
+        color:#8e8e8e;
+        width: 8.56rem;
+        font-size: 0.36rem;
+        line-height: 1.2;
+        display:flex ;
+        justify-content: space-between;
+        &>div{
+          width: 4.13rem;
+         // height: 5.2rem;
+          background-color: #f2f4fc;
+          div{
+            height: 1.97rem;
+            display: inline-flex;
+            align-items: flex-end;
+            img{
+              width: 1.4rem;
+            }
+          }
+          p{
+            font-size: 0.44rem;
+            font-weight: 500;
+            margin: 0.3rem 0 0.48rem;
+          }
+          p:nth-of-type(2){
+            text-align: left;
+            margin: 0 0.15rem;
+            border-top: 1px solid #e4e5e7;
+            line-height: 1.8;
+			padding:0.2rem 0;
+            font-size: 0.36rem;
+            color:#b5b6ba;
+			table-layout:fixed;word-wrap:break-word;word-break:break-all;
+          }
+        }
+      }
+    }
+    .arrow{
+      position: relative;
+      &:after{
+        content: '';
+        z-index: 1002;
+        position: absolute;
+        top: -0.6rem;
+        right:1.6rem;
+        border-width:0.6rem;
+        border-style:dashed solid dashed dashed;
+        border-color:transparent #FFF transparent transparent;
+      }
+    }
+  }
+  .publishButton{
+    position: fixed;
+    bottom: 2.74rem;
+    right: 0.4rem;
+    width: 1.54rem;
+    height: 1.54rem;
+    z-index: 5001;
+    text-align: center;
+    line-height: 1.54rem;
+    border: 1px solid #FFF;
+    background: linear-gradient(to right, #ff9a63 , #ff5b02); /* 标准的语法 */
+    border-radius: 50%;
+    color: #FFF;
+    transition-duration:0.5s;
+    i{
+      transition-duration:0.5s;
+      transform:rotate(0deg);
+      display: inline-block;
+    }
+    i.rotate{
+      transform:rotate(45deg);
+    }
+    &.active{
+      /*bottom: 1.4rem;*/
+    }
+  }
+</style>

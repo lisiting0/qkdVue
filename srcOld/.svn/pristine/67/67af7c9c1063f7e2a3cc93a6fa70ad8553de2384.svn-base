@@ -1,0 +1,340 @@
+<template>
+  <div class="shade" v-show="showFilter" @click="$emit('close')">
+    <div>
+      <transition enter-active-class="slideInDown" leave-active-class="slideOutDown">
+        <div class="filterPopover" v-show="showFilter" @click.stop>
+          <div>
+            <p>地区</p>
+            <div>
+              <span @click="selectLocation=''" :class="{active:location==''}">不限</span>
+              <span @click="showPlacePicker" :class="{active:location==1}" style="width: 50%;">{{place===''?'选择地点':place}}</span>
+            </div>
+            <group style="display: none">
+              <popup-picker :data="areaData" :columns="2" @on-hide="onHide" v-model="selectArea" show-name ref="placePicker" :show.sync="shPlacePicker" :popup-style="{zIndex:1000}"></popup-picker>
+            </group>
+          </div>
+          <div>
+            <p>活动时间</p>
+            <div>
+              <span @click="datingTime=''" :class="{active:datingTime==''}">不限</span>
+              <div @click="datingTime=1" :class="{active:datingTime==1}" class="date_range">
+                <span class="startDate" @click="shStartDate=true">{{startDate}}</span><span class="jgf">~</span><span class="endDate" @click="shEndDate=true">{{endDate}}</span>
+              </div>
+              <group style="display: none">
+                <datetime v-model="startDate" :class="{active:datingTime==1}" @on-confirm="onConfirm" :show.sync="shStartDate"></datetime>
+              </group>
+              <group style="display: none">
+                <datetime v-model="endDate" :class="{active:datingTime==1}" @on-confirm="onConfirm" :show.sync="shEndDate"></datetime>
+              </group>
+            </div>
+          </div>
+          <div>
+            <p>类型</p>
+            <div>
+              <span @click="specialTypeVal=''" :class="{active:specialTypeVal==''}">不限</span>
+              <span @click="specialTypeVal=1" :class="{active:specialTypeVal==1}">普通</span>
+              <span @click="specialTypeVal=2" :class="{active:specialTypeVal==2}">大龄</span>
+              <span @click="specialTypeVal=3" :class="{active:specialTypeVal==3}">硕博</span>
+              <span @click="specialTypeVal=4" :class="{active:specialTypeVal==4}">公务员</span>
+              <span @click="specialTypeVal=5" :class="{active:specialTypeVal==5}">白领</span>
+              <span @click="specialTypeVal=6" :class="{active:specialTypeVal==6}">it从业人员</span>
+              <span @click="specialTypeVal=7" :class="{active:specialTypeVal==7}">高精尖人才</span>
+            </div>
+          </div>
+          <!--<div v-if="$store.state.userInfo.identity == 0">-->
+            <!--<p>活动状态</p>-->
+            <!--<div>-->
+              <!--<span @click="state=''" :class="{active:state==''}">不限</span>-->
+              <!--<span @click="state=1" :class="{active:state==1}">已关注</span>-->
+              <!--<span @click="state=2" :class="{active:state==2}">已报名</span>-->
+            <!--</div>-->
+          <!--</div>-->
+          <button @click="filterMakesure">确定</button>
+        </div>
+      </transition>
+    </div>
+  </div>
+</template>
+
+<script>
+  import {PopupPicker, Group, Datetime} from 'vux'
+  export default {
+        name: "activityFilter",
+        props: {
+          showFilter: {
+            type: Boolean,
+            default: false,
+          },
+          location: "",
+          /*selectArea:{
+            type: Array,
+            default:()=>[]
+          },*/
+        },
+        components: {
+          PopupPicker,
+          Group,
+          Datetime,
+        },
+        data() {
+          return {
+            shPlacePicker: false,
+            areaData: [],
+            place: '',
+            selPlace: '',
+            datingTime: "",//1选择""不限
+            shStartDate: false,
+            shEndDate: false,
+            startDate: this.getToday(),
+            endDate: this.getToday(),
+            specialTypeVal: "",
+			selectLocation:'',
+			selectArea:[],
+            // state: "",
+          }
+        },
+        watch: {
+			selectLocation(val) {
+			if(val==''){
+				this.place='';
+				//this.selectArea=[];
+			}
+            this.$emit("changeLocation", val);
+          },
+		  
+          selectArea(val) {
+            if (this.$refs.placePicker) {
+              this.place = this.$refs.placePicker.getNameValues();
+              let placeArr = this.place.split(' ');
+              this.selPlace = placeArr[0] + "·" + placeArr[1]
+            }
+          },
+        },
+        mounted() {
+          this.getLocation();
+        },
+        methods: {
+			async getLocation(){
+			const t=this;
+			let district = await this.$server.getDistrict();
+			let areaData = district.data.data;
+			t.areaData=areaData;
+			try{
+				let loc = await this.$store.dispatch("getMylocation");
+				  if(loc.province || loc.city){
+				  let proId = null;
+				  let cityId = null;
+				  this.placeholder= loc.province.substring(0,2) + '·' + loc.city.substring(0,2);
+				  for (let i = 0; i < areaData.length; i++){
+					if (loc.province.substring(0, 2).indexOf(areaData[i].name)!= -1) {
+					  proId = areaData[i].value;
+					  break;
+					}
+				  }
+				  for (let j = 0; j < areaData.length; j++){
+					if (loc.city.substring(0, 2).indexOf(areaData[j].name)!= -1) {
+					  cityId = areaData[j].value;
+					  break;
+					}
+				  }
+				  this.location = 1;
+				  this.selectArea = [proId,cityId];
+				}
+			}catch(e){
+				console.log(e);
+			}
+		  },
+			onHide(closeType){
+				if(!closeType&&this.place==''){
+					this.selectLocation='';
+				}
+			},
+          async getDistrict() {
+            let listData = await this.$server.getDistrict();
+            this.areaData = listData.data.data;
+          },
+          getToday() {//获取当前月第一天
+            let myDate = new Date();
+            let year = myDate.getFullYear();//获取当前年
+            let yue = myDate.getMonth() + 1;//获取当前月
+            let ri = myDate.getDate();//获取当前日
+            return year + '-' + yue + '-' + ri;
+          },
+          showPlacePicker(){
+            this.selectLocation=1;
+            this.shPlacePicker=!this.shPlacePicker;
+          },
+          onConfirm() {
+            let start = new Date(this.startDate.replace("-", "/").replace("-", "/"));
+            let end = new Date(this.endDate.replace("-", "/").replace("-", "/"));
+            if (end < start) {
+              this.$vux.toast.show({
+                type: "text",
+                text: "开始日期不能大于结束日期",
+                position: "bottom",
+                width: "2rem",
+              })
+              return false;
+            }
+          },
+          close(){
+            this.$emit('close',false)
+          },
+          filterMakesure() {
+            this.$emit('filterMakesure', this.location,this.selectArea,this.selPlace,this.datingTime,this.startDate,this.endDate,this.specialTypeVal)
+          },
+        }
+    }
+</script>
+
+<style scoped lang="scss">
+  @keyframes slideInDown {
+    from {
+      transform: translate3d(0, -100%, 0);
+    }
+    to {
+      transform: translate3d(0, 0, 0);
+    }
+  }
+  @keyframes slideOutDown {
+    from {
+      transform: translate3d(0, 0, 0);
+    }
+    to {
+      transform: translate3d(0, -100%, 0);
+    }
+  }
+  .slideInDown {
+    animation-name: slideInDown;
+  }
+  .slideOutDown {
+    animation-name: slideOutDown;
+  }
+  .slideOutDown, .slideInDown {
+    animation-duration: 0.3s;
+  }
+
+  //浏览器预览的css
+  .jy_isBrowser{
+    .shade {
+      & > div {
+        top: 3.13rem;
+      }
+    }
+  }
+
+  .shade {
+    top: 0;
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    z-index: 100;
+    overflow: hidden;
+    & > div {
+      overflow: hidden;
+      top: 3.88rem;
+      height: 100%;
+      position: relative;
+      background-color: rgba(0, 0, 0, 0.5);
+    }
+  }
+
+  .filterPopover {
+    background-color: #efefef;
+    padding: 0 0.5rem;
+    & > div {
+      color: #908f92;
+      padding: 0.1rem 0;
+      border-bottom: 1px solid #b9b9b9;
+      &:last-of-type {
+        border-bottom: none;
+      }
+      p {
+        height: 1.4rem;
+        line-height: 1.4rem;
+        font-size: 0.36rem;
+        font-weight: 500;
+      }
+      div {
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        &:after {
+          content: "";
+          width: 46%;
+        }
+        span {
+          font-size: 0.34rem;
+          width: 23%;
+          height: 0.76rem;
+          line-height: 0.76rem;
+          text-align: center;
+          margin-bottom: 0.34rem;
+          box-sizing: border-box;
+          &.active {
+            background-color: #fff;
+            border-radius: 5px;
+            border: 1px solid #70c466;
+            color: #70c466;
+          }
+        }
+      }
+    }
+    .date_range{
+      width: 70%;
+      height: 0.76rem;
+      line-height: 0.76rem;
+      text-align: center;
+      &.active{
+        background-color:#fff;
+        border-radius: 5px;
+        border: 1px solid #70c466;
+        color: #70c466 !important;
+      }
+      span{
+        &.jgf{
+          width: 5%;
+        }
+        &.startDate{
+          position: relative;
+          width: 40%;
+          &:after{
+            content: "";
+            width: 0.34rem;
+            height: 0.34rem;
+            background: url("../../images/calendar_icon.png") no-repeat;
+            background-size: 100% 100%;
+            position: absolute;
+            top: 0.18rem;
+            right: -0.1rem;
+          }
+        }
+        &.endDate{
+          position: relative;
+          width: 40%;
+          text-align: left;
+          &:after{
+            content: "";
+            width: 0.34rem;
+            height: 0.34rem;
+            background: url("../../images/calendar_icon.png") no-repeat;
+            background-size: 100% 100%;
+            position: absolute;
+            top: 0.18rem;
+            right: 0.4rem;
+          }
+        }
+      }
+    }
+    button {
+      height: 1.13rem;
+      line-height: 1.13rem;
+      width: 100%;
+      margin-bottom: 0.54rem;
+      border: 1px solid #d4d4d4;
+      color: #70c466;
+      background-color: #fff;
+    }
+  }
+
+</style>

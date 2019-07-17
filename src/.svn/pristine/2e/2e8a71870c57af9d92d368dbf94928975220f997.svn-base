@@ -1,0 +1,1111 @@
+<template>
+  <div class="main" @click="windowClick">
+    <Loading v-if="isloading"></Loading>
+    <div class="header">
+      <div class="top">
+        <Back class="left"><i class="iconfont">&#xe613;</i></Back>
+        <router-link :to="{name:'addSquareMoment'}" class="right"><i class="iconfont">&#xe61f;</i></router-link>
+        {{momentTitle}}
+      </div>
+    </div>
+    <myScroller :style="$store.state.isBrowser?'padding:1.39rem 0 0;':'padding:2.29rem 0 0;'" :infinite="infinite" :refresh="refresh" :loadRefresh="loadRefresh" :loadInfinite="loadInfinite" ref="myScroller" :showbg="showbg">
+      <div class="myscoll">
+        <div class="content">
+          <template v-if="artList">
+            <template v-if="artList.length>0">
+              <div v-for="item,index in artList" class="momentItem">
+                <div
+                  :style="{'background-image':'url('+getFullPath(item.uploadingPerson.headimgAttachmentId)+')'}"></div>
+                <div>
+                  <div>
+                    <p>{{item.uploadingPerson.aliasName}}</p>
+                    <p
+                      v-if="item.feedContent.length>50&&!item.openContent&&item.uploadingPerson.id==$store.state.userInfo.id"
+                      @click.stop="getDetail(index,1)">
+                      {{item.feedContent.substr(0,50)}}...
+                    </p>
+                    <p v-else-if="item.feedContent.length>50&&!item.openContent" @click.stop="getDetail(index)">
+                      {{item.feedContent.substr(0,50)}}...
+                    </p>
+                    <span v-if="item.feedContent.length>50&&!item.openContent" class="show_hide_text"
+                          @click="function(){item.openContent=true;}">展开</span>
+                    <p
+                      v-if="item.feedContent.length<=50&&item.uploadingPerson.id==$store.state.userInfo.id||item.openContent"
+                      @click.stop="getDetail(index,1)">
+                      {{item.feedContent}}
+                    </p>
+                    <p v-else-if="item.feedContent.length<=50||item.openContent" @click.stop="getDetail(index)">
+                      {{item.feedContent}}
+                    </p>
+                    <span v-if="item.feedContent.length<=50||item.openContent" class="show_hide_text"
+                          v-show="item.feedContent.length>50" @click="function(){item.openContent=false;}">收起</span>
+                  </div>
+				  
+				  <div @click="showImage(0,item.id,$event)" v-if="item.feedAttachment&&item.feedAttachment.split(',').length==1" class="one-cls" :class="'previewer-'+item.id">
+                    <div><img :src="getFullPath(item.feedAttachment.split(',')[0])"/></div>
+                  </div>
+                  <div v-else-if="item.feedAttachment" class="img-cls" :class="'previewer-'+item.id">	
+					 <div @click="showImage(imgIndex,item.id,$event)" v-for="imgItem ,imgIndex in item.feedAttachment.split(',')" :style="{'background-image':'url('+getFullPath(imgItem)+')'}">
+                      <i v-if="imgItem.type===1" class="iconfont" :style="{'background-image':'url('+getFullPath(imgItem.src)+')'}"></i>
+                      <img class="filterimg" v-if="imgItem.type===1" :src="imgs.payfor"/>
+                    </div>
+                  </div>
+					<div v-transfer-dom>
+                      <previewer :list="getImage(item.feedAttachment.split(','))" :ref="'previewer'+item.id" :options="options" @on-close="closeImg()"></previewer>
+                    </div>
+                  <!--<p v-if="item.longitude">{{item.longitude}}</p>-->
+                  <div class="publish-cls">
+                    <span>{{getMessageTimeFromNow(item.createDate)}}</span>
+                    <div :ref="item.id">
+                      <transition v-on:before-enter="beforeEnter(item.id,1)" v-on:before-leave="beforeEnter(item.id,1)"
+                                  v-on:after-enter="afterEnter(item.id,1)" v-on:after-leave="afterEnter(item.id,1)"
+                                  enter-active-class="slideInRight" leave-active-class="slideOutRight">
+                          <span v-show="showCommentIndex==item.id">
+                            <span>
+                              <transition enter-active-class="slideInUp" leave-active-class="slideOutUp">
+                                <span v-show="showPraiseIndex==item.id"><i @click="setFabulous(index,0)">公开</i><i
+                                  @click="setFabulous(index,1)">私密</i></span>
+                              </transition>
+                            </span>
+                             <span v-if="item.isFabulous==1" @click.stop="deleteFabulous(index)"><i class="iconfont">&#xe619;</i> 取消</span>
+                             <span v-else
+                                   @click.stop="showPraiseIndex==item.id?showPraiseIndex=0:showPraiseIndex=item.id"><i
+                               class="iconfont">&#xe619;</i> 赞</span>
+                            <!--<span><i class="iconfont">&#xe629;</i> 打赏</span>-->
+                              <span @click.stop="showComment(item.id,'',index)"><i
+                                class="iconfont">&#xe618;</i> 评论</span>
+                          </span>
+                      </transition>
+                    </div>
+                    <span @click.stop="showCommentIndex==item.id?showCommentIndex=0:showCommentIndex=item.id"><i
+                      class="iconfont">&#xe650;</i></span>
+                  </div>
+                  <div class="praiseAndComment">
+                    <div class="jy_m_fabulous" v-if="item.fabulous&&item.fabulous.length>0">
+                      <i class="iconfont">&#xe619;</i>
+                      <span :key="praiseItem.id" v-for="praiseItem ,praiseIndex in item.fabulous">{{praiseIndex==0?praiseItem.user.aliasName:','+praiseItem.user.aliasName}}</span>
+                    </div>
+                    <div class="jy_m_comment" :class={cur:item.showMore} v-if="item.comments&&item.comments.length>0">
+                      <div v-for="commentItem,commentIndex in item.comments" :key="commentItem.id"
+                           @click.stop="showComment(item.id,commentItem,index)">
+                        <i>{{commentItem.user.aliasName}}</i>
+                        <span>:{{commentItem.content}}</span>
+                        <replayComments @showComment="showComment" v-if="commentItem.comments" :comment="commentItem"
+                                        :parentId="item.id" :parentIndex="index"></replayComments>
+                      </div>
+                    </div>
+                    <p class="showmore" v-if="item.comments&&item.commentLegth>5" @click.stop="showMore(index)">
+                      {{item.showMore?'收起':'展开('+item.commentLegth+')'}}</p>
+                  </div>
+
+                </div>
+              </div>
+
+            </template>
+            <template v-else>
+              <div class="no-data">暂无数据</div>
+            </template>
+          </template>
+        </div>
+      </div>
+    </myScroller>
+    <div v-show="showTextarea" class="commentAdd" @click.stop>
+      <textarea :ref="'textarea'" v-model="commentObj.comment" :placeholder="commentObj.replay?'回复'+commentObj.replay.user.aliasName:'请输入...'" :style="{height:textareaheight+'px'}"/>
+      <div @click.stop="sendComment()">发送</div>
+    </div>
+    <div v-transfer-dom>
+      <popup v-model="showSel" position="bottom" :popup-style="{zIndex:596}" :should-scroll-top-on-show="true">
+        <div class="jy_bond_block">
+          <p class="jy_qb_tit">查看权限</p>
+          <ul class="jy_qb_pay_list">
+            <li v-for="item,index in viewRole" :class="index==viewIndex?'cur':''" @click="viewIndex=index">{{item}}</li>
+          </ul>
+          <p class="jy_auth_btn" @click="showSel=false">确定</p>
+        </div>
+      </popup>
+    </div>
+    <div v-transfer-dom>
+      <popup v-model="showWin" height="100%" :hide-on-blur=false position="bottom" :popup-style="{zIndex:601}" :should-scroll-top-on-show="true">
+        <div class="top_userInfo" v-if="showInfo">
+          <commentDetail @openWin="openWin" :isMy="isMy" :dynamicDes="dynamicDes" @hiddenInfo="hiddenInfo" @editInfo="editInfo" @toggleImgWin="toggleImgWin" ref="commentDetail"></commentDetail>
+        </div>
+      </popup>
+    </div>
+  </div>
+</template>
+<script>
+  import Loading from '@other/loading.vue';
+  import Back from '@other/back.vue';
+  import myScroller from '@other/myScroller.vue';
+  import {TransferDom, Popup,Previewer} from 'vux'
+  import selectPhoto from '../../plugs/selectPhoto'
+  import replayComments from './replayComments';
+  import commentDetail from '../../user/commentDetail.vue';
+	import routerBack from '@/plus/routerBack.js';
+	routerBack.init("squareMoments",{
+		showPhotoStatus:{
+			fn:"hiddenshowPhotoStatus",
+			change:'showPhotoStatusChange',
+		},
+		showWin:{
+			fn:"hiddenInfo",
+		},
+		
+	})
+  let fontsize = parseInt(document.documentElement.style.fontSize)
+  export default {
+    name: 'squareMoments',
+	mixins:[routerBack],
+    directives: {
+      TransferDom
+    },
+    components: {
+      Loading,
+      myScroller,
+      Back,
+      selectPhoto,
+      Popup,
+      replayComments,
+      commentDetail,
+	  Previewer,
+    },
+    data() {
+      return {
+        isloading: false,
+        momentTitle: '乾坤动态',
+        pagerouter: 'main',
+        textareaheight: 0,
+        showPraiseIndex: 0,
+        showCommentIndex: 0,
+        showTextarea: 0,
+        viewRole: ["公开", "私密", "好友"],
+        viewIndex: 0,
+        commentObj: {
+          momentId: null,
+          replay: null,
+          userId: null,
+          comment: null,
+          index: null,
+        },
+        who: "all",
+        showSel: false,
+        feedMaxImg: 6,//发布最大图片数量
+        feedContent: '',//发布内容
+        feedImg: [],//发布图片
+        artList: null,
+        //分页参数
+        pageNo: 1,
+        isRead: false,
+        isEnd: false,
+        loadRefresh: true,//下拉刷新
+        loadInfinite: true, //上拉加载
+        showPhotoStatus: false,
+        showInfo: false,
+        showWin: false,
+        showImg: null,
+		options: {
+          fullscreenEl: false,
+          getThumbBoundsFn: () => {
+            let thumbnail = this._previewer.target
+            let pageYScroll = window.pageYOffset || document.documentElement.scrollTop
+            let rect = thumbnail.getBoundingClientRect()
+            return {x: rect.left, y: rect.top + pageYScroll, w: rect.width}
+          }
+        },
+		showbg:true,
+      }
+    },
+    computed: {
+      
+    },
+    beforeRouteUpdate(to, from, next) {
+      next()
+      this.pagerouter = to.params.pagerouter
+    },
+    created() {
+
+    },
+    destroyed() {
+    },
+    mounted() {
+      // this.getData();
+      this.$nextTick(function () {
+        this.ifinit = true
+      })
+    },
+    watch: {
+      isEnd(val) {
+        const t = this;
+        if (val) {
+          t.$refs.myScroller.finishInfinite(true);
+        } else {
+          t.$refs.myScroller.finishInfinite(false);
+        }
+      },
+    },
+    methods: {
+		hiddenshowPhotoStatus(){
+			const t=this;
+			if(t.showImgID&&t.showWin){
+				t.$refs["commentDetail"].colseWin(t.showImgID);
+			}
+			t.showPhotoStatus=false;
+		},
+		showPhotoStatusChange(val){
+			const t=this;
+			if(!val&&t.showImgID){
+				if(!t.showWin){
+					((this.$refs)[t.showImgID])[0].close();
+				}
+				t.showImgID=null;
+			}
+		},
+      getDetail(index, isMy) {
+        const t = this;
+        t.index = index;
+        t.isMy = isMy;
+        t.dynamicDes = t.artList[index];
+        t.showInfo = true;
+      },
+      openWin() {
+        this.showWin = true;
+      },
+      toggleImgWin(val) {
+		if(val){
+			this.showPhotoStatus=true;
+			this.showImgID = val;
+		}else{
+			this.closeImg();
+		}	
+      },
+      editInfo(val) {
+        const t = this;
+        if (val) {//编辑
+          //t.artList[t.index]=val;
+          t.$set(t.artList, t.index, val);
+        } else {//删除
+          t.artList.splice(t.index, 1);
+          t.showWin = false;
+          setTimeout(() => {
+            t.showInfo = false;
+          }, 800)
+        }
+      },
+      hiddenInfo() {
+        const t = this;
+        t.showWin = false;
+        setTimeout(() => {
+          t.showInfo = false;
+        }, 800)
+      },
+	   closeImg(){
+		this.showPhotoStatus=false;
+	  },
+	  showImage(index, id, e) {
+        let pid = 'previewer' + id
+        this._previewer = e;
+		this.showPhotoStatus=true;
+		this.showImgID=pid;
+        ((this.$refs)[pid])[0].show(index)
+      },
+      showMore(index) {
+        const t = this;
+        t.$set(t.artList[index], "showMore", !t.artList[index]["showMore"]);
+      },
+      /*changeHeight( e) {
+
+        let arr2 = this.commentObj.comment.match(/\r|\n/g)
+
+        let pid = 'textarea';
+        let obj = (this.$refs)[pid][0]
+        if (obj.scrollHeight > obj.clientHeight) {
+          this.textareaheight = obj.scrollHeight
+
+        }
+      },*/
+      showComment(momentId, replay, index) {
+        this.showPraiseIndex = 0
+        this.showCommentIndex = 0
+        // console.log(momentId,replay)
+        let obj = {
+          momentId: null,
+          replay: null,
+          userId: null,
+          comment: null,
+          index: null,
+        }
+        obj.momentId = momentId
+        obj.replay = replay ? replay : null;
+        obj.index = index;
+        this.textareaheight = 1.5 * fontsize
+        this.commentObj = obj
+        this.showTextarea = momentId;
+        let pid = 'textarea';
+        this.$nextTick(function () {
+          $((this.$refs)[pid]).focus()
+
+        })
+      },
+      windowClick() {
+        this.showPraiseIndex = 0
+        this.showCommentIndex = 0
+        if (this.showTextarea != 0) {
+          this.showTextarea = 0
+
+        }
+      },
+      getImage(imageArr) {
+        return imageArr.map((item) => {
+          return {
+            src: this.getFullPath(item)
+          }
+        })
+      },
+
+      beforeEnter(id) {
+        $((this.$refs)[id]).addClass('hidden')
+      },
+      afterEnter(id) {
+        $((this.$refs)[id]).removeClass('hidden')
+      },
+      getMessageTimeFromNow(datetime) {
+        return this.$utils.getMessageTimeFromNow(datetime, new Date(), this.now)
+      },
+      getImgHeight(width, height) {
+        let base = fontsize * 5
+        if (width > height) {
+          if (width < base) {
+            return height
+          } else {
+            return base * height / width
+          }
+        } else {
+          return height
+        }
+      },
+      linkTo(link, id) {
+        let query = null
+        if (link === '/toplineDetail') {
+          query = {
+            id: id
+          }
+        }
+        this.$router.push({
+          path: link,
+          query: query
+        })
+      },
+      linkToDetail(link, id, isMy) {
+        let query = {}
+        if (id) {
+          query = {
+            id: id,
+            isMy: isMy,
+          }
+        }
+        this.$router.push({
+          path: link,
+          query
+        })
+      },
+      getFullPath(path) {
+        return this.$utils.getFullPath(path)
+      },
+      async getData(flag) {
+        const t = this
+        if (t.isRead) {
+          return false;
+        }
+        t.isRead = true;
+        if (t.isRefresh || flag) {
+          t.pageNo = 1;
+          if (flag) {
+            t.isloading = true;
+          }
+        }
+        try {
+          //if (!t.isRefresh) {
+          // t.isloading = true;
+          // }
+          let result = null;
+          if (t.$route.query.type == 'personal') {
+            result = await t.$server.getList({
+              userId: t.$route.query.id,
+              page: t.pageNo,
+              rows: t.$store.state.pageSize
+            });
+          } else {
+			let location = await t.$store.dispatch("getMylocation");
+			let pos={};
+			if(location.lat){
+				pos={
+					longitude:location.lon,
+					latitude:location.lat
+				}
+			}
+            result = await t.$server.feedNearby({
+			...pos,
+              page: t.pageNo,
+              rows: t.$store.state.pageSize
+            });
+          }
+          if (!t.artList || t.isRefresh || flag) {
+            t.$refs.myScroller.scrollTo(1);
+            t.artList = [];
+          }
+          if (result.data.list) {
+			t.showbg=false;
+            let artList = result.data.list;
+            for (let i = artList.length; i--;) {//递归统计评论数量
+              artList[i].commentLegth = 0;
+              if (artList[i].comments) {
+                (function getCount(comments, index) {
+                  for (let i = comments.length; i--;) {
+                    if (comments[i].comments) {
+                      getCount(comments[i].comments, index);
+                    }
+                  }
+                  artList[index].commentLegth += comments.length;
+                }(artList[i].comments, i));
+              }
+            }
+            t.artList.push(...result.data.list);
+          }
+          if (result.data.count <= t.$store.state.pageSize * t.pageNo || result.data.list.length < t.$store.state.pageSize) {//判断是否最后一页
+            t.isEnd = true;
+          } else {
+            t.isEnd = false;
+            t.$refs.myScroller.finishInfinite(false);
+          }
+        } catch (e) {
+			t.isEnd = true;
+        }
+        t.isRead = false;
+        t.isloading = false;
+        t.isRefresh = false;
+        t.pageNo++;
+      },
+      infinite(done) {//上拉加载(防止初始内容不满一屏会无限加载)
+        const t = this;
+        if (t.isEnd) {
+          done(true);
+          return false;
+        }
+        console.log("加载");
+        t.getData().then(() => {
+          if (t.isEnd) {
+            done(true);
+          } else {
+            done();
+          }
+        });
+      },
+      refresh(done) {//下拉刷新
+        const t = this;
+        console.log("刷新");
+        t.isRefresh = true;
+        t.getData().then((res) => {
+          done();
+        });
+      },
+      async deleteFabulous(index) {
+        const t = this;
+        t.showCommentIndex = 0;
+        try {
+          let fabulous = t.artList[index].fabulous.filter(item => {
+            return item.user.id == t.$store.state.userInfo.id;
+          });
+          const result = await t.$server.delFabulous(fabulous[0].id);
+
+         /* t.$vux.toast.show({
+            type: "text",
+            text: result.data.message,
+            position: "bottom",
+            width: "auto",
+          });*/
+          let obj = t.$utils.deepCopy(t.artList[index]);
+          fabulous = obj.fabulous.filter(item => {
+            return item.user.id != t.$store.state.userInfo.id;
+          });
+
+          obj.fabulous = fabulous;
+          obj.isFabulous = 0;
+          t.$set(t.artList, index, obj)
+        } catch (e) {
+          console.log(JSON.stringify(e))
+        }
+      },
+      async sendComment() {
+        const t = this;
+        const index = t.commentObj.index;
+        console.log("评论:" + t.commentObj.comment)
+        try {
+          const result = await t.$server.postComment({
+            businessType: t.commentObj.replay ? 9 : 3,
+            objectId: t.commentObj.replay ? t.commentObj.replay.id : t.commentObj.momentId,
+            content: t.commentObj.comment
+          })
+          t.showTextarea = 0;
+          t.$vux.toast.show({
+            type: "text",
+            text: "评论成功",
+            position: "bottom",
+            width: "auto",
+          });
+          if (!result.data.data.user.aliasName) {
+            result.data.data.user.aliasName = t.$store.state.userInfo.aliasName;
+          }
+          let obj = t.$utils.deepCopy(t.artList[index]);
+          if (t.commentObj.replay) {//回复中的回复
+            ;(function getComment(comment) {
+              let re = null;
+              for (let i = comment.length; i--;) {
+                if (comment[i].id == t.commentObj.replay.id) {
+                  re = comment[i];
+                  if (!comment[i].comments) {
+                    comment[i].comments = [];
+                  }
+                  comment[i].comments.push(result.data.data);
+                  break;
+                }
+                if (comment[i].comments && !re) {
+                  getComment(comment[i].comments)
+                }
+              }
+            }(obj.comments))
+          } else {//第一层回复
+            if (!obj.comments) {
+              obj.comments = [];
+            }
+            obj.comments.push(result.data.data);
+          }
+          obj.commentLegth = 0;
+          if (obj.comments) {
+            (function getCount(comments) {
+              for (let i = comments.length; i--;) {
+                if (comments[i].comments) {
+                  getCount(comments[i].comments);
+                }
+              }
+              obj.commentLegth += comments.length;
+            }(obj.comments));
+          }
+          t.$set(t.artList, index, obj)
+        } catch (e) {
+          console.log(e);
+        }
+      },
+      async setFabulous(index, flag) {//点赞
+        const t = this;
+        let result;
+        try {
+          if (flag == 0) {
+            result = await t.$server.fabulousPublic({
+              commentId: t.artList[index].id
+            })
+          } else {
+            result = await t.$server.fabulousPrivate({
+              commentId: t.artList[index].id
+            })
+          }
+          //console.log(JSON.stringify(result));
+          /*t.$vux.toast.show({
+            type: "text",
+            text: "点赞成功",
+            position: "bottom",
+            width: "auto",
+          });*/
+          let obj = t.$utils.deepCopy(t.artList[index]);
+          if (!obj.fabulous) {
+            obj.fabulous = [];
+          }
+          if (!result.data.data.user.aliasName) {
+            result.data.data.user.aliasName = t.$store.state.userInfo.aliasName;
+          }
+          obj.fabulous.push(result.data.data);
+          obj.isFabulous = 1;
+          t.$set(t.artList, index, obj)
+        } catch (e) {
+
+        }
+      },
+     /* async fileBack(obj) {
+        const t = this
+        t.file = obj.file//提交的图片
+        if (t.file) {
+          for (let i = t.file.length; i--;) {
+            let param = new FormData() //创建form对象
+            param.append('file', t.file[i], t.file[i].name) //单个图片 ，多个用循环 append 添加
+            try {
+              const result = await t.$server.uploadPic(param);
+              console.log(JSON.stringify(result.data));
+              t.feedImg.push(result.data.data.path);
+            } catch (e) {
+
+            }
+          }
+
+        } else {
+          t.$vux.toast.show({
+            type: "text",
+            text: "图片出错",
+            position: "bottom",
+            width: "2rem",
+          });
+        }
+      },*/
+
+    }
+  }
+</script>
+<style scoped lang="scss">
+  body > div:first-child {
+    height: 100%;
+  }
+
+  @keyframes slideInRight {
+    from {
+      transform: translate3d(100%, 0, 0);
+    }
+    to {
+      transform: translate3d(0, 0, 0);
+    }
+  }
+
+  @keyframes slideOutRight {
+    from {
+      transform: translate3d(0, 0, 0);
+    }
+    to {
+      transform: translate3d(100%, 0, 0);
+    }
+  }
+
+  @keyframes slideInUp {
+    from {
+      transform: translate3d(0, 100%, 0);
+    }
+    to {
+      transform: translate3d(0, 0, 0);
+    }
+  }
+
+  @keyframes slideOutUp {
+    from {
+      transform: translate3d(0, 0, 0);
+    }
+    to {
+      transform: translate3d(0, 100%, 0);
+    }
+  }
+
+  .showmore {
+    background-color: #f2f2f2;
+    padding: 0.1rem;
+    text-align: center;
+    border-top: 1px dashed #ccc;
+  }
+
+  .slideInUp {
+    animation-name: slideInUp;
+  }
+
+  .slideOutUp {
+    animation-name: slideOutUp;
+  }
+
+  .slideInRight {
+    animation-name: slideInRight;
+  }
+
+  .slideOutRight {
+    animation-name: slideOutRight;
+  }
+
+  .slideInRight, .slideOutRight, .slideOutUp, .slideInUp {
+    animation-duration: 0.3s;
+  }
+
+  .hidden {
+    overflow: hidden;
+  }
+
+  .main {
+    padding-bottom: 0;
+    &:before {
+      background-color: #3a3845;
+    }
+    .header {
+      position: fixed;
+      width: 100%;
+      z-index: 10;
+      .top {
+        background-color: #3a3845;
+        color: #FFF;
+        font-size: 0.6rem;
+        position: relative;
+        i {
+          font-size: 0.52rem;
+        }
+        a {
+          position: absolute;
+          padding: 3px;
+        }
+        .left {
+          left: 0.325rem;
+        }
+        .right {
+          right: 0.325rem;
+          color: #fff;
+        }
+      }
+    }
+    .myscoll {
+      // margin-top: 1.39rem;
+      .content {
+        background-color: #f2f2f2;
+        padding-top: 0.2rem;
+        .momentItem {
+          background-color: #fff;
+          padding: 0.42rem 0.35rem;
+          border-bottom: 1px solid #f2f2f2;
+          display: flex;
+          justify-content: space-between;
+          & > div:first-child {
+            width: 1.2rem;
+            height: 1.2rem;
+            background-size: cover;
+            background-position: center;
+            background-color: #999;
+          }
+          & > div:last-child {
+            width: 8.6rem;
+            & > div:first-child {
+              p {
+                font-size: 0.44rem;
+                min-height: 1rem;
+                &.allShow {
+                  display: block;
+                }
+                &.unAllShow {
+                  display: -webkit-box;
+                  -webkit-line-clamp: 3;
+                  -webkit-box-orient: vertical;
+                  overflow: hidden;
+                }
+              }
+              p:first-child {
+                height: 0.7rem;
+                line-height: 0.6rem;
+                overflow: hidden;
+                text-overflow: ellipsis; //文本溢出显示省略号
+                white-space: nowrap; //文本不会换行（单行文本溢出）
+                font-size: 0.46rem;
+                color: #667592;
+                font-weight: 500;
+              }
+              p:last-child {
+                span {
+                  display: block;
+                  color: #667592;
+                }
+              }
+            }
+            .one-cls {
+              margin: 0.3rem 0 0.1rem;
+              width: 7.5rem;
+              div {
+                font-size: 0;
+                display: inline-block;
+                position: relative;
+                overflow: hidden;
+                i {
+                  position: absolute;
+                  line-height: 1;
+                  width: 100%;
+                  height: 100%;
+                  top: 0;
+                  right: 0;
+                  text-align: right;
+                  background-size: cover;
+                  background-position: center;
+                  filter: blur(5px);
+                }
+                img.filterimg {
+                  position: absolute;
+                  top: 0;
+                  right: 0;
+                  width: 1.3rem;
+                  height: 1.3rem;
+                  line-height: 1;
+                  background-color: rgba(255, 255, 255, 0);
+                }
+                img:first-child {
+                  max-height: 5rem;
+                  max-width: 5rem;
+                  background-color: #999;
+                }
+              }
+            }
+            .img-cls {
+              margin: 0.3rem 0 0.1rem;
+              display: -webkit-box;
+              display: -ms-flexbox;
+              display: flex;
+              -ms-flex-wrap: wrap;
+              flex-wrap: wrap;
+              width: 7.5rem;
+              div {
+                width: 2.3rem;
+                height: 2.3rem;
+                background-size: cover;
+                background-position: center;
+                background-color: #999;
+                margin: 0 0.1rem 0.2rem 0;
+                overflow: hidden;
+                position: relative;
+                i {
+                  position: absolute;
+                  line-height: 1;
+                  width: 100%;
+                  height: 100%;
+                  top: 0;
+                  right: 0;
+                  text-align: right;
+                  background-size: cover;
+                  background-position: center;
+                  filter: blur(5px);
+                }
+                img.filterimg {
+                  position: absolute;
+                  top: 0;
+                  right: 0;
+                  width: 1.3rem;
+                  height: 1.3rem;
+                  line-height: 1;
+                  background-color: rgba(255, 255, 255, 0);
+                }
+              }
+            }
+            .publish-cls {
+              position: relative;
+              span {
+                height: 0.9rem;
+                line-height: 0.9rem;
+              }
+              div {
+                position: absolute;
+                right: 0.55rem;
+                top: 0;
+                & > span {
+                  display: inline-block;
+                  background-color: #4c5254;
+                  color: #FFF;
+                  font-size: 0.36rem;
+                  border-radius: 3px;
+                  & > span:first-child {
+                    padding: 0 !important;
+                    overflow: hidden;
+                    height: 1.8rem;
+                    top: -2.1rem;
+                    overflow: hidden;
+                    position: absolute;
+                    span {
+                      height: 1.8rem;
+                      background-color: #4c5254;
+                      border-radius: 3px;
+                      display: block;
+                      padding: 0 0.35rem;
+                    }
+                    i {
+                      display: block;
+                      font-size: 0.36rem;
+                    }
+                  }
+                  & > span {
+                    padding: 0 0.35rem;
+                  }
+                  i {
+                    font-size: 0.36rem;
+                  }
+                }
+              }
+              & > span:last-child {
+                position: absolute;
+                right: 0;
+                color: #8b98b2;
+                i {
+                  font-size: 0.45rem;
+                }
+              }
+            }
+            .praiseAndComment {
+              background-color: #f2f2f2;
+              line-height: 0.7rem;
+              .jy_m_fabulous {
+                font-size: 0.4rem;
+                padding: 0.1rem;
+                color: #667592;
+                i {
+                  font-size: 0.4rem;
+                }
+              }
+              .jy_m_comment {
+                font-size: 0.4rem;
+                max-height: 3.45rem;
+                padding: 0.1rem;
+                &.cur {
+                  max-height: inherit;
+                }
+                overflow: hidden;
+                i {
+                  color: #667592;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+    .commentAdd {
+      position: fixed;
+      left: 0;
+      width: 100%;
+      bottom: 0;
+      border-top: 1px solid #ccc;
+      background-color: #fff;
+      padding: 0.2rem;
+      textarea {
+        padding: 0.1rem;
+        -webkit-box-sizing: border-box;
+        box-sizing: border-box;
+        font-size: 0.4rem;
+        background-color: #f2f2f2;
+        resize: none;
+        width: 77.5%;
+        outline: none;
+        border: 0;
+        vertical-align: top;
+      }
+      div {
+        height: 1.5rem;
+        line-height: 1.5rem;
+        display: inline-block;
+        width: 16%;
+        text-align: center;
+        background-color: #f2f2f2;
+        border-radius: 5px;
+      }
+    }
+  }
+
+  .addmoment-cls {
+    position: absolute;
+    width: 100%;
+    top: 0;
+    left: 0;
+    z-index: 499;
+    overflow: hidden;
+    margin: 0 auto;
+    padding-top: 0.75rem;
+    box-sizing: border-box;
+    height: 100%;
+    background-color: #fff;
+    &:before {
+      content: "";
+      position: fixed;
+      display: block;
+      z-index: 99;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 0.75rem;
+      background-size: 100%;
+    }
+    .header {
+      position: fixed;
+      width: 100%;
+      z-index: 10;
+      border-bottom: 1px solid #f2f2f2;
+      background-image: none;
+      .top {
+        color: #FFF;
+        font-size: 0.6rem;
+        position: relative;
+        i {
+          font-size: 0.42rem;
+        }
+        a {
+          position: absolute;
+          padding: 0 3px;
+        }
+        .left {
+          left: 0.325rem;
+          color: #505050;
+        }
+        .right {
+          right: 0.325rem;
+          color: #c0e2c0;
+        }
+      }
+    }
+    .comment {
+      margin: 1.39rem 0.9rem 0;
+      textarea {
+        font-size: 0.48rem;
+        resize: none;
+        width: 100%;
+        outline: none;
+        border: 0;
+        padding: 0.5rem 0 0;
+      }
+      .photo-cls {
+        font-size: 0;
+        span {
+          display: inline-block;
+          width: 2.8rem;
+          height: 2.8rem;
+          line-height: 2.8rem;
+          text-align: center;
+          margin: 0.2rem 0 0 0.28rem;
+        }
+        span:nth-of-type(3n+1) {
+          margin-left: 0;
+        }
+        span.plus {
+          background-color: #f2f2f2;
+          i {
+            font-size: 1rem;
+            color: #c0c0c0;
+          }
+        }
+      }
+      .text-cls {
+        margin-top: 1rem;
+        font-size: 0.48rem;
+        color: #000;
+        font-weight: 500;
+        div {
+          border-bottom: 1px solid #f2f2f2;
+          height: 1.54rem;
+          line-height: 1.54rem;
+          position: relative;
+          span {
+            margin-left: 0.58rem;
+          }
+          span:nth-of-type(2) {
+            position: absolute;
+            right: 0.68rem;
+            color: #9a9a9a;
+          }
+          i:last-child {
+            color: #d7d7db;
+            position: absolute;
+            right: 0;
+          }
+        }
+      }
+    }
+  }
+</style>
+

@@ -1,0 +1,409 @@
+<template>
+  <div class="prizeDraw">
+      <Loading v-if="isloading"></Loading>
+      <div class="prizeDraw-header">
+        <div class="top">
+          <Back class="left"><i class="iconfont">&#xe613;</i></Back>
+          <a class="right"></a>
+        </div>
+      </div>
+      <div class="setting">
+        <div>
+          <p>我的乾坤币</p>
+          <p>{{userMoney}}</p>
+        </div>
+      </div>
+      <jqPrize @endPrize="endPrize" @prizeRunning="prizeRunning" :groupId="groupId" :payBion="cost" :rate="rate" :imgPath="imgPath"></jqPrize>
+      <div class="message-swiper">
+        <template v-if="message">
+          <swiper :options="swiperOption2" ref="mySwiper2">
+            <slot v-for="(item,index) in message">
+              <swiper-slide v-if="index % 2 == 0">
+                <p>
+                  <a><span>{{item.user&&item.user.aliasName}}</span><span>获得{{item.type == 0 ? '美丽约会' : item.type == 1? item.objId+'乾坤币':item.objId}}</span></a>
+                  <a v-if="index+1 < message.length"><span>{{message[index+1]&&message[index+1].user&&message[index+1].user.aliasName}}</span><span>获得{{message[index+1]&&message[index+1].type== 0 ? '美丽约会' : message[index+1]&&message[index+1].type== 1? message[index+1]&&message[index+1].objId+'乾坤币':message[index+1]&&message[index+1].objId}}</span></a>
+                </p>
+              </swiper-slide>
+            </slot>
+          </swiper>
+        </template>
+      </div>
+      <div class="remark">
+        <a @click.stop="showRule=true">规则</a>
+        <router-link :to="{name:'myPrize'}">我的奖品</router-link>
+      </div>
+    <div v-transfer-dom>
+      <x-dialog v-model="showRule" hide-on-blur class="dialog-rule" :dialog-style="{'max-width': '100%', width: '100%','padding': '0.6rem 0', 'background-color': 'transparent'}">
+        <div class="rule">
+          <i class="iconfont" @click.stop="showRule=false">&#xe7de;</i>
+          <p>活动规则</p>
+          <div>
+            活动规则活动规则活动规则活动规则活动规则活动规则活动规则活动规则活动规则活动规则活动规则活动规则
+          </div>
+        </div>
+        <div class="arrow"></div>
+      </x-dialog>
+    </div>
+    </div>
+</template>
+<script>
+  import Loading from '@other/loading.vue';
+  import Back from '@other/back.vue';
+  import prizeSelect from './prizeSelect';
+  import title from '../../images/prizedraw/title.png';
+  import title2 from '../../images/prizedraw/title2.png';
+  import 'swiper/dist/css/swiper.css'
+  import {Group, PopupPicker,TransferDom,XDialog } from 'vux'
+  import {swiper, swiperSlide} from 'vue-awesome-swiper'
+  import jqPrize from './jqPrize.vue';
+
+  let fontsize = parseInt(document.documentElement.style.fontSize);
+  export default {
+    name: 'prizeDraw',
+    components: {
+      Loading,
+      Back,
+      prizeSelect,
+      swiper,
+      swiperSlide,
+      Group,
+      PopupPicker,
+      jqPrize,
+      XDialog
+    },
+    directives: {
+      TransferDom
+    },
+    data() {
+      return {
+        showRule:false,
+        pagerouter: '',
+        isloading: false,
+        isActive: true,
+        contentheight: 0,
+        imgs: {
+          title: title,
+          title2: title2,
+        },
+        userMoney:0,
+        winningRate: '15%',
+        rate: 0.15,
+        imgPath: '',
+        cost: null,
+        visibilityBion: false,
+        swiperOption2: {
+          direction: 'vertical',
+          loop: false,
+          height: 0.72 * fontsize,
+          autoplay: {
+            delay: 3000,
+            stopOnLastSlide: false,
+            disableOnInteraction: false,
+          },
+        },
+        message: [],
+        groupId:null
+      }
+    },
+    watch: {
+      payBion() {
+        if (this.$refs.picker) {
+          this.winningRate = this.$refs.picker.getNameValues();
+          let len = this.$refs.picker.getNameValues().length - 1;
+          this.rate = this.$refs.picker.getNameValues().substring(0, len) / 100;
+        }
+      }
+    },
+    beforeRouteUpdate(to, from, next) {
+      next();
+      this.pagerouter = to.params.pagerouter;
+    },
+    created() {
+      if(this.$route.query.id){
+        this.groupId=this.$route.query.id;
+      }
+    },
+    destroyed() {
+      const t = this;
+      t.$vux.toast.hide()
+    },
+    async mounted() {
+      this.contentheight = document.body.clientHeight - $(".header").height() - $(".my-footer").height() - $(".title").height() - (1.35) * parseInt(document.documentElement.style.fontSize) - 3;
+      let userInfo = await this.$server.getUserInfo({userId:this.$store.state.userId});
+      this.$store.commit("LOGIN",userInfo.data.data);
+      this.userMoney = this.$store.state.userInfo.userMoney;
+      const t = this;
+      t.recordAllList();
+    },
+    methods: {
+      prizeSelect() {
+        this.$router.push({
+          path: '/prizeDraw/prizeSelect',
+        })
+      },
+      onChange(val) {
+        console.log('val change', val)
+      },
+      event(index) {
+        this.isActive = !!index;
+      },
+      transitionEnd: function (type) {
+        var style = document.createElement("DIV").style,
+          transitionEnd = (function () {
+            var transEndEventNames
+            if (type == "transition") {
+              transEndEventNames = {
+                WebkitTransition: 'webkitTransitionEnd',
+                MozTransition: 'transitionend',
+                OTransition: 'oTransitionEnd oTransitionend',
+                transition: 'transitionend'
+              }
+            } else if (type == "animation") {
+              transEndEventNames = {
+                WebkitTransition: 'webkitAnimationEnd',
+                MozTransition: 'animationend',
+                OTransition: 'oAnimationEnd oAnimationend',
+                transition: 'animationend'
+              }
+            }
+            for (var name in transEndEventNames) {
+              if (typeof style[name] === "string") {
+                return transEndEventNames[name]
+              }
+            }
+          })();
+        return transitionEnd;
+      },
+      prizeRunning(val) {//抽奖转盘是否在转动
+        const t = this;
+        t.prizeRun = val;
+      },
+      async endPrize(index, type,msg) {//抽奖结束
+        console.log("抽奖结束")
+        const t = this;
+        let userInfo = await this.$server.getUserInfo({userId:this.$store.state.userId});
+        this.$store.commit("LOGIN",userInfo.data.data);
+        this.userMoney = this.$store.state.userInfo.userMoney;
+        t.$vux.toast.show({
+          type: "text",
+          text: type==99?msg:"恭喜获得 "+msg,
+          position: "bottom",
+          width: "2rem",
+        });
+        t.prizeRun = false;
+      },
+      async recordAllList() {
+        const _this = this
+        let result = await _this.$server.recordAllList();
+        if (result.data.list) {
+          _this.message.push(...result.data.list);
+        }
+      },
+    }
+  }
+</script>
+<style scoped lang="scss">
+  @keyframes slideInUp {
+    from {
+      transform: translate3d(0, 100%, 0);
+    }
+    to {
+      transform: translate3d(0, 0, 0);
+    }
+  }
+
+  @keyframes slideOutUp {
+    from {
+      transform: translate3d(0, 0, 0);
+    }
+    to {
+      transform: translate3d(0, 100%, 0);
+    }
+  }
+
+  .slideInUp {
+    animation-name: slideInUp;
+  }
+
+  .slideOutUp {
+    animation-name: slideOutUp;
+  }
+
+  .slideOutUp, .slideInUp {
+    animation-duration: 0.3s;
+  }
+
+  .prizeDraw {
+    font-weight: normal;
+    background-image: url("../../images/prizedraw/bg2.jpg");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    overflow: auto;
+    min-height: 100%;
+    background-color: #fb3359;
+    .prizeDraw-header {
+      padding-top: 0.75rem;
+      width: 100%;
+      position: fixed;
+      .top {
+        color: #FFF;
+        font-size: 0.52rem;
+        position: relative;
+        i {
+          font-size: 0.52rem;
+        }
+        a {
+          position: absolute;
+          padding: 3px;
+        }
+        .left {
+          left: 0.325rem;
+        }
+        .right {
+          right: 0.325rem;
+        }
+      }
+    }
+    .setting {
+      margin-top: 4.83rem;
+      color: #FFF;
+      display: flex;
+      justify-content: flex-end;
+      align-items: flex-start;
+      & > div {
+        font-size: 0.26rem;
+        overflow: hidden;
+        p {
+          text-align: center;
+          height: 0.48rem;
+          line-height: 0.48rem;
+          i {
+            font-size: 0.3rem;
+          }
+        }
+        p:last-child {
+          background-color: rgba(0,0,0,0.2);
+        }
+        p:first-child {
+          background-color: rgba(0,0,0,0.5);
+        }
+
+      }
+      & > div:nth-of-type(1) {
+        width: 1.55rem;
+        border-radius: 5px 0 0 5px;
+      }
+    }
+    .message-swiper {
+      width: 9.78rem;
+      height: 0.72rem;
+      line-height: 0.72rem;
+      overflow: hidden;
+      color: #FFF;
+      margin: 1.17rem auto 0;
+      border: 1px dashed #fd8c42;
+      border-radius: 3px;
+      p {
+        width: 9.3rem;
+        display: flex;
+        a {
+          width: 50%;
+          span {
+            display: inline-block;
+            width: 50%;
+            text-align: center;
+            font-size: 0.36rem;
+            overflow: hidden; /*超出部分隐藏*/
+            white-space: nowrap; /*不换行*/
+            text-overflow: ellipsis; /*超出部分文字以...显示*/
+          }
+          span:first-child {
+            color: #ffe90b;
+          }
+        }
+      }
+    }
+    .remark {
+      display: flex;
+      margin: 0.975rem 0 0.6rem 0;
+      justify-content: space-between;
+      a {
+        width: 2.4rem;
+        height: 0.805rem;
+        line-height: 0.805rem;
+        color:#FFF;
+        font-weight: 500;
+        font-size: 0.36rem;
+        text-align: center;
+        border-radius: 0.4rem 0 0 0.4rem;
+        background-color: #ffc000;
+      }
+      a:first-child{
+        border-radius: 0 0.4rem 0.4rem 0;
+      }
+    }
+  }
+
+  .rule{
+    background-color: #FFF;
+    width: 7.81rem;
+    margin: 0 auto;
+    border-radius: 5px;
+    position: relative;
+    .iconfont{
+      position: absolute;
+      z-index: 1;
+      right: 0.3rem;
+      top:0.3rem;
+      color:#FFF;
+    }
+    p{
+      height: 1.93rem;
+      line-height: 1.93rem;
+      background-image: url("../../images/prizedraw/rulebg.png");
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      font-size: 0.48rem;
+      color:#FFF;
+      position: relative;
+      &:before {
+        content: "";
+        position: absolute;
+        margin-left: -2.8rem;
+        left: 100%;
+        height: 1px;
+        width: 1.1rem;
+        top: 50%;
+        background-color: rgba(255,255,255,0.2);
+      }
+      &:after {
+        content: "";
+        position: absolute;
+        margin-right: -2.8rem;
+        right: 100%;
+        height: 1px;
+        width: 1.1rem;
+        top: 50%;
+        background-color: rgba(255,255,255,0.2);
+      }
+    }
+    div{
+      height: 6.46rem;
+      padding: 0.365rem 0.4rem 0;
+      box-sizing: border-box;
+    }
+  }
+
+  .prizeSelect {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    z-index: 100;
+    background-color: #ffffff;
+  }
+</style>
+

@@ -1,0 +1,397 @@
+<template>
+    <div class="main jy_all_top">
+      <Loading v-if="isloading"></Loading>
+      <div class="header">
+        <div class="top">
+          <Back class="left"><i class="iconfont">&#xe613;</i></Back>
+          <router-link v-if="$route.query.userId==$store.state.userInfo.id||!$route.query.userId" :to="{name:'addMoment'}" class="right"><i class="iconfont">&#xe61f;</i></router-link>{{($route.query.userId==$store.state.userInfo.id||!$route.query.userId)?"我的动态":userIinfo?userIinfo.aliasName+"的动态":"Ta的动态"}}
+        </div>
+      </div>
+      <myScroller :style="$store.state.isBrowser?'padding:1.39rem 0 0;':'padding:2.29rem 0 0;'" :touchmove="touchmove" :noDataText="noDataText" :infinite="infinite" :refresh="refresh" :loadRefresh="loadRefresh" :loadInfinite="loadInfinite" ref="myScroller">
+		<dl class="dy_mydt_list" v-if="artObj">
+			<template v-for="yearObj,year in artObj">
+			<dt class="dy_mydt_year">{{year}}</dt>
+			<dd v-for="dayObj,day in yearObj">
+				<i class="dy_mydt_day">{{day}}</i>
+				<ul class="dy_mydt_ul">
+					<li :class="{dy_mydt_simg:item.feedAttachment&&item.feedAttachment.split(',').length==1}" v-for="item,index in dayObj" :key="item.id" @click.stop="getDetail(year,day,index,1)">
+						<div class="dy_mydt_img" v-if="item.feedAttachment&&item.feedAttachment.split(',').length==1">
+							<i class="dy_dt_img" :bgImg="$utils.getFullPath(item.feedAttachment.split(',')[0])"></i>
+						</div>
+						<p class="dy_mydt_con">{{item.feedContent}}</p>
+						<p class="dy_mydt_tip"><em>{{item.commentLegth}}</em>{{Fn.timeFormat(item.createDate,'hh:mm')}}</p>
+						<div class="dy_mydt_img" v-if="item.feedAttachment&&item.feedAttachment.split(',').length>1">	
+							<i class="dy_dt_img" v-for="imgItem ,imgIndex in item.feedAttachment.split(',')" :bgImg="$utils.getFullPath(imgItem)"></i>
+						</div>
+					</li>
+				</ul>
+			</dd>
+			</template>
+		</dl>
+      </myScroller>
+	  <div v-transfer-dom>
+		<popup v-model="showWin" height="100%" :hide-on-blur=false position="bottom" :popup-style="{zIndex:601}" :should-scroll-top-on-show="true">
+		<div class="top_userInfo" v-if="showInfo">
+			<commentDetail @openWin="openWin" :isMy="isMy" :dynamicDes="dynamicDes" @hiddenInfo="hiddenInfo" @editInfo="editInfo" @toggleImgWin="toggleImgWin" ref="commentDetail"></commentDetail>
+		</div>
+		</popup>
+	</div>
+    </div>
+</template>
+
+<script>
+  import payfor from '../../images/payfor.png'
+  import Loading from '@other/loading.vue';
+  import Back from '@other/back.vue';
+  import myScroller from '@other/myScroller.vue';
+  import {Previewer, Popup, TransferDom} from 'vux'
+  import replayComment from './replayComment';
+  import selectPhoto from '../plugs/selectPhoto'
+  import commentDetail from './commentDetail.vue';
+	let fontsize = parseInt(document.documentElement.style.fontSize)
+  export default {
+    name: 'myComments',
+    directives: {
+      TransferDom
+    },
+    components: {
+      Loading,
+      myScroller,
+      Previewer,
+      Back,
+      selectPhoto,
+      Popup,
+      replayComment,
+	  commentDetail,
+    },
+    data() {
+		return {
+			isloading: false,
+			showSel: false,
+			artList: null,
+			artObj: null,
+			//分页参数
+			pageNo: 1,
+			isRead: false,
+			isEnd: false,
+			loadRefresh:true,//下拉刷新
+			loadInfinite:true, //上拉加载
+			noDataText:'',
+			jqList:[],
+			showInfo:false,
+			showWin:false,
+			showImg:null,//是否显示了图片
+			userIinfo:null,
+		}
+	},
+	async mounted() {
+		const t=this;
+		//this.getData();
+		if(this.$route.query.to=="photo"){
+			for (let i = t.$store.state.fileImg.length; i--;) {
+				let param = new FormData() //创建form对象
+				param.append('file', t.$store.state.fileImg[i], t.$store.state.fileImg[i].name) //单个图片 ，多个用循环 append 添加
+				param.append('dataSources','myComments');
+				try {
+					const result = await t.$server.uploadPic(param);
+					console.log(JSON.stringify(result.data));
+					t.feedImg.push(result.data.data.path);
+				} catch (e) {
+					console.log(e);
+				}
+			}
+		}
+		t.offsetTop=$(".myscroller ._v-container").offset().top;
+		if(t.$route.query.userId){
+			try{
+				let result = await t.$server.getUserInfo({userId:t.$route.query.userId});
+				t.userIinfo=result.data.data;
+			}catch(e){
+				console.log(JSON.stringify(e));
+			}	
+		}
+		
+	},
+	computed:{
+      handleRoute(){
+        return this.$store.state.handleRoute;
+      },
+    },
+    watch: {
+		handleRoute(newV){
+			if(!newV){
+				if(this.showImg!=null){
+					
+					//console.log(this.$refs.commentDetail);
+					this.$refs["commentDetail"].colseWin(this.showImg);
+				}else{
+					this.hiddenInfo();
+				}
+			}
+		},
+		showWin(val){
+			this.$store.commit("CHANGEHANDLEROUTE",val);
+		},
+      isEnd(val) {
+        const t=this;
+        if(val){
+          t.$refs.myScroller.finishInfinite(true);
+        }else{
+          t.$refs.myScroller.finishInfinite(false);
+        }
+      },
+	  artList(val){
+		const t=this;
+		let artObj={};
+		if(!val){
+			return false;
+		}
+		let artList=val;
+		for(let i=artList.length;i--;){//递归统计评论数量
+			artList[i].commentLegth=0;
+			if(artList[i].comments){
+				(function getCount(comments,index){
+					for(let i=comments.length;i--;){
+						if(comments[i].comments){
+							getCount(comments[i].comments,index);
+						}
+					}
+					artList[index].commentLegth+=comments.length;
+				}(artList[i].comments,i));
+			}
+		}
+		let nowYear=t.Fn.timeFormat(new Date(),"yyyy")+"年";
+		let nowDay=t.Fn.timeFormat(new Date(),"MM-dd");
+		for(let i=0;i<artList.length;i++){
+			let year=t.Fn.timeFormat(artList[i].createDate,"yyyy")+"年";
+			let day=t.Fn.timeFormat(artList[i].createDate,"MM-dd");
+			if(year==nowYear){
+				year="今年"
+			}
+			if(day==nowDay){
+				day="今天"
+			}
+			if(!artObj[year]){
+				artObj[year]={}
+			}
+			if(!artObj[year][day]){
+				artObj[year][day]=[];
+			}
+			artObj[year][day].push(artList[i]);
+		}
+		t.artObj=artObj;
+		//console.log(artObj)
+		/*t.$nextTick(()=>{
+			let top=$(".dy_mydt_list").offset().top;
+			t.jqList=[];
+			$(".dy_dt_img:not(.cur)").each(function(index,item){
+				const _t=$(this);
+				let _top=_t.parent().offset().top;
+				t.jqList.push({top:_top-top,obj:_t,src:_t.attr("bgImg")});
+			})
+		})*/
+	  }
+    },
+    methods: {
+		toggleImgWin(val){
+			this.showImg=val;
+		},
+		getDetail(year,day,index,isMy){
+			const t=this;
+			t.year=year;
+			t.day=day;
+			t.index=index;
+			t.isMy=isMy;
+			t.dynamicDes=t.artObj[year][day][index];
+			t.showInfo=true;
+		},
+		openWin(){
+			this.showWin=true;
+		},
+		editInfo(val){
+			const t=this;
+			if(val){//编辑
+				//t.artList[t.index]=val;
+				t.$set(t.artList,t.index,val);
+			}else{//删除
+				t.artList.splice(t.index,1);
+				t.showWin=false;
+				setTimeout(()=>{
+					t.showInfo=false;
+				},800)
+			}
+		},
+		hiddenInfo(){
+			const t=this;
+			t.showWin=false;
+			setTimeout(()=>{
+				t.showInfo=false;
+			},800)
+		},
+		touchmove(left,mtop,zoom,height){
+			const t=this;
+			//const length=t.jqList.length;
+			clearTimeout(t.imgTimeout);
+			t.isMove=true;
+			t.imgTimeout=setTimeout(()=>{
+			//	for(let i=0;i<length;i++){
+					if($(".dy_mydt_list").length==0){
+						return false;
+					}
+					let top=$(".dy_mydt_list").offset().top;
+					t.jqList=[];
+					$(".dy_dt_img:not(.imgloading)").each(function(index,item){
+						const _t=$(this);
+						let _top=_t.parent().offset().top;
+						t.jqList.push({top:_top-top,obj:_t,src:_t.attr("bgImg")});
+					});
+					//console.log("长度:"+t.jqList.length);
+					t.isMove=false;
+					;(function loadImg(list,i){
+						//console.log(list,t.isMove,i,t.jqList[i])
+						if(!list||t.isMove){
+							return false;
+						}
+							
+						if(list.top>=mtop){
+							list.obj.addClass("imgloading");
+							let img=new Image(),
+								maxWidth=250*window.FS/100;
+							img.setAttribute('crossOrigin','anonymous');
+							img.onload=function(){//图片先加载,再显示
+								let canvasId = 'canvasBase64Imgid',  //图片远程不能使用画布
+									canvas = document.getElementById(canvasId);  
+								if(canvas!=null){document.body.removeChild(canvas);}  
+								canvas = document.createElement("canvas");  
+								canvas.innerHTML = 'New Canvas';  
+								canvas.setAttribute("id", canvasId);  
+								canvas.style.display='none';  
+								document.body.appendChild(canvas);  
+								canvas.width = this.width;  
+								canvas.height = this.height;  
+								let imageWidth = this.width,  	
+									imageHeight = this.height;  
+								if (this.width > maxWidth){  
+									imageWidth = maxWidth;  
+									imageHeight = this.height * maxWidth/this.width;  
+									canvas.width = imageWidth;  
+									canvas.height = imageHeight;  
+								}  
+								let context = canvas.getContext('2d');  
+								context.clearRect(0, 0, imageWidth, imageHeight);  
+								context.drawImage(this, 0, 0, imageWidth, imageHeight); 
+								//console.log(this)							
+								let base64 = canvas.toDataURL('image/jpeg',0.7);	
+								
+								list.obj.css({backgroundImage:"url("+base64+")"});
+								list.obj.addClass("cur");	
+								//t.jqList.shift();//删除第一个
+								img.onload=null;
+								if(list.top<=mtop+height){
+									i++;
+									loadImg(t.jqList[i],i);
+								}
+							}
+							img.onerror=function(){
+								//t.jqList.shift();//删除第一个
+								img.onerror=null;
+								
+								list.obj.removeClass("imgloading");	
+								if(list.top<=mtop+height){
+									i++;
+									loadImg(t.jqList[i],i);
+								}
+								
+							}
+							//console.log(list.src)
+							img.src=list.src+"?t="+t.Fn.timeFormat(new Date(),'yyyyMMddhh');
+							//t.jqList.splice(i,1);
+						}else{
+							i++;
+							loadImg(t.jqList[i],i);
+						}
+						
+					}(t.jqList[0],0));	
+				//}
+			},150);
+		},
+		async getData() {
+			const t = this
+			if (t.isRead) {
+				return false;
+			}
+			t.isRead = true;
+			t.noDataText='正在加载...';
+			if (t.isRefresh) {
+				t.pageNo = 1;
+			}
+			try {
+				let result;
+				let isRefresh={};
+				if(t.isRefresh){
+					isRefresh={isRefresh:true};
+				}
+				if (t.$route.query.userId == t.$store.state.userInfo.id || !t.$route.query.userId) {
+					result = await t.$server.getMyList({
+						...isRefresh,
+						page: t.pageNo,
+						rows: t.$store.state.pageSize
+					})
+				} else {
+					result = await t.$server.getList({
+						...isRefresh,
+						page: t.pageNo,
+						rows: t.$store.state.pageSize,
+						userId: t.$route.query.userId
+					})	
+				}
+				if (!t.artList || t.pageNo==1) {
+					t.$refs.myScroller.scrollTo(1);
+					t.artList = [];
+				}
+				if (result.data.list) {
+					
+					t.artList.push(...result.data.list);
+				}
+				if (result.data.count <= t.$store.state.pageSize * t.pageNo || result.data.list.length < t.$store.state.pageSize) {//判断是否最后一页
+					t.noDataText='已加载全部数据';
+					t.isEnd = true;
+				} else {
+					t.isEnd = false;
+					//t.$refs.myScroller.finishInfinite(false);
+				}
+				t.pageNo++;
+			} catch (e) {
+				t.noDataText='加载异常,请重试';
+				t.isEnd=true;
+			}
+			t.isRead=false;
+			//t.isloading=false;
+			t.isRefresh=false;
+		},
+		infinite(done) {//上拉加载(防止初始内容不满一屏会无限加载)
+			const t=this;
+			if(t.isEnd){
+				done(true);
+				return false;
+			}
+			console.log("加载");
+			t.getData().then(()=>{
+				if(t.isEnd){
+					done(true);
+				}else{
+					done();
+				}
+			});
+		},
+		refresh(done) {//下拉刷新
+			const t=this;
+			console.log("刷新");
+			t.isRefresh=true;
+			t.getData().then((res)=>{
+				done();
+			});
+		},
+	}
+}
+</script>

@@ -1,0 +1,918 @@
+<template>
+  <div class="page main">
+    <Loading v-if="isloading"></Loading>
+    <div class="header">
+      <div class="top">
+        <a class="left" @click="goback"><i class="iconfont">&#xe613;</i></a>
+        <a class="right"><i class="iconfont"></i></a>发布约会
+      </div>
+    </div>
+    <div class="publish-menu">
+      <div @click="menuClick(1)" class="timeline-text" :class="{active:menu.type==1}"><span class="text">选择类型</span>
+      </div>
+      <div @click="menuClick(2)" class="timeline-text" :class="{active:menu.detail}"><span class="text">约会详情</span>
+      </div>
+      <div @click="menuClick(3)" class="timeline-text" :class="{active:menu.require}"><span class="text">资格要求</span>
+      </div>
+    </div>
+    <template v-if="panel==1">
+      <div class="panel">
+        <p class="title">约会类型</p>
+        <!--1、旅行 2、吃饭 3、电影 4、唱歌 5、运动 99、其他-->
+        <div class="check-box">
+          <span class="check-type" @click="type=2" :class="{active:type==2}"><i class="iconfont">&#xe66c;</i>美食</span>
+          <span class="check-type" @click="type=4" :class="{active:type==4}"><i class="iconfont">&#xe895;</i>K歌</span>
+          <span class="check-type" @click="type=3" :class="{active:type==3}"><i class="iconfont">&#xe669;</i>电影</span>
+          <span class="check-type" @click="type=1" :class="{active:type==1}"><i class="iconfont">&#xe66d;</i>旅行</span>
+          <span class="check-type" @click="type=5" :class="{active:type==5}"><i class="iconfont">&#xee41;</i>运动</span>
+          <span class="check-type" @click="type=99" :class="{active:type==99}"><i class="iconfont">&#xe66f;</i>其他</span>
+        </div>
+      </div>
+      <div class="panel">
+        <p class="title">选择对象方式</p>
+        <!--1:选缘 ,2:抢缘,3:竞缘,4:中缘,5:配缘-->
+        <div class="check-box">
+          <span class="check-method" @click="datingMethod=5" :class="{active:datingMethod==5}">配缘</span>
+          <span class="check-method" @click="datingMethod=2" :class="{active:datingMethod==2}">抢缘</span>
+          <span class="check-method" @click="datingMethod=3" :class="{active:datingMethod==3}">竞缘</span>
+          <span class="check-method" @click="datingMethod=1" :class="{active:datingMethod==1}">选缘</span>
+          <span class="check-method" @click="datingMethod=4" :class="{active:datingMethod==4}">中缘</span>
+        </div>
+        <div class="tips">
+          <p>{{datingMethodList[datingMethod]}}说明:</p>
+          <template v-if="datingMethod==1">
+            <p>约会根据自已的喜好自主选择约会对象（可以通过聊天、送礼等来感受谁对你更钟意）；活动持续30分钟，30分钟内必须选择一人，否则被视为违规，将受到一定的乾坤币惩罚。</p>
+          </template>
+          <template v-if="datingMethod==2">
+            <p>约会根据自已的喜好自主选择约会对象（可以通过聊天、送礼等来感受谁对你更钟意）；活动持续30分钟，30分钟内必须选择一人，否则被视为违规，将受到一定的乾坤币惩罚。</p>
+          </template>
+          <template v-if="datingMethod==3">
+            <p>约会根据自已的喜好自主选择约会对象（可以通过聊天、送礼等来感受谁对你更钟意）；活动持续30分钟，30分钟内必须选择一人，否则被视为违规，将受到一定的乾坤币惩罚。</p>
+          </template>
+          <template v-if="datingMethod==4">
+            <p>约会根据自已的喜好自主选择约会对象（可以通过聊天、送礼等来感受谁对你更钟意）；活动持续30分钟，30分钟内必须选择一人，否则被视为违规，将受到一定的乾坤币惩罚。</p>
+          </template>
+          <template v-if="datingMethod==5">
+            <p>约会根据自已的喜好自主选择约会对象（可以通过聊天、送礼等来感受谁对你更钟意）；活动持续30分钟，30分钟内必须选择一人，否则被视为违规，将受到一定的乾坤币惩罚。</p>
+          </template>
+        </div>
+      </div>
+      <div class="panel">
+        <p class="title">报名费用</p>
+        <div class="check-box">
+          <span class="fee" @click="fee=0" :class="{active:fee==0}">免费</span>
+          <span class="fee" @click="fee=100" :class="{active:fee==100}"><i class="qkb-icon"></i>100</span>
+          <span class="fee" @click="fee=200" :class="{active:fee==200}"><i class="qkb-icon"></i>200</span>
+          <span class="fee" @click="fee=500" :class="{active:fee==500}"><i class="qkb-icon"></i>500</span>
+        </div>
+      </div>
+      <div class="panel marginBottom">
+        <p class="title">保证金<em style="background-color: initial;color: #0cd3fc;" @click="showRule=true">保证金规则</em></p>
+        <div class="check-box">
+          <span class="bail" @click="bail=0" :class="{active:bail==0}">免保证金</span>
+          <span class="bail" @click="bail=100" :class="{active:bail==100}"><i class="bzj-icon"></i>100</span>
+          <span class="bail" @click="bail=200" :class="{active:bail==200}"><i class="bzj-icon"></i>200</span>
+          <span class="bail" @click="bail=500" :class="{active:bail==500}"><i class="bzj-icon"></i>500</span>
+        </div>
+      </div>
+    </template>
+    <template v-if="panel==2">
+      <div class="marginBottom02 select_panel">
+        <div class="select_con" @click="shAddress=true">
+          <div>约会地点</div>
+          <div>{{addressText==""?"选择地点": addressText}}</div>
+          <div><i class="iconfont">&#xe702;</i></div>
+          <actionsheet v-model="shAddress" :menus="addressMenu" @on-click-menu="click" show-cancel></actionsheet></actionsheet>
+        </div>
+        <div class="select_con" @click="shDatingTime=true">
+          <div>约会时间</div>
+          <div>{{datingTimeText==""?"选择时间": datingTimeText}}</div>
+          <div><i class="iconfont">&#xe702;</i></div>
+          <group style="display: none">
+            <datetime title="约会时间" v-model="datingTimeText" :show.sync="shDatingTime" :start-date="startDate" :end-date="endDate" format="YYYY-MM-DD" year-row="{value}年" month-row="{value}月" day-row="{value}日" confirm-text="完成" cancel-text="取消"></datetime>
+          </group>
+        </div>
+        <div class="select_con" @click="shObjTime=true">
+          <div>约会对象时间</div>
+          <div>{{objTimeText==""?"选择约会对象时间": objTimeText}}</div>
+          <div><i class="iconfont">&#xe702;</i></div>
+          <group style="display: none">
+            <datetime title="约会对象时间" v-model="objTimeText" :show.sync="shObjTime" :start-date="startDate" :end-date="endDate" format="YYYY-MM-DD HH:mm" year-row="{value}年" month-row="{value}月" day-row="{value}日" hour-row="{value}点" minute-row="{value}分" :minute-list='minuteList' confirm-text="完成" cancel-text="取消"></datetime>
+          </group>
+        </div>
+      </div>
+      <div class="marginBottom02 select_panel">
+        <div class="select_con">
+          <div>对象性别</div>
+          <div class="row-check-box">
+            <span class="box" @click="sex=2" :class="{active:sex==2}"><i class="iconfont" style="font-size: 0.6rem;">&#xe671;</i></span>
+            <span class="box" @click="sex=1" :class="{active:sex==1}"><i class="iconfont" style="font-size: 0.6rem;">&#xe672;</i></span>
+            <span class="box" @click="sex=0" :class="{active:sex==0}">不限</span>
+          </div>
+        </div>
+        <div class="select_con">
+          <div>买单</div>
+          <div class="row-check-box">
+            <span class="box" @click="pay=1" :class="{active:pay==1}">AA</span>
+            <span class="box" @click="pay=2" :class="{active:pay==2}">我买单</span>
+            <span class="box" @click="pay=3" :class="{active:pay==3}">你买单</span>
+          </div>
+        </div>
+        <div class="select_con">
+          <div class="checkFriend" style="width: 100%;text-align: right;">
+            <check-icon :value.sync="carryingFriends">可协商携带好友</check-icon>
+          </div>
+        </div>
+      </div>
+      <div class="marginBottom02 img-panel">
+        <div class="checkbox-panel">
+          <label for="businessImage" class="radio">
+            <span class="radio-bg"></span>
+            <input type="radio" name="img" id="businessImage" value="用商家图片" checked="checked" /> 用商家图片
+            <span class="radio-on"></span>
+          </label>
+          <label for="ownImage" class="radio">
+            <span class="radio-bg"></span>
+            <input type="radio" name="img" id="ownImage" value="用我的头像" /> 用我的头像
+            <span class="radio-on"></span>
+          </label>
+        </div>
+        <div class="photo-cls jy_user_img_group select_panel" style="border-bottom: 1px solid #F2F2F2;">
+          <ul class="jy_auth_up jy_feed_img user_img">
+            <draggable v-model="feedImg" @update="dragEnd" :options="{animation:500}">
+              <transition-group>
+                <li v-for="(item,index) in feedImg" :style="'background-image:url('+getFullPath(item)+');'"
+                    @click.stop="deleteImg(index)" :key="item">
+                  <i class="iconfont">&#xe67c;</i>
+                </li>
+              </transition-group>
+            </draggable>
+            <selectPhoto v-if="feedMaxImg-feedImg.length>0" :amount="$store.state.isBrowser?feedMaxImg-feedImg.length:1" @fileBack="fileBack" :cutting="true">
+              <li class="noUploadPhoto"></li>
+            </selectPhoto>
+          </ul>
+          <div class="user_img_desc">上传图片更吸引人呦（最多三张）</div>
+        </div>
+        <textarea v-model="datingDesc" cols="40" rows="2" placeholder="写点什么会有更多关注哦" style="border: none;margin: 0.4rem 0 0;color: #a3a3a4;font-size: 0.4rem;"></textarea>
+      </div>
+      <div class="panel">
+        <p class="title">见面礼</p>
+        <div class="right-con">
+          <div class="left-title">约会地点</div>
+          <div class="right-title">去选礼物</div>
+          <div class="next-icon"><i class="iconfont">&#xe702;</i></div>
+        </div>
+        <div class="right-con">
+          <div class="left-title">我要收</div>
+          <div class="right-title">
+              <div class="gift-info">
+                <div class="gift-icon"></div>
+                <p>香水500ml*1</p>
+                <p>价值：2000元</p>
+              </div>
+          </div>
+          <div class="next-icon"><i class="iconfont" style="color: #ff4200;">&#xe67c;</i></div>
+        </div>
+      </div>
+      <div class="panel marginBottom">
+        <p class="title">约会后续</p>
+        <div class="check-box">
+          <span class="three-box" @click="followUp.goHome=='' ? followUp.goHome=1 : followUp.goHome=''" :class="{active:followUp.goHome}">各回各家</span>
+          <span class="three-box" @click="followUp.life=='' ? followUp.life=1 : followUp.life=''" :class="{active:followUp.life}">谈人生</span>
+          <span class="three-box" @click="followUp.ideal=='' ? followUp.ideal=1 : followUp.ideal=''" :class="{active:followUp.ideal}">谈理想</span>
+          <span class="three-box" @click="followUp.road=='' ? followUp.road=1 : followUp.road=''" :class="{active:followUp.road}">压马路</span>
+          <span class="three-box" @click="followUp.other=='' ? followUp.other=1 : followUp.other=''" :class="{active:followUp.other}">决战到天亮</span>
+          <span class="three-box" @click="followUp.more=='' ? followUp.more=1 : followUp.more=''" :class="{active:followUp.more}">视情况而定</span>
+        </div>
+      </div>
+    </template>
+    <template v-if="panel==3">
+      <div class="panel">
+        <p class="title">认证要求 <em>{{certificationList[certification]}}</em></p>
+        <div class="check-box">
+          <span class="five-box" @click="certification=0" :class="{active:certification==0}">不限</span>
+          <span class="five-box" @click="certification=1" :class="{active:certification==1}"><i class="iconfont">&#xe69c;</i></span>
+          <span class="five-box" @click="certification=2" :class="{active:certification==2}"><i class="iconfont">&#xe697;</i></span>
+          <span class="five-box" @click="certification=3" :class="{active:certification==3}"><i class="iconfont">&#xe69f;</i></span>
+          <span class="five-box" @click="certification=4" :class="{active:certification==4}"><i class="iconfont">&#xe69e;</i></span>
+        </div>
+      </div>
+      <div class="panel">
+        <p class="title">学历要求</p>
+        <div class="check-box">
+          <span class="three-box" @click="education=0" :class="{active:education==0}">不限</span>
+          <span class="three-box" @click="education=1" :class="{active:education==1}">高中及以上</span>
+          <span class="three-box" @click="education=2" :class="{active:education==2}">大专及以上</span>
+          <span class="three-box" @click="education=3" :class="{active:education==3}">本科及以上</span>
+          <span class="three-box" @click="education=4" :class="{active:education==4}">硕士及以上</span>
+          <span class="three-box" @click="education=5" :class="{active:education==5}">博士及以上</span>
+        </div>
+      </div>
+      <div class="panel">
+        <p class="title">年龄要求</p>
+        <div class="check-box">
+          <span class="three-box" @click="age=0" :class="{active:age==0}">不限</span>
+          <span class="three-box" @click="age=1" :class="{active:age==1}">18-23</span>
+          <span class="three-box" @click="age=2" :class="{active:age==2}">24-29</span>
+          <span class="three-box" @click="age=3" :class="{active:age==3}">30-35</span>
+          <span class="three-box" @click="age=4" :class="{active:age==4}">36-40</span>
+          <span class="three-box" @click="age=5" :class="{active:age==5}">41以上</span>
+        </div>
+      </div>
+      <div class="panel">
+        <p class="title">身高要求</p>
+        <div class="check-box">
+          <span class="five-box" @click="height=0" :class="{active:height==0}">不限</span>
+          <span class="five-box" @click="height=1" :class="{active:height==1}">≥150</span>
+          <span class="five-box" @click="height=2" :class="{active:height==2}">≥155</span>
+          <span class="five-box" @click="height=3" :class="{active:height==3}">≥160</span>
+          <span class="five-box" @click="height=4" :class="{active:height==4}">≥165</span>
+          <span class="five-box" @click="height=5" :class="{active:height==5}">≥170</span>
+          <span class="five-box" @click="height=6" :class="{active:height==6}">≥175</span>
+          <span class="five-box" @click="height=7" :class="{active:height==7}">≥180</span>
+          <span class="five-box" @click="height=8" :class="{active:height==8}">≥185</span>
+          <span class="five-box" @click="height=9" :class="{active:height==9}">≥190</span>
+        </div>
+      </div>
+
+      <div class="panel marginBottom">
+        <p class="title">是否允许乾坤轮匹配缘分 <i class="iconfont" style="color: #ff4200;vertical-align: middle;">&#xe682;</i><inline-x-switch v-model="isLottery"></inline-x-switch></p>
+      </div>
+    </template>
+    <div class="publish_bd_btn">
+      <em class="bc">保存</em>
+      <em class="next" v-if="panel==1 || panel==2 " @click="nextClick">下一步</em>
+      <em class="next" v-else @click="finish">发布</em>
+    </div>
+
+
+    <div v-transfer-dom>
+      <x-dialog v-model="showRule" hide-on-blur class="dialog-rule" :dialog-style="{'max-width': '100%', width: '100%','padding': '0.6rem 0', 'background-color': 'transparent'}">
+        <div class="rule">
+          <i class="iconfont" @click.stop="showRule=false">&#xe7de;</i>
+          <p>保证金规则</p>
+          <div>ffdsafdsafs</div>
+        </div>
+        <div class="arrow"></div>
+      </x-dialog>
+    </div>
+  </div>
+</template>
+
+<script>
+  import Loading from '../loading.vue';
+  import {TransferDom, Group, Popup, PopupPicker, Datetime, CheckIcon,InlineXSwitch, XDialog, Actionsheet} from 'vux';
+  import selectPhoto from '../plugs/selectPhoto'
+  import draggable from 'vuedraggable'
+
+  export default {
+    name: "PublishAppointment",
+    directives: {
+      TransferDom
+    },
+    components: {
+      Loading,
+      Group,
+      Popup,
+      PopupPicker,
+      Datetime,
+      CheckIcon,
+      selectPhoto,
+      draggable,
+      InlineXSwitch,
+      XDialog,
+      Actionsheet,
+    },
+    data() {
+      return {
+        isloading: false,
+        active: [1],
+        panel: 1,
+        menu: {//认证信息0不需要1需要
+          type: 1,
+          detail: "",
+          require: "",
+        },
+        type: 2,
+        datingMethod: 1,
+        datingMethodList:{1:'选缘',2:'抢缘',3:'竞缘',4:'中缘',5:'配缘'},
+        fee: 0,
+        bail: 0,
+        showRule: false,
+
+        shAddress: false,
+        addressText: '',
+        addressCityId: 0,
+        addressAreaId: 0,
+        addressList: [],
+        addressArr: [],
+        addressMenu: {
+          menu1: '指定餐厅',
+          menu2: '自选地点'
+        },
+
+        shDatingTime: false,
+        datingTimeText: '',
+
+
+        shObjTime: false,
+        objTimeText: '',
+        minuteList: ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'],
+
+        sex: 0,
+        pay: 1,
+        carryingFriends: false,
+        businessImage: false,
+        ownImage: true,
+
+        file: null,
+        headimgAttachmentId: null,
+        feedMaxImg: 3,//发布最大图片数量
+        feedImg: [],//发布图片
+        fileList: null,
+        datingDesc: '',
+        followUp: {//认证信息0不需要1需要
+          goHome: "",
+          life: "",
+          ideal: "",
+          road: "",
+          other: "",
+          more: "",
+        },
+        certification: 0,
+        certificationList: ["不限", "身份认证", "视频认证", "车辆认证", "房产认证"],
+        education: 0,
+        height: 0,
+        age: 0,
+        isLottery: false,
+      }
+    },
+    watch: {
+      addressArr() {
+        if (this.$refs.addressPicker) {
+          this.addressText = this.$refs.addressPicker.getNameValues();
+          this.addressCityId = this.addressArr[0];
+          this.addressAreaId = this.addressArr[1];
+        }
+      },
+    },
+    computed: {
+      startDate: function () {
+        return this.$utils.format(new Date(), 'yyyy-MM-dd');
+      },
+      endDate: function () {
+        return this.$utils.getIntervalDate(this.$utils.format(new Date(), 'yyyy-MM-dd'), 90);
+      },
+    },
+    mounted() {
+      this.getDistrict();
+    },
+    methods: {
+      goback() {
+        this.$router.go(-1)
+      },
+      getFullPath(path) {
+        return this.$utils.getFullPath(path)
+      },
+      menuClick(menuIndex) {
+        const _this = this;
+        if(menuIndex==1){
+          _this.menu.type = 1;
+          _this.menu.detail= '';
+          _this.menu.require= '';
+          _this.panel = 1;
+        }else if (menuIndex == 2) {
+          _this.menu.type = 1;
+          _this.menu.detail = 1;
+          _this.menu.require = '';
+          _this.panel = 2;
+        } else if (menuIndex == 3) {
+          _this.menu.type = 1;
+          _this.menu.detail = 1
+          _this.menu.require = 1;
+          _this.panel = 3;
+        }
+      },
+      nextClick() {
+        const _this = this;
+        if (_this.menu.detail == '' || _this.menu.require==1) {
+          _this.panel = 2;
+          _this.menu.detail = 1;
+          _this.menu.require =  '';
+          _this.nextText = '下一步';
+        } else if (_this.menu.detail == 1 && _this.menu.require == '') {
+          _this.panel = 3;
+          _this.menu.require = 1;
+          _this.nextText = '上一步';
+        }
+      },
+      async getDistrict() {
+        let listData = await this.$server.getDistrict();
+        this.addressList = listData.data.data;
+      },
+      async fileBack(obj) {
+        const t = this
+        if(obj.serverId){
+          for(let i=0;i<obj.serverId.length;i++){
+            let result = await t.$server.wxMpMedia({
+              mediaId:obj.serverId[i]
+            })
+            t.feedImg.push(result.data.data&&result.data.data.path);
+          }
+        }else{
+          t.fileList = obj.file//提交的图片
+          if (t.fileList) {
+            for (let i = t.fileList.length; i--;) {
+              let param = new FormData() //创建form对象
+              param.append('file', t.fileList[i], t.fileList[i].name) //单个图片 ，多个用循环 append 添加
+              try {
+                const result = await t.$server.uploadPic(param);
+                t.feedImg.push(result.data.data.path);
+              } catch (e) {
+
+              }
+            }
+
+          } else {
+            t.$vux.toast.show({
+              type: "text",
+              text: "图片出错",
+              position: "bottom",
+              width: "2rem",
+            });
+          }
+        }
+      },
+      dragEnd: function (evt) {
+        console.log('拖动前的索引：' + evt.oldIndex);
+        console.log('拖动后的索引：' + evt.newIndex);
+        console.log(this.feedImg);
+      },
+      deleteImg(index) {
+        this.feedImg.splice(index, 1);
+      },
+      finish(){
+
+      },
+      click (key) {
+        console.log(key)
+        if(key=='menu1'){
+          this.$router.push({
+            path: "/store",
+            query:{
+              type: this.type,
+            }
+          });
+        }else{
+          this.$router.push({
+            path: "/map"
+          });
+        }
+      },
+    }
+  }
+</script>
+
+<style scoped lang="scss">
+  .main {
+    padding-bottom: 0;
+    &:before {
+      background-color: #3a3845;
+    }
+    .header {
+      position: fixed;
+      width: 100%;
+      z-index: 10;
+      .top {
+        background-color: #3a3845;
+        color: #FFF;
+        font-size: 0.52rem;
+        position: relative;
+        i {
+          font-size: 0.52rem;
+        }
+        a {
+          position: absolute;
+          padding: 3px;
+        }
+        .left {
+          left: 0.325rem;
+        }
+        .right {
+          right: 0.325rem;
+        }
+      }
+    }
+    .publish-menu {
+      width: 100%;
+      height: 1.3rem;
+      margin-top: 1.62rem;
+      margin-bottom: 0.6rem;
+      .timeline-text {
+        width: 33.33%;
+        float: left;
+        text-align: center;
+        border-bottom: 3px solid #e5e5e5;
+        padding: 0.28rem 0 0.2rem;
+        margin-bottom: 0;
+        position: relative;
+        background-color: #ffffff;
+        :before {
+          content: "";
+          width: 0.4rem;
+          height: 0.4rem;
+          border-radius: 50%;
+          background-color: #e5e5e5;
+          margin: 0 auto;
+          position: absolute;
+          bottom: -0.25rem;
+          left: 0;
+          right: 0;
+        }
+        .text {
+          font-size: 0.4rem;
+          color: #a0a0a0;
+          display: inline-block;
+          text-rendering: auto;
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
+        }
+        &.active {
+          border-bottom: 3px solid #ff4200;
+          :before {
+            content: "";
+            width: 0.2rem;
+            height: 0.2rem;
+            border-radius: 50%;
+            margin: 0 auto;
+            position: absolute;
+            bottom: -0.25rem;
+            left: 0;
+            right: 0;
+            background-color: #ffffff;
+            border: 0.1rem solid #ff4200;
+          }
+          .text {
+            color: #ff4200;
+          }
+        }
+      }
+    }
+    .panel {
+      padding: 0.2rem 0.4rem;
+      margin-bottom: 0.2rem;
+      background-color: #ffffff;
+      &.marginBottom {
+        margin-bottom: 2.2rem;
+      }
+      .title {
+        font-size: 0.4rem;
+        color: #333333;
+        line-height: 0.8rem;
+        position: relative;
+        &:before {
+          content: '';
+          margin-right: 0.2rem;
+          border-left: 0.2rem solid #ff0000;
+        }
+
+        em{
+          float: right;
+          font-size: 0.4rem;
+          color: #666666;
+          background-color: #f2f2f2;
+          padding: 0 0.2rem;
+          border-radius: 0.2rem;
+        }
+        .inline-x-switch {
+          position: absolute;
+          right: 0.29rem;
+          top: 50%;
+          margin-top: -16px;
+        }
+        .weui-switch:checked, .weui-switch-cp__input:checked ~ .weui-switch-cp__box {
+          border-color: #ff4200;
+          background-color: #ff4200;
+        }
+      }
+      .check-box {
+        padding: 0.2rem 0;
+        span {
+          display: inline-block;
+          height: 0.8rem;
+          color: #b6b6b6;
+          font-size: 0.4rem;
+          line-height: 0.8rem;
+          border-radius: 0.4rem;
+          border: 1px solid #f5f5f5;
+          text-align: center;
+          &.active {
+            border: 1px solid #ff0000;
+            color: #ff0000;
+            i {
+              color: #ff0000;
+            }
+          }
+          &.check-type {
+            width: 29%;
+            margin: 0.14rem 0.12rem;
+            i {
+              margin: 0 0.2rem;
+              vertical-align: middle;
+            }
+          }
+          &.check-method {
+            width: 17%;
+            margin: 0.06rem;
+          }
+          &.fee {
+            width: 23%;
+            i.qkb-icon {
+              display: inline-block;
+              vertical-align: middle;
+              width: 0.4rem;
+              height: 0.4rem;
+              margin-right: 0.18rem;
+              background: url("../../images/qkb-icon.png") no-repeat;
+              background-size: 100% 100%;
+            }
+          }
+          &.bail {
+            width: 23%;
+            i.bzj-icon {
+              display: inline-block;
+              vertical-align: middle;
+              width: 0.4rem;
+              height: 0.4rem;
+              margin-right: 0.18rem;
+              background: url("../../images/bzj-icon.png") no-repeat;
+              background-size: 100% 100%;
+            }
+          }
+          &.three-box{
+            width: 29%;
+            margin: 0.14rem 0.12rem;
+          }
+          &.five-box{
+            width: 15%;
+            margin: 0.14rem 0.12rem;
+          }
+        }
+      }
+      .tips {
+        padding: 0.2rem 0.4rem;
+        margin-bottom: 0.2rem;
+        background-color: #F5F5F5;
+        border-radius: 0.2rem;
+        p {
+          color: #666666;
+          line-height: 0.68rem;
+          &:nth-of-type(1) {
+            font-size: 0.4rem;
+          }
+          &:nth-of-type(2) {
+            font-size: 0.36rem;
+          }
+        }
+      }
+      .right-con{
+        position: relative;
+        display: -webkit-box;
+        display: -ms-flexbox;
+        display: flex;
+        -webkit-box-align: center;
+        -webkit-align-items: center;
+        padding: 0.4rem;
+        border-bottom: 1px solid #F2F2F2;
+        &:last-child{
+          border: none;
+        }
+        .left-title{
+          width: 35%;
+          font-size: 0.48rem;
+          color: #3b3b3b;
+        }
+        .right-title{
+          width: 60%;
+          text-align: right;
+          margin-right: 0.2rem;
+          font-size: 0.36rem;
+          color: #b1b1b1;
+          .gift-info{
+            background-color: #F2F2F2;
+            border-radius: 0.2rem;
+            position: relative;
+            .gift-icon {
+              float: left;
+              width: 1rem;
+              height: 1rem;
+              background-size: cover;
+              background-position: center;
+              border-radius: 0.2rem;
+              background-image: url("../../images/p1.jpg");
+              margin: 0.1rem;
+            }
+            p{
+              font-size: 0.3rem;
+              color: #666666;
+              line-height: 1.5;
+              text-align: left;
+              margin-left: 1.4rem;
+            }
+          }
+        }
+        .next-icon{
+          width: 5%;
+        }
+      }
+    }
+    .select_panel{
+      padding: 0;
+      background-color: #FFFFFF;
+      color: #3b3b3b;
+      .select_title{
+        font-size: 0.36rem;
+        padding: 0.4rem;
+        background-color: #f5f5f5;
+      }
+      .select_con{
+        position: relative;
+        display: -webkit-box;
+        display: -webkit-flex;
+        display: flex;
+        -webkit-box-align: center;
+        -webkit-align-items: center;
+        padding: 0.4rem;
+        border-bottom: 1px solid #F2F2F2;
+        &:last-of-type{
+          border-bottom: none;
+        }
+        div{
+          &:nth-of-type(1){
+            width: 35%;
+            font-size: 0.48rem;
+            color: #3b3b3b;
+          }
+          &:nth-of-type(2){
+            width: 60%;
+            text-align: right;
+            margin-right: 0.2rem;
+            font-size: 0.36rem;
+            color: #b1b1b1;
+          }
+          &:nth-of-type(3){
+            width: 5%;
+          }
+        }
+      }
+    }
+    .publish_bd_btn {
+      width: 100%;
+      padding: 1em 0;
+      text-align: center;
+      position: fixed;
+      left: 0;
+      bottom: 0;
+      background-color: rgba(0, 0, 0, 0.1);
+      em {
+        display: inline-block;
+        width: 4.8rem;
+        height: 1.26rem;
+        line-height: 1.26rem;
+        font-size: 0.52rem;
+        color: #FFFFFF;
+        background-color: #ababab;
+        border-radius: 1rem;
+        &.next {
+          background-color: #ff4200;
+        }
+      }
+    }
+    .marginBottom02 {
+      margin-bottom: 0.2rem;
+    }
+    .row-check-box {
+      .box {
+        width: 28%;
+        height: 0.8rem;
+        font-size: 0.4rem;
+        line-height: 0.8rem;
+        border-radius: 0.4rem;
+        display: inline-block;
+        text-align: center;
+        &.active {
+          color: #ff4200;
+          border: 1px solid #ff4200;
+        }
+      }
+    }
+    .checkFriend {
+      .vux-check-icon {
+        width: 100% !important;
+      }
+    }
+    .img-panel {
+      padding: 0.4rem;
+      background-color: #FFFFFF;
+      color: #3b3b3b;
+      .checkbox-panel{
+        padding-bottom: 0.2rem;
+
+        .radio{
+          display: inline-block;
+          position: relative;
+          line-height: 18px;
+          margin-right: 10px;
+          cursor: pointer;
+        }
+        .radio input{
+          display: none;
+        }
+        .radio .radio-bg{
+          display: inline-block;
+          height: 14px;
+          width: 14px;
+          margin-right: 5px;
+          padding: 0;
+          background-color: #fff;
+          border: 1px solid #C9C9C9;
+          border-radius: 100%;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          vertical-align: middle;
+        }
+        .radio .radio-on{
+          display: none;
+        }
+        .radio input:checked + span.radio-on{
+          width: 8px;
+          height: 8px;
+          position: absolute;
+          border-radius: 100%;
+          background: #ff4200;
+          top: 6px;
+          left: 4px;
+          background-image: linear-gradient(#FF5508 0, #ff4200 100%);
+          transform: scale(0, 0);
+          transition: all 0.2s ease;
+          transform: scale(1, 1);
+          display: inline-block;
+        }
+      }
+    }
+    .user_img_desc{
+      padding: 0 0.2rem 0.2rem 0;
+    }
+  }
+
+  .rule {
+    background-color: #FFF;
+    width: 7.81rem;
+    margin: 0 auto;
+    border-radius: 5px;
+    position: relative;
+    .iconfont {
+      position: absolute;
+      z-index: 1;
+      right: 0.3rem;
+      top: 0.3rem;
+      color: #FFF;
+    }
+    p {
+      height: 1.93rem;
+      line-height: 1.93rem;
+      background-image: url("../../images/prizedraw/rulebg.png");
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      font-size: 0.48rem;
+      color: #FFF;
+      position: relative;
+      &:before {
+        content: "";
+        position: absolute;
+        margin-left: -2.8rem;
+        left: 100%;
+        height: 1px;
+        width: 1.1rem;
+        top: 50%;
+        background-color: rgba(255, 255, 255, 0.2);
+      }
+      &:after {
+        content: "";
+        position: absolute;
+        margin-right: -2.8rem;
+        right: 100%;
+        height: 1px;
+        width: 1.1rem;
+        top: 50%;
+        background-color: rgba(255, 255, 255, 0.2);
+      }
+    }
+    div {
+      height: 6.46rem;
+      padding: 0.365rem 0.4rem 0;
+      box-sizing: border-box;
+    }
+  }
+</style>

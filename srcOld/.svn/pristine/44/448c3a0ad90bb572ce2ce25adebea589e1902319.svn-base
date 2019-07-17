@@ -1,0 +1,640 @@
+<template>
+  <div class="page" ref="scrollTop" @scroll="scroll">
+    <div class="user-div">
+      <Loading v-if="isloading"></Loading>
+      <div class="user_top" :class="{userTop:userTop}">
+        <div ref="header" class="header">
+          <div class="top">
+            <a class="left"></a><a class="right" @click="clickShare"><i class="iconfont">&#xe679;</i></a>
+          </div>
+        </div>
+        <share :show="showShare" @changeShow="changeShow"></share>
+        <div class="user_info" style="position: relative;">
+          <router-link :to="{name:'userInfo',query:{id:$store.state.userInfo.id}}" tag="i" class="user_img" :style="'background-image:url('+getFullPath($store.state.userInfo.headimgAttachmentId)+');'"></router-link>
+          <h2><a v-if="0" @click="linkTo('/signOn')" class="btn_qd">签到</a>
+            <span><i>{{$store.state.userInfo.aliasName}}</i><i>VIP未开通</i><i class="jy_auth_level">{{$store.state.userInfo.level}}</i></span>
+          </h2>
+          <i class="iconfont" style="font-size: 1rem;color:#fff;position:absolute;right: 1rem;top: 0;" @click="showQRCode=true">&#xe68a;</i>
+          <p>{{$store.state.userInfo.selfLabel}}</p>
+          <p>
+            <a :class="{demanda:$store.state.userInfo.idStatus==1}" v-if="$store.state.userInfo.idStatus==1 || $store.state.userInfo.idStatus==2"><img :src="imgs.idcard" class="idCard"/></a>
+            <router-link :to="{name:'identityAuth'}" v-else><img :src="imgs.idcard" class="idCard"/></router-link>
+            <a :class="{demanda:$store.state.userInfo.carStatus==1}" v-if="$store.state.userInfo.carStatus==1 || $store.state.userInfo.carStatus==2"><img :src="imgs.car" class="car"/></a>
+            <router-link :to="{name:'carAuth'}" v-else><img :src="imgs.car" class="car"/></router-link>
+            <a :class="{demanda:$store.state.userInfo.houseStatus==1}" v-if="$store.state.userInfo.houseStatus==1 || $store.state.userInfo.houseStatus==2"><img :src="imgs.house" class="house"/></a>
+            <router-link :to="{name:'houseAuth'}" v-else><img :src="imgs.house" class="house"/></router-link>
+            <a :class="{demanda:$store.state.userInfo.healthyStatus==1}" v-if="$store.state.userInfo.healthyStatus==1 || $store.state.userInfo.healthyStatus==2"><img :src="imgs.health" class="health"/></a>
+            <router-link :to="{name:'healthyAuth'}" v-else><img :src="imgs.health" class="health"/></router-link>
+            <a :class="{demanda:$store.state.userInfo.videoStatus==1}" v-if="$store.state.userInfo.videoStatus==1 || $store.state.userInfo.videoStatus==2"><img @touchend.stop="openVideo(getFullPath($store.state.userInfo.videoUrl),$store.state.userInfo.videoStatus)" :src="imgs.video" class="video"/></a>
+            <router-link :to="{name:'videoAuth'}" v-else><img :src="imgs.video" class="video"/></router-link>
+          </p>
+        </div>
+        <div class="user_menu" :class="$store.state.isWeixin?'user_menu3':''">
+          <a @click="linkTo('/recentVisit')"><span :class="{news:news.vistorCount>0}"></span>最近来访<br/> {{news.vistorCount}}</a>
+          <a @click="linkTo('/myFocus','2')"><span :class="{news:news.newFriendCount>0}"></span>我的关注<br/> {{$store.state.userInfo.followCount}}</a>
+          <a @click="linkTo('/myFocus','3')"><span :class="{news:news.newFanCount>0}"></span>我的粉丝 <br/>{{$store.state.userInfo.fanCount}}</a>
+          <a @click="linkTo('/myOffer')" v-if="!$store.state.isWeixin">我的邀约<br/><span class="time">{{closeTime}}</span></a>
+        </div>
+        <ul class="user_l">
+          <li><a @click="linkTo('/safeHouse')" class="icon_jb">金屋<em>{{$store.state.userInfo.userMoney}}枚</em></a></li>
+          <li><a @click="linkTo('/prizeDraw/main')" class="icon_prize">抽奖</a></li>
+          <shop @changeLoading="changeLoading" :tag="'li'"><a class="icon_shop">购物</a></shop>
+          <li>
+            <router-link :to="{name:'bill'}" class="icon_order">账单</router-link>
+          </li>
+        </ul>
+      </div>
+      <!--<div class="label-cls">-->
+      <!--<p><span>我的标签</span><span>管理</span></p>-->
+      <!--<p>-->
+      <!--<span v-for="item in user.label"> {{item}} </span>-->
+      <!--</p>-->
+      <!--</div>-->
+      <!--<div class="moment-cls" @click="linkTo('/myComments/main')">-->
+      <!--<p><i class="myDynamic-icon"></i>我的动态<span>({{user.userMoments}})</span></p>-->
+      <!--<p><span v-for="item in user.userMomentsList" :style="'background-image:url('+getFullPath(item.img)+');'"><i>{{item.datetime.substr(0,10)}}</i></span><i class="iconfont">&#xe702;</i></p>-->
+      <!--</div>-->
+      <!--<div class="invite-cls">-->
+      <!--<p>我的邀约<span>({{user.userInvite}})</span><i class="iconfont">&#xe702;</i></p>-->
+      <!--<p>-->
+      <!--<a v-for="item in user.userInviteList" :key="item.id">{{item.content}}</a>-->
+      <!--</p>-->
+      <!--</div>-->
+      <!--<div @click="linkTo('/myBlindDate')" class="invite-cls">
+        <p><span class="myBlindDate-icon"></span>我的相亲活动<i class="iconfont">&#xe702;</i></p>
+      </div>-->
+      <template v-if="$store.state.isWeixin">
+        <div class="invite-cls" @click="linkTo('earnCoin')">
+          <p><span class="rwzx-icon"></span>任务中心 <span class="right-text">做任务领乾坤币</span><i class="iconfont">&#xe702;</i>
+          </p>
+        </div>
+        <router-link :to="{name:'agent'}" tag="div" class="invite-cls">
+          <p><span class="wddl-icon"></span>我的代理<i class="iconfont">&#xe702;</i></p>
+        </router-link>
+        <router-link :to="{name:'myBlindDate'}" tag="div" class="invite-cls">
+          <p><span class="xq-icon"></span>我的相亲<i class="iconfont">&#xe702;</i></p>
+        </router-link>
+      </template>
+      <template v-else>
+        <div class="invite-cls" @click="linkTo('/myOffer')">
+          <p><span class="processing-icon"></span>进行中<i class="iconfont">&#xe702;</i></p>
+          <div class="activity-list" v-for="item in processingArr" :key="item.id" @click="toActiveDetail(item.id)">
+            <div class="activity-info">
+              <img :src="getFullPath(item.coverimgImages?item.coverimgImages:item.jiaoyouUser.headimgAttachmentId)"/>
+              <div class="playing">
+                <span></span>
+                <span></span>
+                <span></span>
+              </div>
+            </div>
+            <p>{{item.datingDesc}}</p>
+          </div>
+        </div>
+        <div class="invite-cls" @click="linkTo('/myOffer')">
+          <p><span class="datingPending-icon"></span>待约会<i class="iconfont">&#xe702;</i></p>
+          <div class="activity-list" v-for="item in pendingArr" :key="item.id" @click.stop="toActiveDetail(item.id)">
+            <div class="activity-info">
+              <img :src="getFullPath(item.coverimgImages?item.coverimgImages:item.jiaoyouUser.headimgAttachmentId)"/>
+              <span class="countdown"><i class="countdown_icon"></i></span>
+            </div>
+            <p>{{item.datingDesc}}</p>
+          </div>
+        </div>
+        <div @click="linkTo('/myComments')" class="invite-cls">
+          <p><span class="myDynamic-icon"></span>我的动态<i class="iconfont">&#xe702;</i></p>
+        </div>
+        <router-link :to="{name:'myEvaluation'}" tag="div" class="invite-cls">
+          <p><span class="myComment-icon"></span>我的评价<i class="iconfont">&#xe702;</i></p>
+        </router-link>
+        <!--<router-link :to="{name:'userCenter'}" tag="div" class="invite-cls">-->
+        <!--<p><span class="vip-icon"></span>会员中心<i class="iconfont">&#xe702;</i></p>-->
+        <!--</router-link>-->
+        <router-link :to="{name:'popularActivity'}" tag="div" class="invite-cls" v-if="0">
+          <p><span class="popularity-icon"></span>人气活动<i class="iconfont">&#xe702;</i></p>
+        </router-link>
+      </template>
+      <router-link :to="{name:'certificationCenter'}" tag="div" class="invite-cls">
+        <p><span class="rzzx-icon"></span>认证中心<i class="iconfont">&#xe702;</i></p>
+      </router-link>
+      <template v-if="!$store.state.isWeixin">
+        <router-link :to="{name:'setting'}" tag="div" class="invite-cls">
+          <p><span class="setting-icon"></span>设置<i class="iconfont">&#xe702;</i></p>
+        </router-link>
+        <div class="invite-cls">
+          <p><span class="help-icon"></span>帮助与反馈 <span class="right-text">反馈有礼</span><i class="iconfont">&#xe702;</i>
+          </p>
+        </div>
+        <Routerlink></Routerlink>
+      </template>
+    </div>
+    <div v-transfer-dom>
+      <x-dialog v-model="showQRCode" hide-on-blur :dialog-style="{'max-width': '100%', width: '100%','padding': '0.6rem 0', 'background-color': 'transparent'}">
+        <div class="qrcode_con">
+          <div class="close-icon" @click.stop="showQRCode=false"><i class="iconfont">&#xe7de;</i></div>
+          <div class="qrcode_panel" id="qrcode">
+            <p>告诉小伙伴,你在乾坤岛等Ta</p>
+            <vue-qr :logoSrc="imageUrl" :text="qrcodeValue" :size="150" :margin="0" :logoMargin="5" :logoCornerRadius="4"></vue-qr>
+            <p>扫一扫</p>
+            <p>登陆乾坤岛</p>
+          </div>
+        </div>
+      </x-dialog>
+    </div>
+  </div>
+</template>
+<script>
+  import car from '@/images/car.png'
+  import idcard from '@/images/idcard.png'
+  import video from '@/images/video_icon.png'
+  import house from '@/images/house.png'
+  import health from '@/images/health.png'
+  import Routerlink from '../routerlink.vue'
+  import Loading from '@other/loading.vue';
+  import shop from '@other/shop.vue';
+  import { TransferDom,XDialog } from 'vux';
+  // import user from './user.data'
+  import Share from '@/components/home/share.vue'
+  import VueQr from 'vue-qr'
+  import imageUrl from '../../images/logo_240.png'
+
+
+  export default {
+    name: 'user',
+    directives: {
+      TransferDom
+    },
+    components: {
+      Routerlink,
+      Loading,
+      Share,
+      shop,
+      XDialog,
+      VueQr,
+    },
+    data() {
+      return {
+        userTop: false,
+        imgs: {car: car, idcard: idcard, house: house, health: health, video: video},
+        isloading: false,
+        // user: user.user,
+        news: {},
+        closeTime: null,
+        showShare: false,
+        processingArr: [],
+        pendingArr: [],
+        showQRCode: false,
+        qrcodeValue: this.$store.state.baseURL+'/api/account/publicAddressLoginUrl?&state=user__pid_'+ this.$store.state.userInfo.jyNumber,
+        imageUrl: imageUrl,
+      }
+    },
+    async mounted() {
+      const t = this;
+      t.unreadNews();
+      t.getList();
+      t.$store.dispatch("CHECKMONEY");//查询用户当前的乾坤币
+      // console.log(JSON.stringify(this.$store.state.userInfo));
+      let userInfo = await this.$server.getUserInfo({userId: this.$store.state.userId});
+      this.$store.commit("LOGIN", userInfo.data.data);
+      t.closestActivityTime();
+    },
+    methods: {
+      changeLoading(val) {
+        this.isloading = val;
+      },
+      scroll() {
+        if (this.$refs.scrollTop.scrollTop > 2) {
+          this.userTop = true
+        } else {
+          this.userTop = false
+        }
+      },
+      openVideo(path, videoStatus) {
+        if (path) {
+          this.$utils.moviePlay(path, videoStatus)
+        }
+      },
+      getFullPath(path) {
+        return this.$utils.getFullPath(path)
+      },
+      goback() {
+        this.$router.go(-1);
+
+      },
+      linkTo(link, active) {
+        let query = null
+        if (active) {
+          query = {
+            active: active
+          }
+        }
+        this.$router.push({
+          path: link,
+          query: query
+        })
+      },
+      clickShare() {
+        this.showShare = !this.showShare;
+      },
+      changeShow(val) {
+        this.showShare = val;
+      },
+      async unreadNews() {
+        const _this = this;
+        _this.$vux.loading.show();
+        let newsResult = await _this.$server.userUnreadVisitNumer();
+        _this.news = newsResult.data.data || {newFanCount: 0, newFriendCount: 0, vistorCount: 0};
+        _this.$vux.loading.hide()
+      },
+      async closestActivityTime() {
+        const _this = this;
+        let result = await _this.$server.closestActivityTime();
+        if (result.data.data) {
+          setInterval(() => {
+            let date1 = result.data.data;
+            let date2 = new Date(); //当前时间
+            let date3 = new Date(date1).getTime() - date2.getTime();   //时间差的毫秒数
+            if (date3 > 0) {
+              //计算出相差天数
+              let days = Math.floor(date3 / (24 * 3600 * 1000))
+              //计算出小时数
+              let leave1 = date3 % (24 * 3600 * 1000)    //计算天数后剩余的毫秒数
+              let hours = Math.floor(leave1 / (3600 * 1000))
+              //计算相差分钟数
+              let leave2 = leave1 % (3600 * 1000)        //计算小时数后剩余的毫秒数
+              let minutes = Math.floor(leave2 / (60 * 1000))
+              //计算相差秒数
+              let leave3 = leave2 % (60 * 1000)      //计算分钟数后剩余的毫秒数
+              let seconds = Math.round(leave3 / 1000);
+              if (hours < 10) {
+                hours = "0" + hours;
+              }
+              if (minutes < 10) {
+                minutes = "0" + minutes;
+              }
+              if (seconds < 10) {
+                seconds = "0" + seconds;
+              }
+              if (hours <= 0 && minutes <= 0 && seconds <= 0) {
+                hours = "00";
+                minutes = "00";
+                seconds = "00";
+              }
+              if (days <= 1 && hours <= 1) {
+                _this.closeTime = minutes + ":" + seconds;
+                return _this.closeTime;
+              }
+            } else {
+              clearInterval();
+            }
+          }, 1000);
+        }
+      },
+
+      async getList() {
+        const _this = this;
+        let result = await _this.$server.getMyCandidateDating({state: 6});
+        if (result.data.list) {
+          _this.processingArr = [];
+          _this.processingArr.push(...result.data.list);
+        }
+        let pending = await _this.$server.get2CommentDating({beginDatingStarttime: _this.Fn.timeFormat(new Date(), 'yyyy-MM-dd hh:mm:ss')});
+        if (pending.data.list) {
+          _this.pendingArr = [];
+          _this.pendingArr.push(...pending.data.list);
+        }
+      },
+      toActiveDetail(id) {
+        this.$router.push({
+          path: "/act",
+          query: {
+            id: id
+          }
+        })
+      },
+    }
+  }
+</script>
+<style lang="scss" scoped>
+  .page {
+    height: 100%;
+    overflow: auto;
+    position: relative;
+  }
+
+  .user-div {
+    padding-bottom: 1.62rem;
+  }
+
+  .user_top {
+    padding-top: 0.75rem;
+    &::before {
+      content: "";
+      position: fixed;
+      display: block;
+      z-index: 99;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 0.8rem;
+      background-size: 100%;
+    }
+    .header {
+      position: fixed;
+      width: 100%;
+      z-index: 10;
+      background: none;
+      border-bottom: none !important;
+      .top {
+        color: #FFF;
+        font-size: 0.52rem;
+        position: relative;
+        background-color: rgba(0, 0, 0, 0) !important;
+        i {
+          font-size: 0.52rem;
+        }
+        a {
+          position: absolute;
+          padding: 3px;
+        }
+        .left {
+          left: 0.325rem;
+        }
+        .right {
+          right: 0.325rem;
+        }
+      }
+    }
+    .user_info {
+      margin-top: 1.39rem;
+      padding: 0 0.42rem;
+      h2 {
+        span {
+          display: inline-block;
+          height: 0.7rem;
+          line-height: 0.7rem;
+          i {
+            vertical-align: middle;
+            margin-right: 0.2rem;
+          }
+          i:first-child {
+            font-size: 0.52rem;
+          }
+          i:nth-of-type(2) {
+            font-size: 0.18rem;
+            padding: 0.1rem 0.15rem;
+            background-color: #c4c4c4;
+            border-radius: 5px;
+          }
+          i:last-child {
+            font-size: 0.25rem;
+            line-height: 0.45rem;
+            border-radius: 3px;
+            &.jy_auth_level {
+              padding: 0.05rem;
+              background: -webkit-linear-gradient(left, #ffb533, #FFB533, #ff7900); /* Safari 5.1 - 6.0 */
+              background: -o-linear-gradient(left, #ffd455, #FFB533, #ff7900); /* Opera 11.6 - 12.0 */
+              background: -moz-linear-gradient(left, #ffd455, #FFB533, #ff7900); /* Firefox 3.6 - 15 */
+              background: linear-gradient(to right, #ffd455, #FFB533, #ff7900); /* 标准的语法（必须放在最后） */
+              &:before {
+                content: "Lv.";
+                display: inline-block;
+                margin-right: 0.03rem;
+                vertical-align: middle;
+              }
+            }
+          }
+        }
+      }
+      p:nth-of-type(1) {
+        color: #e2b5e4;
+        font-size: 0.36rem;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      p:last-child {
+        height: 1rem;
+        line-height: 1rem;
+        font-size: 0;
+        margin-top: 0.3rem;
+        .demanda {
+          background-color: #ffa800;
+        }
+        a {
+          display: inline-block;
+          width: 1rem;
+          height: 1rem;
+          border-radius: 0.5rem;
+          text-align: center;
+          background-color: #c4c4c4;
+          margin-right: 0.4rem;
+          vertical-align: top;
+          img {
+            vertical-align: middle;
+            &.idCard {
+              width: 60%;
+              height: 50%;
+            }
+            &.car {
+              width: 90%;
+              height: 90%;
+            }
+            &.video {
+              width: 50%;
+              height: 40%;
+            }
+            &.house {
+              width: 80%;
+              height: 80%;
+            }
+            &.health {
+              width: 60%;
+              height: 60%;
+            }
+          }
+        }
+      }
+    }
+  }
+
+  .userTop {
+    &::before {
+      background: -webkit-linear-gradient(left, #e04bae, #b654d3); /* Safari 5.1 - 6.0 */
+      background: -o-linear-gradient(right, #e04bae, #b654d3); /* Opera 11.1 - 12.0 */
+      background: -moz-linear-gradient(right, #e04bae, #b654d3); /* Firefox 3.6 - 15 */
+      background: linear-gradient(to right, #e04bae, #b654d3); /* 标准的语法 */
+    }
+    .header {
+      background: -webkit-linear-gradient(left, #e04bae, #b654d3); /* Safari 5.1 - 6.0 */
+      background: -o-linear-gradient(right, #e04bae, #b654d3); /* Opera 11.1 - 12.0 */
+      background: -moz-linear-gradient(right, #e04bae, #b654d3); /* Firefox 3.6 - 15 */
+      background: linear-gradient(to right, #e04bae, #b654d3); /* 标准的语法 */
+    }
+  }
+
+  .label-cls {
+    margin: 0.34rem 0;
+    padding: 0 0.4rem;
+    background-color: #FFF;
+    color: #c5c5c9;
+    p:first-child {
+      padding: 0.35rem 0;
+      position: relative;
+      font-size: 0.44rem;
+      font-weight: 500;
+      span:first-child {
+        color: #000;
+      }
+      span:last-child {
+        font-size: 0.32rem;
+        position: absolute;
+        right: 0;
+      }
+    }
+    p:last-child {
+      display: flex;
+      flex-wrap: wrap;
+      span {
+        font-size: 0.3rem;
+        height: 0.6rem;
+        line-height: 0.6rem;
+        padding: 0 10px;
+        border: 1px solid #c5c5c9;;
+        border-radius: 0.3rem;
+        margin-left: 0.6rem;
+        margin-bottom: 0.35rem;
+      }
+      span:nth-of-type(7n+5) {
+        margin-left: 1.7rem;
+      }
+    }
+
+  }
+
+  .moment-cls {
+    margin: 0.34rem 0;
+    padding: 0 0.4rem 0.35rem;
+    background-color: #FFF;
+    p:first-child {
+      padding: 0.35rem 0;
+      font-size: 0.44rem;
+      font-weight: 500;
+      span {
+        font-size: 0.32rem;
+        font-weight: 300;
+        color: #c5c5c9;
+      }
+    }
+    p:last-child {
+      position: relative;
+      height: 1.7rem;
+      line-height: 1.7rem;
+      span:first-child {
+        margin-left: 0.3rem;
+      }
+      span {
+        display: inline-block;
+        width: 1.7rem;
+        height: 1.7rem;
+        background-size: cover;
+        background-position: center;
+        margin-right: 0.2rem;
+        border-radius: 5px;
+        i {
+          display: inline-block;
+          vertical-align: bottom;
+          background-color: rgba(0, 0, 0, 0.4);
+          font-size: 0.2rem;
+          text-align: center;
+          width: 100%;
+          height: 0.3rem;
+          line-height: 0.3rem;
+          color: #FFF;
+        }
+      }
+      & > i {
+        position: absolute;
+        right: 0;
+        color: #c5c5c9;
+      }
+    }
+  }
+
+  .invite-cls {
+    margin: 0.34rem 0;
+    padding: 0 0.4rem;
+    background-color: #FFF;
+    p:first-child {
+      position: relative;
+      padding: 0.4rem 0;
+      font-size: 0.44rem;
+      font-weight: 500;
+      span {
+        font-size: 0.32rem;
+        font-weight: 300;
+        color: #c5c5c9;
+      }
+      i {
+        position: absolute;
+        top: 0.44rem;
+        right: 0;
+        color: #c5c5c9;
+      }
+      .right-text {
+        position: absolute;
+        top: 0.44rem;
+        right: 0.6rem;
+      }
+    }
+    p:last-child {
+      a {
+        display: block;
+        margin-left: 0.2rem;
+        height: 1.27rem;
+        line-height: 1.27rem;
+        border-top: 1px solid #f2f2f2;
+      }
+      a:first-child {
+        border-top: 0;
+      }
+    }
+  }
+
+  .qrcode_con{
+    position: relative;
+    .close-icon{
+      position: absolute;
+      right: 0.8rem;
+      top: 0;
+      width: 1rem;
+      height: 1rem;
+      border-radius: 50%;
+      background: linear-gradient(to right, #ff9a63 , #ff5b02); /* 标准的语法 */
+      border: 1px solid #ffffff;
+      i{
+        color: #ffffff;
+        font-size: 0.6rem;
+      }
+    }
+    .qrcode_panel{
+      width: 9.16rem;
+      height: 10.86rem;
+      background: url("../../images/code_border.png") no-repeat;
+      background-size: cover;
+      margin: 0 auto 1rem;
+
+      p{
+        &:nth-of-type(1){
+          font-size: 0.48rem;
+          color: #3f3c3f;
+          line-height: 3rem;
+        }
+        &:nth-of-type(2),&:nth-of-type(3){
+          font-size: 0.56rem;
+          color: #3f3c3f;
+          line-height: 1rem;
+        }
+      }
+    }
+  }
+</style>

@@ -1,0 +1,2523 @@
+<template>
+<div class="jy_act_scroll jy_act_blindPrize">
+	<div class="main jy_all_top jy_act jy_act_new jy_act_blind">
+		<div class="page_1 page1">
+			<div class="horizontalScroll_1">
+				<div class="page_2 s1">
+					<div class="header">
+						<div class="top">
+							<Back class="left"><i class="iconfont">&#xe613;</i></Back><div class="right">
+								<a @click.shop="qcode"><i class="iconfont">&#xe60e;</i></a><a @click.shop="showPh=!showPh"><i class="iconfont">&#xe668;</i></a><a @click.stop="exit('actInfo',{id:datingId,type:'blindDate'})"><i class="iconfont">&#xe92f;</i></a><a v-if="!$store.state.isBrowser" @click.stop="exit('registrationActivity')"><i class="iconfont">&#xe7de;</i></a>
+							</div><p>{{owner&&owner.datingTitle}}</p>
+						</div>
+					</div>
+					<div class="jy_act_top" v-if="owner">
+						<div class="jy_act_tx jy_act_tx_l">
+							<i class="jy_act_tx_img" :style="'background-image:url('+$utils.getFullPath(owner.jiaoyouUser.headimgAttachmentId)+')'" @click.stop="getUserInfo(owner.jiaoyouUser.id)"></i>
+							<p class="jy_act_tx_tit"><span>主持人</span></p>
+						</div>
+						<div class="jy_act_bl_r">
+							<!--<a v-if="chatRoomInfo&&chatRoomInfo.status==4&&chatRoomInfo.number==4" @click.stop="overAct">结束</a>-->
+							<template v-if="chatRoomInfo&&!(chatRoomInfo.status==4&&chatRoomInfo.number==4)&&!isActEnd&&isManage">
+								<a @click.stop="nextStep">{{chatRoomInfo.status==0?'开始':chatRoomInfo.status==1?chatRoomInfo.number==4?'抽奖':'结束':chatRoomInfo.status==2?'公布':chatRoomInfo.status==3?'下一组':'END'}}</a>
+							</template>
+							<a v-else-if="!isManage&&isSign">{{getSex($store.state.userInfo.sex)+isSign+"号"}}</a>
+							
+						</div>
+						<dl class="jy_act_bl_cur cur" v-if="chatRoomInfo">
+							<template v-if="isActEnd">
+								<dt>活动结束</dt>
+								<dd>
+									<ul class="jy_act_bl_cur_tip">
+										<li>活动结束了.</li>
+									</ul>
+								</dd>
+							</template>
+							<template v-else-if="chatRoomInfo.number==1">
+								<dt>当前环节：互选意中人</dt>
+								<dd>
+									<ul class="jy_act_bl_cur_tip">
+										<li v-if="chatRoomInfo.status==0">本轮已结束,等待开始下一环节</li>
+										<li v-else-if="chatRoomInfo.status==1">男女双方互相选择自己的意中人</li>
+										<li v-else-if="chatRoomInfo.status==2||chatRoomInfo.status==3">等待主持人公布本环节匹配结果</li>
+									</ul>
+								</dd>
+							</template>
+							<template v-else-if="chatRoomInfo.number==2">
+								<dt>当前环节：男生选择意中人</dt>
+								<dd>
+									<ul class="jy_act_bl_cur_tip">
+										<li v-if="chatRoomInfo.status==0">本轮已结束,等待开始下一环节</li>
+										<template  v-else-if="chatRoomInfo.status==1">
+											<li>男生选择一个意中人</li>
+											<li>女生可在选择自己的男生中接受对方</li>
+										</template>
+										<li v-else-if="chatRoomInfo.status==2||chatRoomInfo.status==3">等待主持人公布本环节匹配结果</li>
+									</ul>
+								</dd>
+							</template>
+							<template v-else-if="chatRoomInfo.number==3">
+								<dt>当前环节：女生选择意中人</dt>
+								<dd>
+									<ul class="jy_act_bl_cur_tip">
+										<li v-if="chatRoomInfo.status==0">本轮已结束,等待开始下一环节</li>
+										<template  v-else-if="chatRoomInfo.status==1">
+											<li>女生选择一个意中人</li>
+											<li>男生可在选择自己的女生中接受对方</li>
+										</template>
+										<li v-else-if="chatRoomInfo.status==2||chatRoomInfo.status==3">等待主持人公布本环节匹配结果</li>
+									</ul>
+								</dd>
+							</template>
+							<template v-else-if="chatRoomInfo.number==4&&chatRoomInfo.status==4">
+								<dt>活动结束</dt>
+								<dd>
+									<ul class="jy_act_bl_cur_tip">	
+										<li>等待主持人公布本环节匹配结果</li>		
+									</ul>
+								</dd>
+							</template>
+							<template v-else-if="chatRoomInfo.number==4">
+								<dt>当前环节：抽奖</dt>
+								<dd>
+									<ul class="jy_act_bl_cur_tip">
+									<li v-if="chatRoomInfo.status==0">本轮已结束,活动即将结束</li>
+										<template  v-else-if="chatRoomInfo.status==1">
+											<li>姻缘天注定,没能匹配的男女可选择加入抽奖,由系统抽奖匹配有缘人.</li>
+										</template>
+										<li v-else-if="chatRoomInfo.status==2||chatRoomInfo.status==3">等待主持人公布本环节匹配结果</li>		
+									</ul>
+								</dd>
+							</template>
+							<template v-else-if="chatRoomInfo.state==3">
+								<dt>待开始</dt>	
+							</template>
+							<template v-else-if="chatRoomInfo.state==5">
+								<dt>已结束</dt>	
+							</template>
+						</dl>
+						<template v-if="chatRoomInfo">
+							<p class="jy_act_people">{{(chatRoomInfo.baoMingCount)||0}}</p>
+							<p class="jy_act_bl_tip" v-if="isManage">报名人数：{{baomingUser&&baomingUser.length||owner.enrollCount||0}}人,签到人数:{{chatRoomInfo.baoMingCount||0}},男:{{chatRoomInfo.lookOnCount}},女:{{chatRoomInfo.baoMingCount-chatRoomInfo.lookOnCount}},已匹配:{{currMatchUsers.length}}对,剩余:(男:{{chatRoomInfo.lookOnCount-currMatchUsers.length}},女:{{chatRoomInfo.baoMingCount-chatRoomInfo.lookOnCount-currMatchUsers.length}});
+							<p class="jy_act_bl_tip" v-else>配对总数：{{curMatch.length}}对， 当前配对：{{allMatchUsers&&allMatchUsers["num_"+chatRoomInfo.number]?allMatchUsers["num_"+chatRoomInfo.number].length+"对":(chatRoomInfo.status==0&&chatRoomInfo.number>0)||isActEnd?"本环节无匹配":"等待公布结果"}}，报名人数：{{baomingUser&&baomingUser.length||owner.enrollCount||0}}人</p>
+						</template>
+					</div>
+					<div class="jy_act_mid">
+						<div class="jy_act_mid_con">
+							<div v-if="$store.state.isBrowser" class="jy_act_bl_scroll" :class="{cur:allMatchUsers}">
+								<div class="jy_act_bl_reslist">
+									<ul v-for="val,num in allMatchUsers" :data-num="isManage?'第'+num.replace('num_','')+'轮('+val.length+'对)':'第'+num.replace('num_','')+'轮'">
+										<li v-for="item,index in val">
+											<div class="jy_act_bl_reslist_l">
+												<i :style="'background-image:url('+$utils.getFullPath(item[0].headimg)+')'"></i>
+												<p>{{"("+getSex(item[0].sex)+item[0].extInt+"号)"+item[0].name}}</p>
+											</div>
+											<div class="jy_act_bl_reslist_r">
+												<i :style="'background-image:url('+$utils.getFullPath(item[1].headimg)+')'"></i>
+												<p>{{"("+getSex(item[1].sex)+item[1].extInt+"号)"+item[1].name}}</p>
+											</div>
+										</li>
+									</ul>
+								</div>
+							</div>
+							<dl class="jy_act_lt" v-else>
+								<dd>
+									<ul class="jy_act_lt_list" v-if="chatList">
+										<template v-for="item,index in chatList">
+											<li :class="item.userId==$store.state.userInfo.id?'jy_lt_right':'jy_lt_left'">
+												<i @click.stop="item.userId==$store.state.userInfo.id?'':getUserInfo(item.userId)" class="jy_lt_img" :style="'background-image:url('+$utils.getFullPath(item.bicon)+')'"><em  v-if="item.videoStatus==1" class="jy_lt_video"></em></i>
+												<h4>{{item.bname}}<i v-if="item.userId==owner.jiaoyouUser.id" class=" jy_h_text">主持人</i></h4>
+												<!--<div class="jy_lt_msg" v-html="getExpContent(item.message)"></div>-->
+												<div v-if="item.message" class="jy_lt_msg" v-html="getExpContent(item.message)"></div>
+												<div v-else-if="item.audio" class="jy_lt_msg" @click.stop="setActiveItem(item)">
+													<voice-playback @listenChildMethod="listenChildMethod" :animation="activeItem.id==item.id" :path="item.audio" :rotateType="item.userId==$store.state.userInfo.id?'1':null"></voice-playback>
+													<div class="remark">{{item.remark}}</div>
+												</div>
+											</li>
+										</template>
+									</ul>
+								</dd>
+							</dl>
+						</div>
+					</div>
+					<div class="jy_act_bottom" v-if="!showBoard">
+						<div class="jy_act_b_btn" >
+							<a v-if="(curMatch.length>0||(isManage&&allMatchUsers))&&!$store.state.isBrowser" class="jy_act_b_qy_btn" @click.stop="showPP=true">已匹配</a>
+							<template v-if="!isManage">
+								<a v-if="chatRoomInfo&&chatRoomInfo.status==1&&!isMatch&&!isSelect&&((chatRoomInfo.number==1)||(chatRoomInfo.number==2&&$store.state.userInfo.sex==2)||(chatRoomInfo.number==3&&$store.state.userInfo.sex==1))" class="jy_act_b_qy_btn" @click.stop="showChoose=true">选择</a>	
+								<!--<a class="jy_act_b_gift" @click.stop="showGift=true">&#xe6e0;</a>-->
+							</template>		
+							<a v-if="isManage" class="jy_act_b_qy_btn" @click.stop="showLuck=true">抽奖</a>
+						</div>
+						<p v-if="!$store.state.isBrowser">
+							<img @click.stop="beginRecord" v-show="!voice" src="../../images/message/voice.png"/>
+							<img @click.stop="voice=!voice" v-show="voice" src="../../images/message/keyboard.png"/>
+							<span @click.stop="showKeyBoard" v-show="!voice">说点什么吧...</span>
+							<span :style="{'text-align': 'center',backgroundColor:record?'#999':'#c6c6c6','border-radius':'3px',color:'#FFF'}" @touchmove.stop="touchmove($event)" @touchstart.stop="touchstart($event)" @touchend.stop="touchend($event)" @touchcancel.stop="touchcancel($event)" v-show="voice">
+							{{record?'松开 结束':'按住 说话'}}
+							</span>
+						</p>
+						<!--<p v-else @click.stop="showKeyBoard">说点什么吧...</p>-->
+					</div>
+				</div>
+				<div class="page_2 s2">
+					<div class="header">
+						<div class="top">
+							<div class="right">
+								<a @click.stop="exit('actInfo',{id:datingId,type:'blindDate'})"><i class="iconfont">&#xe92f;</i></a>
+							</div><p>{{isManage?'相亲结果':owner&&owner.datingTitle}}</p>
+						</div>
+					</div>
+					<template v-if="isManage">
+						<p class="jy_act_s2_re"><a v-for="item,index in curResultMenu" :class="{cur:curResult==index}" @click.stop="curResult=index">{{item}}</a></p>
+						<dl class="jy_act_result">
+							<dt>
+								<p class="jy_act_result_tit">{{curResult==0?(allMatchUsers?'匹配结果('+currMatchUsers.length+'对)':'暂无匹配'):curResult==1?(prizeUser?'抽奖结果('+prizeUserList.length+(luckuser?'+'+luckuser.length:'')+'人)':luckuser?'单独抽奖'+'('+luckuser.length+'人)':'暂无结果'):''}}</p>
+								<div class="jy_act_result_menu" v-if="curResult==0&&allMatchUsers">
+									<i><a v-for="val,num in allMatchUsers" @click.stop="curNumber=num" :class="{cur:curNumber==num}">第{{num.replace('num_','')}}轮({{val.length}})</a></i>
+								</div>
+								<div class="jy_act_result_menu" v-else-if="curResult==1&&(prizeUser||luckuser)"><i>
+									<template v-if="prizeUser"><a v-for="val,num in prizeUser" @click.stop="curPrize=num" :class="{cur:curPrize==num}">{{prizeArr[num]}}({{prizeUser[num].length}})</a></template><a v-if="luckuser" @click.stop="curPrize='Alone'" :class="{cur:curPrize=='Alone'||!prizeUser}">抽奖(单独)({{luckuser.length}})</a></i>
+								</div>
+							</dt>
+							<dd>
+								<div class="jy_act_bl_reslist" v-if="curResult==0&&allMatchUsers">
+									<ul>
+										<li v-for="item,index in allMatchUsers[curNumber]">
+											<div class="jy_act_bl_reslist_l">
+												<i :style="'background-image:url('+$utils.getFullPath(item[0].headimg)+')'"></i>
+												<p>{{"("+getSex(item[0].sex)+item[0].extInt+"号)"+item[0].name}}</p>
+											</div>
+											<div class="jy_act_bl_reslist_r">
+												<i :style="'background-image:url('+$utils.getFullPath(item[1].headimg)+')'"></i>
+												<p>{{"("+getSex(item[1].sex)+item[1].extInt+"号)"+item[1].name}}</p>
+											</div>
+										</li>
+									</ul>
+								</div>
+								<ul v-else-if="curResult==1&&(prizeUser||luckuser)" class="jy_act_bl_rlist">
+									<template v-if="prizeUser&&curPrize!='Alone'">
+										<li v-for="item,index in prizeUser[curPrize]">
+											<i :style="'background-image:url('+$utils.getFullPath(item.jiaoyouUser.headimgAttachmentId)+')'"></i>
+											<p>{{"("+getSex(item.candidateSex)+item.ext.extInt+"号)"+item.jiaoyouUser.aliasName}}</p>
+										</li>
+									</template>
+									<template v-else-if="luckuser">
+										<li v-for="item,index in luckuser">
+											<i :style="'background-image:url('+$utils.getFullPath(item.jiaoyouUser.headimgAttachmentId)+')'"></i>
+											<p>{{"("+getSex(item.candidateSex)+item.ext.extInt+"号)"+item.jiaoyouUser.aliasName}}</p>
+										</li>
+									</template>
+								</ul>	
+							</dd>
+						</dl>
+					</template>
+					<template v-else>
+						<div class="jy_act_top">
+							<div class="jy_act_top_ani">
+								<i></i><em></em>	
+							</div>
+							<div class="jy_act_tx jy_act_tx_l">
+								<i class="jy_act_tx_img" :style="'background-image:url('+$utils.getFullPath($store.state.userInfo.headimgAttachmentId)+')'"></i>
+								<p class="jy_act_bl_tit">{{isSign?"("+getSex($store.state.userInfo.sex)+isSign+"号)":''}}{{$store.state.userInfo.aliasName}}</p>
+							</div>
+							<div class="jy_act_tx jy_act_tx_r"  @click.stop="isMatch?showSelectUser(myMathch.userId):''">
+								<i  class="jy_act_tx_img" :style="isMatch?'background-image:url('+$utils.getFullPath(myMathch.headimg)+')':''"></i>
+								<p class="jy_act_tx_tit" v-if="!isMatch"><span>稍后揭晓</span></p>
+								<p class="jy_act_bl_tit">{{!isMatch?'来自火星的Ta':"("+getSex(myMathch.sex)+myMathch.extInt+"号)"+myMathch.name}}</p>
+							</div>
+						</div>
+						<p class="jy_act_bl_tit2" v-if="chatRoomInfo&&!isActEnd&&!isMatch">{{chatRoomInfo.number==1?'我中意的人':chatRoomInfo.number==2?($store.state.userInfo.sex==1?'中意我的人':'我中意的人'):chatRoomInfo.number==3?($store.state.userInfo.sex==2?'中意我的人':'我中意的人'):''}}</p>
+						<div class="jy_act_mid">
+							<div class="jy_act_mid_con">
+								<ul class="jy_act_bl_list" v-if="chatRoomInfo&&!isActEnd&&!isMatch">
+									<template v-if="chatRoomInfo.number==1">
+										<li v-for="item,index in youLove" @click.stop="showSelectUser(item.userId,item.extInt)">
+											<i :style="'background-image:url('+$utils.getFullPath(item.headimg)+')'"></i>
+											<p>({{getSex(item.sex)+item.extInt}}号){{item.name}}</p>
+										</li>	
+									</template>
+									<template v-else-if="chatRoomInfo.number==2">
+										<template v-if="$store.state.userInfo.sex==1">
+											<li v-for="item,index in myLove" :class="{off:myMathch&&myMathch.userId!=item.userId,cur:myMathch&&myMathch.userId==item.userId}" @click.stop="showSelectUser(item.userId,item.extInt)">
+												<i :style="'background-image:url('+$utils.getFullPath(item.headimg)+')'"></i>
+												<p>({{getSex(item.sex)+item.extInt}}号){{item.name}}</p>
+											</li>
+										</template>
+										<template v-else>
+											<li v-for="item,index in youLove" :class="{off:myMathch&&myMathch.userId!=item.userId,cur:myMathch&&myMathch.userId==item.userId}" @click.stop="showSelectUser(item.userId,item.extInt)">
+												<i :style="'background-image:url('+$utils.getFullPath(item.headimg)+')'"></i>
+												<p>({{getSex(item.sex)+item.extInt}}号){{item.name}}</p>
+											</li>
+										</template>
+									</template>
+									<template v-else-if="chatRoomInfo.number==3">
+										<template v-if="$store.state.userInfo.sex==2">
+											<li v-for="item,index in myLove" :class="{off:myMathch&&myMathch.userId!=item.userId,cur:myMathch&&myMathch.userId==item.userId}" @click.stop="showSelectUser(item.userId,item.extInt)">
+												<i :style="'background-image:url('+$utils.getFullPath(item.headimg)+')'"></i>
+												<p>({{getSex(item.sex)+item.extInt}}号){{item.name}}</p>
+											</li>
+										</template>
+										<template v-else>
+											<li v-for="item,index in youLove" :class="{off:myMathch&&myMathch.userId!=item.userId,cur:myMathch&&myMathch.userId==item.userId}" @click.stop="showSelectUser(item.userId,item.extInt)">
+												<i :style="'background-image:url('+$utils.getFullPath(item.headimg)+')'"></i>
+												<p>({{getSex(item.sex)+item.extInt}}号){{item.name}}</p>
+											</li>
+										</template>
+									</template>
+								</ul>
+							</div>
+						</div>	
+					</template>
+				</div>
+			</div>
+		</div>
+	</div>
+	<Loading v-if="isloading"></Loading>
+	<a class="jy_s1_jt"></a>
+	<div v-if="showZy" class="jy_act_zy_prize">
+		<p class="jy_act_qy_t">
+			<i v-if="!startPrize">{{prizeTime}}秒后自动抽奖</i>
+			<em class="jy_act_qy_close" @click.shop="showZy=false">&#xe622;</em>
+		</p>
+		<Prize @endPrize="endPrize" @prizeRunning="prizeRunning" @toStartPrize="toStartPrize" :startPrize="startPrize" :prizeIndex="prizeIndex"></Prize>
+		<!--<p class="jy_act_zy_b"><i><em bgImg="@images/e4.jpg"></em>看天不美   正在抽奖.....</i></p>-->
+	</div>
+	
+	<div v-show="showVedio" class="vedio-cls">
+		<div>
+			<span></span>
+			<span></span>
+			<span></span>
+			<span></span>
+			<span></span>
+		</div>
+		<div>松开发送，上滑取消</div>
+	</div>
+	<div v-transfer-dom>
+		<popup v-model="showWin" height="100%" :hide-on-blur=false position="bottom" :popup-style="{zIndex:598}" :should-scroll-top-on-show="true">
+		<div class="top_userInfo" v-if="showInfo">
+			<userInfo :actDatingId="datingId" :actGetGoodDatingId="datingId" :select="select" @openWin="openWin" @hiddenInfo="hiddenInfo" :userId="userId"></userInfo>
+		</div>
+		</popup>
+	</div>
+	<transition enter-active-class="slideInUp" leave-active-class="slideOutUp">
+	  <gift v-show="showGift" :showAnimate="false"  @sendGift="sendGift" :name="title" @close="sendGift" :list="giftList"></gift>
+	</transition>
+	<transition enter-active-class="slideInUp" leave-active-class="slideOutUp">
+	  <gift v-show="showGiftUser" :showAnimate="false"  @sendGift="sendGiftUser" :name="selectUserInfo&&selectUserInfo.aliasName" @close="sendGiftUser" :list="giftList"></gift>
+	</transition>
+	<div class="ds_flower">
+		<!--<div class="flower"></div>-->
+		<ul>
+		</ul>
+	</div>
+	<!-- 查看中意我的人的信息(接受她) -->
+	<div class="jy_bl_select" v-if="showSelect" @click.stop="showSelect=false">
+		<div class="jy_bl_select_con" @click.stop>
+			<div class="jy_bl_select_top">
+				<p class="jy_bl_select_id"><i @click.stop="showSelect=false">&#xe67c;</i>ID：{{selectUserInfo.jyNumber}}</p>
+				<i class="jy_bl_select_img" :style="'background-image:url('+$utils.getFullPath(selectUserInfo.headimgAttachmentId)+')'" @click.stop="getUserInfo(selectUserInfo.id)"></i>
+				<p class="jy_bl_select_ico">{{selectUserInfo.aliasName}}<i class="jy_auth_age" :class="{jy_auth_age_man:selectUserInfo.sex==2}">{{selectUserInfo.sex==1?'&#xe64a;':'&#xe605;'}}{{selectUserInfo.age}}</i><i class="jy_xz">{{selectUserInfo.userExt.constellation}}</i></p>
+				<p class="jy_bl_select_text">{{selectUserInfo.selfLabel}}</p>
+			</div>
+			<ul class="jy_bl_select_list">
+				<li v-if="selectUserInfo.isGood" class="cur" @click.stop="myFeel"><i>&#xe793;</i>有好感</li>
+				<li v-else @click.stop="myFeel"><i>&#xe793;</i>好感</li>
+				<li @click.stop="showGiftUser=true"><i>&#xe6e0;</i>送礼</li>
+				<li v-if="selectUserInfo.isFollow==0" @click.stop="followFriend"><i>&#xe642;</i>关注</li>
+				<li v-else class="cur"><i>&#xe642;</i>已关注</li>
+				<li v-if="!$store.state.isBrowser" @click.stop="exit('chatWindow',{id:selectUserInfo.id,name:selectUserInfo.aliasName})"><i>&#xe644;</i>对话</li>
+			</ul>
+			<p class="jy_auth_btn" v-if="chatRoomInfo&&!myMathch&&((chatRoomInfo.number==2&&chatRoomInfo.status==1&&$store.state.userInfo.sex==1)||(chatRoomInfo.number==3&&chatRoomInfo.status==1&&$store.state.userInfo.sex==2))&&selectUserInfo.isLike==0" @click.stop="marriageAgree">接受她</p><!--  isLike :1表示相互匹配，2表示对方已经被别人接受，0表示未匹配-->
+		</div>
+	</div>
+	<!-- 选择意中人 -->
+	<div v-transfer-dom>
+		<popup v-model="showChoose" class="jy_bl_Choose_wrap" height="100%" :hide-on-blur=false position="bottom" :popup-style="{zIndex:597}" :show-mask="false" :should-scroll-top-on-show="true">
+		<div>
+		<div class="jy_bl_Choose">
+			<div class="jy_bl_Choose_top"><em @click.stop="showChoose=false">取消</em>选择意中人<i @click.stop="marriageLove">提交</i></div>
+			<div class="jy_bl_Choose_search"><input type="search" v-model="searchKey" @search="search(false)" placeholder="搜索序号或昵称"></div>
+			<p class="jy_bl_Choose_tit">中意<i>（按住拖动调整顺序）</i></p>
+			<ul class="jy_bl_Choose_list">
+				<template v-if="chooseList.length>0">
+				<draggable v-model="chooseList" @update="dragEnd" :options = "{animation:500,ghostClass:'jy_choose_drag'}">
+					<transition-group>
+						<li v-for="item,index in chooseList" :key="index"><a :style="'background-image:url('+$utils.getFullPath(item.jiaoyouUser.headimgAttachmentId)+')'"><em @click.stop="delChoose(index)">&#xe7de;</em><span>序号:{{item.ext&&(getSex(item.candidateSex)+item.ext.extInt+"号")}}</span><p><i>{{item.jiaoyouUser.age}}岁</i>{{item.jiaoyouUser.aliasName}}</p></a></li>
+					</transition-group>
+				</draggable>
+				</template>
+				<li v-else><a></a></li>
+			</ul>
+			<div class="jy_bl_Choose_menu">
+				<a v-for="item,index in listKey" :class="listType==index?'cur':''" @click.stop="listType=index">{{item}}</a>
+			</div>
+			<div class="jy_bl_Choose_scroll" :style="chooseList.length>4?'padding:10.69rem 0 0;':'padding:8.07rem 0 0;'">
+				<ul class="jy_bl_Choose_list jy_bl_Choose_sel">
+					<template v-if="listType==0">
+						<li v-for="item,index in selectList"><a @click.stop="getUserInfo(item.jiaoyouUser.id)" :style="'background-image:url('+$utils.getFullPath(item.jiaoyouUser.headimgAttachmentId)+')'"><em :class="item.choose?'cur':''" @click.stop="choose(index)">&#xe646;</em><span>序号:{{item.ext&&(getSex(item.candidateSex)+item.ext.extInt+"号")}}</span><i class="jy_sppd">{{item.jiaoyouUser.matchAgree&&item.jiaoyouUser.matchAgree>0?'匹配度:'+item.jiaoyouUser.matchAgree+'%':''}}</i><p><i>{{item.jiaoyouUser.age}}岁</i>{{item.jiaoyouUser.aliasName}}</p></a></li>	
+					</template>
+					<template v-else-if="listType==1">
+						<template v-if="loveList.length>0">
+							<li v-for="item,index in loveList"><a @click.stop="getUserInfo(item.jiaoyouUser.id)" :style="'background-image:url('+$utils.getFullPath(item.jiaoyouUser.headimgAttachmentId)+')'"><em :class="item.choose?'cur':''" @click.stop="choose(index)">&#xe646;</em><span>序号:{{item.ext&&(getSex(item.candidateSex)+item.ext.extInt+"号")}}</span><i class="jy_sppd">{{item.jiaoyouUser.matchAgree&&item.jiaoyouUser.matchAgree>0?'匹配度:'+item.jiaoyouUser.matchAgree+'%':''}}</i><p><i>{{item.jiaoyouUser.age}}岁</i>{{item.jiaoyouUser.aliasName}}</p></a></li>
+						</template>
+						<li v-else>暂无好感对象</li>
+					</template>
+					<template v-else-if="listType==2">
+						<template v-if="searchList.length>0">
+							<li v-for="item,index in searchList"><a @click.stop="getUserInfo(item.jiaoyouUser.id)" :style="'background-image:url('+$utils.getFullPath(item.jiaoyouUser.headimgAttachmentId)+')'"><em :class="item.choose?'cur':''" @click.stop="choose(index)">&#xe646;</em><span>序号:{{item.ext&&(getSex(item.candidateSex)+item.ext.extInt+"号")}}</span><i class="jy_sppd">{{item.jiaoyouUser.matchAgree&&item.jiaoyouUser.matchAgree>0?'匹配度:'+item.jiaoyouUser.matchAgree+'%':''}}</i><p><i>{{item.jiaoyouUser.age}}岁</i>{{item.jiaoyouUser.aliasName}}</p></a></li>
+						</template>
+						<li v-else>暂无匹配结果</li>
+					</template>
+				</ul>
+			</div>
+		</div>
+		</div>
+	</popup>
+	</div>
+	<div v-transfer-dom>
+		<popup v-model="showBaoMingList" class="jy_bl_Choose_wrap" height="100%" :hide-on-blur=false position="bottom" :popup-style="{zIndex:596}" :show-mask="true" :should-scroll-top-on-show="true">
+			<dl class="jy_act_activeUser">
+				<dt>活动用户<i @click.stop="showPh=false">&#xe7de;</i></dt>
+				<dd :class="{jy_act_isUser:!isManage}">
+					<ul class="jy_act_activeList jy_act_activeList_abs" v-if="!isManage">
+						<li v-for="item,index in baomingUser" :data-num="index+1" v-if="item.jiaoyouUser.id==$store.state.userInfo.id">
+							<em class="jy_act_activeJb" :data-prize="getResult(item.jiaoyouUser.id)">{{item.ext&&item.ext.extInt?getSex(item.candidateSex)+item.ext.extInt+"号":"待签到"}}</em>
+							<i class="jy_act_activeimg" @click.stop="getUserInfo(item.jiaoyouUser.id)" :style="'background-image:url('+$utils.getFullPath(item.jiaoyouUser.headimgAttachmentId)+')'"></i>
+							<h4>{{item.candidateName}}</h4>
+							<p><i class="jy_auth_age" :class="{jy_auth_age_man:item.candidateSex==2}">{{item.candidateSex==1?'&#xe64a;':'&#xe605;'}}{{item.jiaoyouUser.age}}</i></p>
+						</li>	
+					</ul>
+					<ul class="jy_act_activeList">
+						<li v-for="item,index in baomingUser" :data-num="index+1">
+							<em class="jy_act_activeJb" :data-prize="getResult(item.jiaoyouUser.id)">{{item.ext&&item.ext.extInt?getSex(item.candidateSex)+item.ext.extInt+"号":"待签到"}}</em>
+							<i class="jy_act_activeimg" @click.stop="getUserInfo(item.jiaoyouUser.id)" :style="'background-image:url('+$utils.getFullPath(item.jiaoyouUser.headimgAttachmentId)+')'"></i>
+							<h4>{{item.candidateName}}</h4>
+							<p><i class="jy_auth_age" :class="{jy_auth_age_man:item.candidateSex==2}">{{item.candidateSex==1?'&#xe64a;':'&#xe605;'}}{{item.jiaoyouUser.age}}</i></p>
+						</li>	
+					</ul>
+				</dd>
+			</dl>
+		</popup>
+	</div>
+	<div v-transfer-dom>
+		<x-dialog v-model="showQcode" :hide-on-blur=true>
+			<div class="jy_act_bl_qcode" v-if="isManage">
+				<p>扫描以下二维码签到</p>
+				<qrcode class="jy_act_bl_c" :value="signCode.type?JSON.stringify(signCode):signCode"></qrcode>
+			</div>
+		</x-dialog>
+	</div>
+	<!-- 已成功匹配的 -->
+	<div class="jy_act_fix" v-if="showPP&&!$store.state.isBrowser">
+		<div class="jy_act_bl_result">
+			<p class="jy_act_bl_retit"><i>匹配结果</i><em @click.stop="showPP=false">&#xe7de;</em></p>
+			<div class="jy_act_bl_scroll">
+				<div class="jy_act_bl_reslist">
+					<ul v-for="val,num in allMatchUsers" :data-num="isManage?'第'+num.replace('num_','')+'轮('+val.length+'对)':'第'+num.replace('num_','')+'轮'">
+						<li v-for="item,index in val">
+							<div class="jy_act_bl_reslist_l">
+								<i :style="'background-image:url('+$utils.getFullPath(item[0].headimg)+')'"></i>
+								<p>{{"("+getSex(item[0].sex)+item[0].extInt+"号)"+item[0].name}}</p>
+							</div>
+							<div class="jy_act_bl_reslist_r">
+								<i :style="'background-image:url('+$utils.getFullPath(item[1].headimg)+')'"></i>
+								<p>{{"("+getSex(item[1].sex)+item[1].extInt+"号)"+item[1].name}}</p>
+							</div>
+						</li>
+					</ul>
+				</div>
+			</div>
+		</div>
+	</div>
+	<!--<div v-transfer-dom>
+		<popup v-model="showLuck" class="jy_luck_w" height="100%"  width="100%" :hide-on-blur=false position="left" :popup-style="{zIndex:596}" :show-mask="false" :should-scroll-top-on-show="true">-->
+			<Luck v-if="showLuck" :luckList="luckList" @closeLuck="closeLuck" @prizeResult="prizeResult" @moveLuck="moveLuck" @click="endLuck" :startLuck="startLuck" :isManage="isManage" :datingId="datingId"></Luck>
+		<!--</popup>
+	</div>-->
+	<!--<div class="jy_act_zy_prize">
+		<myPrize></myPrize>
+	</div>-->
+</div>
+</template>
+<script>
+	import Loading from '@other/loading.vue';
+	import Back from '@other/back.vue';
+	import Prize from './prize.vue';
+	//import myPrize from './myPrize.vue';
+	import userInfo from '../user/userInfo.vue';
+	import emotion from '@/assets/emotion/emotion';
+	import gift from '../plugs/gift';
+	import myApi from '@js/flower.js';
+	import myTouch from '@js/scrollpage.1.0.3.js';
+	import {Popup,TransferDom,XDialog,Qrcode} from 'vux'
+	import VoicePlayback from '@/components/plugs/voicePlayback'
+	import draggable from 'vuedraggable'
+	import { scanQRCode } from '@js/wxjssdk';
+	import Media from '@js/voice'
+	import Luck from './luck.vue';
+  export default {
+    name: 'blindDate',
+    data () {
+		return {
+			activeItem:{},
+			showVedio:false,
+			touchY:0,
+			touchOffset:0,
+			voice:false,
+			record:false,
+			showInfo:false,
+			showWin:false,
+			datingId:null,
+			userId:null,
+			isloading:false,
+			isActEnd:false,//竞价是否结束
+			showPh:false,//活动用户
+			showBaoMingList:false,//活动用户弹窗
+			showZy:false,//显示抽奖
+			dataChats:[],
+			UIChatBox:null,
+			chatRoomInfo:null,//活动信息{status:"0开始,1结束,2发布,3下一组",number:"轮数,1盲选,2男选女,3女选男,4抽奖"}
+			inputBarHeight:0,
+			limit:1000,//读取的聊天条数
+			chatList:null,//聊天信息
+			owner:null,
+			showGift:false,
+			giftList:[],
+			giftEndlist:[],
+			title:'',//送礼的对象名
+			flower:{},
+			prizeRun:false,//抽奖转盘是否在转动
+			select:false,//选缘查看用户信息可以选择用户
+			showBoard:false,//是否显示聊天框
+			//actStatusRes:false,//活动结束后进入不显示结果弹窗的
+			onlineUser:[],//在线用户
+			showSelect:false,//第二轮接受对象
+			chooseList:[],//已经选中的对象
+			selectList:[],//现场选择列表
+			searchList:[],//搜索的结果
+			loveList:[],//好感对象列表
+			showChoose:false,//选择意中人
+			searchKey:"",
+			listKey:["现场","好感","搜索"],
+			listType:0,
+			chooseMax:5,//选人的最大数量
+			showQcode:false,//显示相亲签到二维码
+			showPP:false,
+			currMatchUsers:[],//匹配成功的名单
+			myLove:[],//中意我的人的列表
+			youLove:[],//我中意的人
+			selectUserInfo:null,//接收的人的个人信息
+			isMatch:false,//是否已经匹配了
+			isSelect:false,//是否已经提交了选择(离开现场再进就没效了)
+			myMathch:null,//我的匹配对象
+			baomingUser:null,//报名人员列表
+			showGiftUser:false,
+			prizeTime:5,//抽奖倒计时
+			prizeTimeout:'',
+			startPrize:false,//是否开始抽奖
+			prizeIndex:-1,//中奖下标
+			isExit:false,
+			agreePrize:0,
+			isSign:false,//签到序号
+			allMatchUsers:null,//加了轮数的全部匹配
+			actRound:0,//进入现场后经历了几轮环节
+			isManage:false,//是否主持人
+			//isFirstMatch:false,//输出一次无匹配信息
+			curMatch:[],//已经公布的匹配
+			prizeAll:null,//所有的中奖人对象
+			prizeArr:["意中人","三等奖","四等奖","参与奖","二等奖","一等奖","三等奖","四等奖","参与奖","二等奖",],//奖品列表
+			curResultMenu:["匹配结果","抽奖结果"],
+			curResult:0,//主持人查看结果(1匹配,2抽奖)
+			curNumber:null,//主持人查看结果当前的轮数
+			curPrize:null,//主持人查看结果当前的抽奖
+			prizeUser:null,//主持人查看的中奖人
+			prizeUserList:[],//主持人查看的中奖人个数
+			luckList:[],//单独抽奖用户列表(只有id)
+			showLuck:false,//显示单独抽奖
+			startLuck:false,//开始单独抽奖
+			playingLuck:false,//单独抽奖是否正在进行
+			luckuser:null,//单独抽奖的用户
+			requestNum:0,//请求或接收消息的次数
+			numberPeople:null,//每轮环节可选对象数
+		}
+    },
+    components: {
+      Loading,
+	  Prize,
+	  Back,
+	  userInfo,
+	  Popup,
+	  gift,
+	  XDialog,
+	  draggable,
+	  VoicePlayback,
+	  Qrcode,
+	  Luck,
+	// myPrize,
+    },
+	directives: {
+      TransferDom
+    },
+	computed: {
+		listenChatRoomMessageList() {//聊天信息
+			return this.$store.state.chatRoomMessageList;
+		},
+		listenChatRoomFlower(){//礼物信息
+			return this.$store.state.giftObj;
+		},
+		chatRoomInfoMsg() {//推送的信息
+			return this.$store.state.chatRoomInfo;
+		},
+		myLoveLength(){
+			return this.myLove.length;
+		},
+		//youLoveLength(){
+		//	return this.youLove.length;
+		//},
+		handleRoute() {
+			return this.$store.state.handleRoute;
+		},
+		/*intoUser(){
+			return this.chatRoomInfo&&this.chatRoomInfo.intoUser;
+		},
+		leaveUser(){
+			return this.chatRoomInfo&&this.chatRoomInfo.leaveUser;
+		}*/
+    },
+	beforeRouteEnter(to, from, next) {
+        next({
+          path: '/blindDateNew',
+          query: {
+            id: to.query.id
+          }
+        })
+    },
+    watch:{
+		handleRoute(newV) {//返回键触发
+			const t=this;
+			if (!newV) {
+				if(t.showWin){
+					t.hiddenInfo();
+				}else if(t.showSelect){
+					t.showSelect=false;
+				}else if(t.showPh){
+					t.showPh=false;
+				}else if(t.showChoose){
+					t.showChoose=false;
+				}
+			}
+		},
+		listenChatRoomFlower(gift){
+			//console.log("收到花:"+JSON.stringify(gift));
+			const t=this;
+			t.flower.putFlower(gift.userName,1,gift.userImage,gift.giftId,gift.giftImage);
+		},
+		listenChatRoomMessageList(newList){
+			//消息列表，用于展示
+			console.log('聊天室新消息：'+JSON.stringify(newList))
+			this.chatList=newList;
+			this.$nextTick(()=>{//滚动到底部
+				//$(".jy_act_lt")[0].scrollTop=$(".jy_act_lt_list").outerHeight(true);
+				$(".jy_act_lt").animate({"scrollTop":$(".jy_act_lt_list").outerHeight(true)},500);
+			});
+		},
+		isMatch(val){//是否已经匹配了
+			if(val){
+				this.showChoose=false;
+			}
+		},
+		myLoveLength(val){
+			const t=this;
+			if(val>0){
+				setTimeout(()=>{
+					if((t.chatRoomInfo.number==2&&t.$store.state.userInfo.sex==1)||(t.chatRoomInfo.number==3&&t.$store.state.userInfo.sex==2)&&!t.isActEnd&&!t.isMatch){//活动没结束/没匹配
+						if($(".s2.cur").length<1){
+							t.$vux.toast.show({
+								type: 'text',
+								text: "有人中意您,快滑动屏幕看看吧",
+								position: 'middle',
+								width: 'auto',
+							});
+						}
+					}
+				},0)
+			}
+		},
+		'chatRoomInfo.status': {//活动轮数状态改变
+			handler(newVal, oldVal) {
+				const t=this;
+				if(newVal===oldVal){
+					return false;
+				}
+				if(newVal!=1){//隐藏选人界面
+					t.showChoose=false;
+				}
+				t.actRound++
+				console.log("经历的环节数:"+t.actRound);
+				if(oldVal||oldVal==0){
+					setTimeout(()=>{//延迟,为了isMatch等先判断完.
+						if((newVal==0||newVal==3||(newVal==2&&t.isManage))&&(t.chatRoomInfo.number==1||t.chatRoomInfo.number==2||t.chatRoomInfo.number==3||t.chatRoomInfo.number==4)&&t.allMatchUsers){
+							console.log("allMatchUsers"+JSON.stringify(t.allMatchUsers["num_"+t.chatRoomInfo.number]));
+							//setTimeout(()=>{
+							//	console.log("allMatchUsers延迟"+JSON.stringify(t.allMatchUsers["num_"+t.chatRoomInfo.number]));
+							//},0);
+							if(!t.allMatchUsers["num_"+t.chatRoomInfo.number]){
+								//t.isFirstMatch=true;
+								t.$vux.toast.show({
+									type: 'cancel',
+									text: "真可惜!第 "+t.chatRoomInfo.number+" 轮暂无匹配.",
+									position: 'middle',
+									width: 'auto',
+								});
+							}else{
+								t.showPP=true;
+								t.clickVoice(true);//提示音
+							}
+						}
+					},0);
+				}	
+			},
+		},
+		agreePrize(val) {//是否已经提交了选择/是否已经同意加入奖池
+			const t=this;
+			if(val==1){
+				t.isSelect=true;
+			}else{
+				t.isSelect=false;
+			}
+		},
+		'chatRoomInfo.number': {//活动轮数改变
+			handler(newVal, oldVal) {
+				const t=this;
+			//	console.log("numbernumbernumbernumbernumbernumber")
+				if(newVal===oldVal){
+					return false;
+				}
+				setTimeout(async ()=>{//延迟,为了isMatch等先判断完.
+					console.log("轮数改变:"+newVal+","+oldVal+" agreePrize:"+t.agreePrize);
+					if(t.chatRoomInfo.status==1&&!t.isMatch&&t.agreePrize!=1&&t.isSign){//没匹配的,没提交/同意奖池,已签到
+						console.log("轮数数据清除")
+						if(newVal==1){//盲选
+							if(!t.isManage){//非主持
+								t.chooseMax=(t.numberPeople&&t.numberPeople[0])||5;
+								t.isSelect=false;
+								t.showChoose=true;
+								t.clickVoice();//提示音
+							}
+							try{
+								const result= await t.$server.blindDatingBaoming({
+									datingId:t.datingId,
+									rows:10000
+								});
+								t.baomingUser=result.data.list||[];	
+							}catch(e){
+								console.log("盲选报名用户接口:"+JSON.stringify(e));
+							}
+							//t.isFirstMatch=false;
+						}else if(newVal==2){//男选女
+							if(!t.isManage&&t.$store.state.userInfo.sex==2){//非主持
+								t.chooseMax=(t.numberPeople&&t.numberPeople[1])||1;
+								t.isSelect=false;
+								t.showChoose=true;
+								t.clickVoice();//提示音
+							}
+							//t.isFirstMatch=false;
+						}else if(newVal==3){//女选男
+							if(!t.isManage&&t.$store.state.userInfo.sex==1){//非主持
+								t.chooseMax=(t.numberPeople&&t.numberPeople[2])||1;
+								t.isSelect=false;
+								t.showChoose=true;	
+								t.clickVoice();//提示音
+							}
+							//t.isFirstMatch=false;
+						}else if(newVal==4){//抽奖
+							t.showChoose=false;
+							if(!t.isManage&&t.agreePrize==0&&!t.isActEnd){//非主持/没匹配的.
+								t.$vux.confirm.show({
+									title:"加入抽奖",
+									content:"是否加入奖池(加入后,对方可能会在抽奖中跟您匹配成功)",
+									maskZIndex:98,
+									onCancel () {
+										
+									},
+									onConfirm () {
+										t.toPrize();
+									}
+								});
+							}
+							//t.isFirstMatch=false;
+						}
+						t.showSelect=false;//个人信息弹窗
+						t.showPh=false;//活动用户
+						t.showLuck=false;
+						t.chooseList=[];//已选意中人列表
+						t.selectList=[];//选择意中人列表
+						t.myLove=[];//中意我的人
+						t.youLove=[];//我中意的人	
+					}	
+				},0);
+			},
+			//deep: true//不需要,否则值相同也触发
+		},
+		currMatchUsers(val){//已匹配的人员列表
+			const t=this;
+			if(!t.isManage){//非主持,找出已经我已经匹配的.
+				let hasMatch=val.filter(v=>{
+					//return (v[0].userId==t.$store.state.userInfo.id||v[1].userId==t.$store.state.userInfo.id)&&v[0].status==1;
+					return (v[0].userId==t.$store.state.userInfo.id||v[1].userId==t.$store.state.userInfo.id);
+				});
+				//t.curMatch=val.filter(v=>{
+				//	return v[0].status==1;
+				//});
+				//console.log("quanb我的匹配:"+JSON.stringify(hasMatch));
+				if(hasMatch.length>0){
+					let myMathch=hasMatch[0].filter(v=>{
+						return v.userId!=t.$store.state.userInfo.id;
+					});
+					t.myMathch=myMathch[0]||null;
+					if(t.myMathch&&t.myMathch.status==1){//已经公布
+						t.isMatch=true;
+					}
+					console.log("我的匹配:"+JSON.stringify(t.myMathch));
+				}
+			}
+			console.log("匹配人数变化");
+			let allMatchUsers=null;
+			let sortVal=t.$utils.deepCopy(val);
+			sortVal.sort((a,b)=>{
+				return a[0].number>b[0].number;
+			})
+			for(let i =sortVal.length;i--;){
+				let number=sortVal[i][0].number||sortVal[i][1].number;
+				if(number&&(sortVal[i][0].status==1||t.isManage)){
+					if(!allMatchUsers){
+						allMatchUsers={};
+					}
+					if(!allMatchUsers["num_"+number]){
+						if(!t.curNumber){
+							t.curNumber="num_"+number;
+						}
+						allMatchUsers["num_"+number]=[];
+					}
+					allMatchUsers["num_"+number].push(sortVal[i]);
+				}
+			}
+			//console.log("allMatchUsers"+allMatchUsers)
+			t.allMatchUsers=allMatchUsers;
+			$(".jy_act_bl_reslist").animate({"scrollTop":0},500);
+			
+		},
+		'chatRoomInfo.allMatchUser': {//匹配人数变化
+			handler(newVal, oldVal) {
+				const t=this;
+				let newMatch=null,oldMatch=null;
+				if(newVal){
+					newMatch=newVal.filter(v=>{
+						return v[0].status==1;
+					});
+				}
+				if(oldVal){
+					oldMatch=oldVal.filter(v=>{
+						return v[0].status==1;
+					});
+				}
+				if(newMatch&&((oldMatch&&newMatch.length!=oldMatch.length)||!oldMatch||(t.isManage&&newVal.length!=oldVal.length))){
+					t.curMatch=newMatch;
+					t.currMatchUsers=newVal;
+				}
+			}
+		},
+		/*'chatRoomInfo.prizeNumber':{//单独抽奖开始(数值变化即开始新一轮抽奖)(弃用)
+			handler(newVal, oldVal) {
+				console.log("单独抽奖:"+newVal+":"+oldVal);
+				const t=this;
+				//if(t.showLuck){
+				//	return false;
+				//}
+				if(newVal!='undefined'&&oldVal!='undefined'&&newVal>oldVal){
+					t.luckList=t.chatRoomInfo.prizeUserList;//中奖者列表
+					t.showLuck=true;
+					t.startLuck=false;
+					t.$nextTick(()=>{
+						t.startLuck=true;
+					})
+				}
+			}
+		},*/
+		'chatRoomInfo.prizeUserList':{//(数值变化即开始新一轮抽奖)
+			handler(newVal,oldVal){
+				const t=this;
+				if(!oldVal||newVal.length>oldVal.length){
+					if(t.requestNum>1){//从第二次请求开始
+						if(oldVal&&newVal.length>oldVal.length||!oldVal){//开始抽奖
+							t.luckList=t.chatRoomInfo.prizeUserList;//中奖者列表
+							t.showLuck=true;
+							t.startLuck=false;
+							t.$nextTick(()=>{
+								t.startLuck=true;
+							});
+						}
+					}
+					if(t.baomingUser){//更新中奖者列表
+						let luckuser=t.baomingUser.filter((val,ind)=>{//没抽中过的用户
+							let canLuck=newVal.filter((v,i)=>{
+								return val.jiaoyouUser.id==v;//已经抽过了.
+							});
+							return canLuck.length>0;//没抽过	 
+						});
+						t.luckuser=luckuser;
+					}
+				}
+			}
+		},
+		async isActEnd(val){
+			const t=this;
+			if(val){
+				try{
+					const result= await t.$server.blindDatingBaoming({
+						datingId:t.datingId,
+						rows:10000
+					});
+					t.baomingUser=result.data.list||[];	
+				}catch(e){
+					
+				}
+			}
+		},
+		prizeAll(val){
+			const t=this;
+			if(t.baomingUser){
+				let prizeUser={},prizeUserList=[];
+				for(let i=t.baomingUser.length;i--;){
+					if(val[t.baomingUser[i].jiaoyouUser.id]||val[t.baomingUser[i].jiaoyouUser.id]==0){
+						if(!prizeUser[val[t.baomingUser[i].jiaoyouUser.id]]){
+							prizeUser[val[t.baomingUser[i].jiaoyouUser.id]]=[];
+							if(!t.curPrize){
+								t.curPrize=val[t.baomingUser[i].jiaoyouUser.id];
+							}
+						}
+						prizeUser[val[t.baomingUser[i].jiaoyouUser.id]].push(t.baomingUser[i]);
+						prizeUserList.push(t.baomingUser[i]);
+					}
+				}
+				t.prizeUser=prizeUser;
+				t.prizeUserList=prizeUserList;
+			}
+		},
+		chatRoomInfoMsg(val){//活动信息更新(app使用)
+			const t=this;
+			/*if(!(t.chatRoomInfo&&t.chatRoomInfo.prizeNumber)){
+				val.prizeNumber=1;
+			}else if(!t.playingLuck){
+				val.prizeNumber=2;
+			}*/
+			t.requestNum++;
+			t.chatRoomInfo=val;
+			//if(val.allMatchUser){	
+				//if(t.isManage){
+				//	t.currMatchUsers=val.currNumberMatchUser;
+				//}else{
+					//t.currMatchUsers=val.allMatchUser;
+				//}	
+			//}
+			/*if(val.currMatchUsers){//当前匹配结果
+				t.showPP=true;
+				if(t.currMatchUsers.length>0){
+					let has=false,//只有一个相同
+						doubleHas=false;//两个都相同
+					for(let i=t.currMatchUsers.length;i--;){//第一层
+						for(let l=t.currMatchUsers[i].length;l--;){//第二层
+							for(let j=val.currMatchUsers.length;j--;){////第三层判断相同
+								if(t.currMatchUsers[i][l].id===val.currMatchUsers[j].id){
+									if(has){//匹配成功两个
+										has=false;
+										doubleHas=true;
+										break;
+									}
+									has=true;//匹配成功一个
+									break;
+								}
+							}
+							if(doubleHas){
+								break;
+							}
+						}
+						if(doubleHas){
+							break;
+						}
+					}
+					//if(has){
+					//	console.log("单独相同");
+					//}else if(doubleHas){
+					//	console.log("完全相同");
+					//}
+					if(!has&&!doubleHas){
+						t.currMatchUsers.unshift(val.currMatchUsers);//头部添加
+					}else{
+						if(has){
+							console.log("匹配单独重复");
+						}
+					}
+				}else{
+					t.currMatchUsers.unshift(val.currMatchUsers);//头部添加
+				}
+			}else{
+				if(val.status==3&&t.isManage){//主持人
+					t.$vux.toast.show({
+						type: 'cancel',
+						text: "没有匹配的对象了!",
+						position: 'middle',
+						width: 'auto',
+					});
+				}
+			}*/
+			
+			if(!t.isSign&&val.status2){
+				t.isSign=val.status2||false;//是否已经签到
+				/*if(t.isSign){
+					t.$vux.toast.show({
+						type:"text",
+						text: "您的序号为: "+t.isSign+" ,请牢记!",
+						position:"middle",
+						width:"auto",
+						time:3000,
+					});
+				}*/
+			}
+			if(!t.isMatch){//还没匹配
+				t.agreePrize=val.agreePrize;
+			}else{
+				t.agreePrize=1;
+			}
+			//console.log("agreePrize:"+t.agreePrize);
+			if(val.beLikeList&&val.beLikeList.length>0){//中意我的人
+				if(t.$store.state.isBrowser){//一般浏览器
+					t.myLove=val.beLikeList;
+				}else{//app
+					t.myLove.push(...val.beLikeList);
+				}
+			}else{
+				t.myLove=[];
+			}
+			if(val.likeList&&val.likeList.length>0){//我中意的人
+				if(t.$store.state.isBrowser){//一般浏览器
+					t.youLove=val.likeList;
+				}else{//app
+					t.youLove.push(...val.likeList);
+				}
+			}else{
+				t.youLove=[];
+			}
+			if(val.object){
+				t.prizeAll=val.object;
+				if(val.object[t.$store.state.userInfo.id]!=undefined&&t.isSign&&!t.firstShowZy&&t.actRound>1){//显示抽奖
+					t.showZy=true;//显示奖盘
+					t.clickVoice();//提示音
+					t.firstShowZy=true;//兼容其他浏览器第一次弹出
+					t.closeKeyBoard();//关闭键盘
+					t.prizeIndex=val.object[t.$store.state.userInfo.id];
+					t.prizeTimeout=setInterval(()=>{
+						t.prizeTime--;
+						if(t.prizeTime<=0){
+							t.toStartPrize();
+						}
+					},1000);
+				}
+			}
+			if(val.state==5){//活动结束
+				t.isActEnd=true;
+			}
+		},
+		showWin(val){
+			const t=this;
+			let status = val || t.showSelect || t.showPh||t.showChoose;
+			t.$store.commit("CHANGEHANDLEROUTE", status);
+			if(val){
+				t.closeKeyBoard();
+			}
+		},
+		showGift(val){
+			const t=this;
+			if(val){
+				t.showPh=false;
+			}
+		},
+		async showPh(val){
+			const t=this;
+			let status = val || t.showWin || t.showSelect||t.showChoose;
+			t.$store.commit("CHANGEHANDLEROUTE", status);
+			//if(val&&(!t.baomingUser||(t.baomingUser&&t.chatRoomInfo==3))){
+			if(val){
+				try{
+					t.isloading=true;
+					const result= await t.$server.blindDatingBaoming({
+						datingId:t.datingId,
+						rows:10000
+					});
+					t.isloading=false;
+					t.showBaoMingList=true;
+					t.baomingUser=result.data.list||[];		
+				}catch(e){
+					t.isloading=false;
+					t.showPh=false;
+					console.log(JSON.stringify(e));
+				}
+			}else{
+				t.showBaoMingList=false;
+			}
+		},
+		searchKey(){
+			this.search(true);
+		},
+		showChoose(val){//选择意中人
+			const t=this;
+			let status = val || t.showWin || t.showPh|| t.showSelect;
+			t.$store.commit("CHANGEHANDLEROUTE", status);
+			if(val){
+				if(t.selectList.length<1){
+					t.getOnlineUser();//已报名的现场人员
+				}else{
+					for(let i=t.selectList.length;i--;){	
+						t.selectList[i].choose=false;
+					}
+				}
+				t.getGood();//好感的人
+			}else{
+				t.chooseList=[];
+			}
+		},
+		showSelect(val){//个人信息
+			const t=this;
+			let status = val || t.showWin || t.showPh||t.showChoose;
+			t.$store.commit("CHANGEHANDLEROUTE", status);
+		},
+    },
+	beforeRouteLeave (to, from, next) {
+		const t=this;	
+		this.UIChatBox&&this.UIChatBox.close();
+		if(!t.isExit&&this.datingId){
+			this.$utils.openSuspensionWindow(this.datingId,this.owner.datingTitle,this.owner.coverimgImages||this.owner.jiaoyouUser.headimgAttachmentId,6);
+		}
+		//$(document).unbind("touchmove.blindDate");
+		t.timeoutBlind&&clearTimeout(t.timeoutBlind);//清除定时器
+		next();
+    },
+	created(){
+		const t=this;
+	},
+    async mounted () {
+		const t=this;
+		t.$utils.closeSuspensionWindow();
+		//$(document).bind("touchmove.blindDate",t.touchHandlerDummy);
+		t.datingId = t.$route.query.id;
+		if(!t.datingId){
+			t.$vux.toast.show({
+				type: 'cancel',
+				text: "活动不存在",
+				position: 'middle',
+				width: 'auto',
+			});
+			return false;
+		}
+		//t.signCode={type:"signIn",from:"blindDate",id:t.datingId};
+		//if(t.$store.state.isBrowser){
+			t.signCode= t.$store.state.baseURL+"/api/account/publicAddressLoginUrl?&state=sign__id_"+t.datingId;//签到二维码
+		//}
+		console.log("活动ID:"+t.datingId);
+		let goon=true;
+		try{
+			await t.getSingle();//获取活动详情
+		}catch(e){
+			goon=false;
+		}
+		if(!goon){
+			return false;
+		}
+		t.flower=new myApi(function(gift){
+			t.giftAniEnd(gift)
+		});
+		t.getGift();//获取礼物列表
+		//t.getConfig();//获取配置文件
+		t.clickMusic="static/music/tips5.aac?ver=1.02";
+		t.longMusic="static/music/tips6.mp3?ver=1.02";
+		t.musicClick=new Media({src:t.clickMusic,loop:false,autoplay:false});//点击音乐
+		t.musicLong=new Media({src:t.longMusic,loop:false,autoplay:false});//长音乐
+		if(!t.owner){
+			return false;
+		}
+		t.audioAutoPlay();
+		//if(!t.isManage){//非主持人才能滑屏
+			let myClickTouch=new myTouch({//滑屏
+				wrapper:".jy_act_blind",
+				durationTime:0.3,
+				loop:false,//横屏是否循环滚动
+				mouse:true,//竖屏是否支持鼠标滚轮滚动
+				disRadio:0,//触发翻屏所需要的最小拖动距离比例
+				preventDefault:true,
+				horizontalClassName:".horizontalScroll_1",//水平页面顶级容器 (必须是 verticalPageName 的一代子元素)
+				contentClassName:".contentScroll_1",//滚动内容的容器(必须是 verticalPageName 的一代子元素)
+				verticalPageName:".page_1",//垂直页面容器 (必须是 wrapper 的一代子元素)
+				horizontalPageName:".page_2",//水平页面容器(必须是 horizontalClassName 的一代子元素)
+				curClassName:"cur",//当前页面
+				start:function(){
+					//console.log("start");
+				},
+				moveY:function(d){
+					//console.log("moveY"+this.changeY);
+				},
+				endY:function(){
+					//console.log("endY");
+				},
+				moveX:function(d){
+					//console.log("moveX"+this.changeX);
+					t.closeKeyBoard();
+					$(".jy_s1_jt").removeClass("cur");
+				},
+				endX:function(){
+					//console.log("endX");
+				},
+			});
+			$(".jy_s1_jt").addClass("cur");
+		//}
+		try{
+			const result= await t.$server.blindDatingBaoming({
+				datingId:t.datingId,
+				rows:10000
+			});
+			t.baomingUser=result.data.list||[];	
+		}catch(e){
+			console.log(e);
+		}
+		if(!window.api){
+			//t.actStatus();//获取活动状态
+			if(t.$store.state.isBrowser){
+				(function getDatingStatus(time){
+					//if(t.isActEnd){//活动结束后不再请求
+					//	return false;
+					//}
+					t.timeoutBlind=setTimeout(async ()=>{
+						try{
+							//const result =await t.$server.timeoutdatingStatus({
+							const result =await t.$server.actStatus({
+								datingDetailsId:t.datingId,
+							});
+							if(t.$route.name!="blindDate"){//预防跳出路由后还会执行
+								return false;
+							}
+							let val=result.data.data;
+							/*if(!val.currMatchUsers){//测试用的
+								if(t.currMatchUsers.length>0){
+									if(t.currMatchUsers.length<4){
+										val.currMatchUsers=[{id:"ssss",name:"小米"},{id:"aaa",name:"小哄"}];
+									}
+									
+								}else{
+									val.currMatchUsers=[{id:"ddddd",name:"小虫"},{id:"aaa",name:"小哄"}];
+								}
+								
+							}*/
+							//console.log(t.myClickTouch&&t.myClickTouch);
+							t.$store.commit('CHAGECHATROOMINFO',val);//更新现场活动信息	
+							//t.chatRoomInfo=val;
+							getDatingStatus(3000);
+						}catch(e){
+							getDatingStatus(3000);
+						}
+					},time);
+				}(0));
+			}
+			return false;
+		}
+		this.joinChatRoom();
+      this.UIChatBox = window.api.require('UIChatBox');
+	  let extras={},extrasBtn={};
+      this.UIChatBox.open({
+        placeholder: '',
+        maxRows: 4,
+        emotionPath: 'widget://image/emotion',
+        texts: {
+          sendBtn: {
+            title: '发送'
+          }
+        },
+        styles: {
+          inputBar: {
+            borderColor: '#d9d9d9',
+            bgColor: '#f2f2f2'
+          },
+          inputBox: {
+            borderColor: '#B3B3B3',
+            bgColor: '#FFFFFF'
+          },
+          emotionBtn: {
+            normalImg: 'widget://image/face.png',
+          },
+		  ...extrasBtn,
+          keyboardBtn: {                      //JSON对象；键盘按钮样式
+            normalImg: 'widget://image/keyboard.png'
+          },
+          indicator: {
+            target: 'both',
+            color: '#c4c4c4',
+            activeColor: '#9e9e9e'
+          },
+          sendBtn: {
+            titleColor: '#4cc518',
+            bg: '#f2f2f2',
+            activeBg: '#46a91e',
+            titleSize: 14
+          }
+        },
+		...extras,
+      }, function(ret, err) {
+        if(ret.eventType=="send"){
+          if(!ret.msg.trim()){
+            return false;
+          }
+         t.setMessage(2,ret.msg,null,null,null)
+        }else if(ret.eventType=='clickExtras'){
+          if(ret.index==0){
+            t.closeKeyBoard();
+            t.showGift=true;
+          }
+        }
+      });
+	  /*监听事件*/
+		this.UIChatBox.addEventListener({
+			target: 'inputBar',
+			name: 'move'
+		}, (ret, err)=> {
+			if (ret) {
+				const height=ret.panelHeight;
+				clearTimeout(t.boardTimeout);
+				if(height==0){
+					t.boardTimeout=setTimeout(()=>{
+						t.closeKeyBoard();
+					},200);
+				}
+			}
+		});
+		if(!t.isManage){
+			this.UIChatBox.addEventListener({
+				target: 'inputBar',
+				name: 'showExtras'
+			}, (ret, err)=> {
+				if (ret) {
+					t.closeKeyBoard();
+					t.showGift=true;
+
+				}
+			});
+		}
+		this.UIChatBox.addEventListener({
+			target: 'inputBar',
+			name: 'change'
+		}, (ret, err)=> {
+			if (ret) {
+				this.inputBarHeight = parseInt(ret.inputBarHeight);
+			}
+		});
+		t.closeKeyBoard();
+	},
+    beforeDestroy () {
+      this.quitChatRoom();
+    },
+    methods :{
+		closeLuck(){
+			this.showLuck=false;
+		},
+		endLuck(){
+			this.startLuck=false;
+		},
+		moveLuck(moveing){
+			this.playingLuck=moveing
+		},
+		prizeResult(result){
+			const t=this;
+			t.$store.commit('CHAGECHATROOMINFO',result);//更新现场活动信息	
+		},
+		getSex(sex){
+			if(sex==1){
+				return "女";
+			}else if(sex==2){
+				return "男";
+			}
+			return "";
+		},
+		getResult(id){
+			const t=this;
+			if(t.isManage||id==t.$store.state.userInfo.id){
+				if(t.isManage&&t.currMatchUsers.length>0){
+					let hasResult=t.currMatchUsers.filter((v,i)=>{
+						return (v[0].userId==id||v[1].userId==id);
+					});
+					//console.log(hasResult)
+					if(hasResult.length>0){
+						return "已匹配"+(hasResult[0].status==0?'(未公布)':'');
+					}
+				}
+				if(t.prizeAll&&(t.prizeAll[id]||t.prizeAll[id]==0)){//下标可以为0
+				//console.log("t.prizeAll[id]"+t.prizeAll[id])
+					return t.prizeArr[t.prizeAll[id]];
+				}
+			}
+			return "";
+		},
+		clickVoice(flag){
+			const t=this;
+			if(flag){
+				if(t.musicClick){
+					t.musicClick.pause();
+				}
+				if(t.musicLong&&t.musicLong.media){
+					t.musicLong.media.currentTime=0;
+					t.musicLong.play();
+				}
+			}else{
+				if(t.musicLong){
+					t.musicLong.pause();
+				}
+				if(t.musicClick&&t.musicClick.media){
+					t.musicClick.media.currentTime=0;
+					t.musicClick.play();
+				}
+			}
+			
+		},
+		audioAutoPlay(){  
+			const t=this;
+			var play = function(){
+				if(!t.musicClick||!t.musicClick.media){
+					t.musicClick=new Media({src:t.clickMusic,loop:false,autoplay:false});//点击音乐		
+				}
+				if(!t.musicLong||!t.musicLong.media){
+					t.musicLong=new Media({src:t.longMusic,loop:false,autoplay:false});//长音乐		
+				}
+				if(t.musicClick.loading&&t.musicLong.loading){	
+					document.removeEventListener("touchstart",play, false);  
+				}else{
+					if(!t.musicClick.loading){
+						t.musicClick.onload();
+					}
+					if(!t.musicLong.loading){
+						t.musicLong.onload();
+					}
+				}
+			};
+			document.addEventListener("WeixinJSBridgeReady", function () {  
+				play();  
+			}, false);  
+			document.addEventListener('YixinJSBridgeReady', function() {  
+				play();  
+			}, false);  
+			document.addEventListener("touchstart",play, false);  
+		},
+		touchHandlerDummy(e){
+			const t=this;
+			e.preventDefault();
+			return false;
+		},
+		exit(name,query){
+			const t=this;
+			t.isExit=true;
+			t.$router.push({name,query});
+		},
+		overAct(){
+			this.$vux.toast.show({
+				type: 'success',
+				text: "活动结束",
+				position: 'middle',
+				width: 'auto',
+			});
+		},
+		async toPrize(){//同意加入奖池
+			const t=this;
+			try{
+				const result=await t.$server.agreePrize({
+					datingActivityId:t.datingId,
+				})
+				t.$vux.toast.show({
+					type: 'success',
+					text: result.data.message,
+					position: 'middle',
+					width: 'auto',
+				});
+				t.agreePrize=1;
+			}catch(e){
+				t.$vux.toast.show({
+					type: 'cancel',
+					text: e.message,
+					position: 'middle',
+					width: 'auto',
+				});
+			}
+		},
+		async followFriend(){ //关注好友接口
+			const t=this;
+			try{
+				t.isloading=true;
+				const result = await t.$server.followFriend(t.selectUserInfo.id);
+				t.isloading=false;
+				t.$vux.toast.show({
+					type: 'success',
+					text: result.data.message,
+					position: 'middle',
+					width: 'auto',
+				});
+				t.selectUserInfo.isFollow=1;
+			}catch(e){
+				t.isloading=false;
+				t.$vux.toast.show({
+					type: 'cancel',
+					text: e.message,
+					position: 'middle',
+					width: 'auto',
+				});
+			}	
+		},
+		async showSelectUser(id,extInt){//显示中意的人的信息
+			const t=this;
+			//console.log(id);
+			try{
+				t.isloading=true;
+				const result =await t.$server.userHomePage({
+					userId:id,
+					activityId:t.datingId,
+				});
+				t.selectUserInfo=result.data.data;
+				if(extInt){
+					t.selectUserInfo.extInt=extInt;
+				}
+				console.log("中意的人:"+JSON.stringify(t.selectUserInfo));
+				t.isloading=false;
+				t.showSelect=true;
+			}catch(e){
+				t.isloading=false;
+				console.log(JSON.stringify(e));
+			}
+		},
+		async getOnlineUser(){//现场人员
+			const t=this;
+			try{
+				const result =await t.$server.sceneCandi({
+					datingActivityId:t.datingId,
+				});
+				if(result.data.data){
+					t.selectList=result.data.data;
+				}
+			}catch(e){
+				console.log(JSON.stringify(e));
+			}
+		},
+		async getGood(){//我好感的人
+			const t=this;
+			try{
+				const result =await t.$server.getGood({
+					datingActivityId:t.datingId,
+				});
+				if(result.data.list){
+					t.loveList=result.data.list;
+				}
+			}catch(e){
+				console.log(JSON.stringify(e));
+			}
+		},
+		async myFeel(){//好感
+			const t=this;
+			if(t.selectUserInfo.isGood){
+				try{
+					t.isloading=true;
+					const result =await t.$server.deleteGood({
+						datingActivityId:t.datingId,
+						likingUserId:t.selectUserInfo.id,
+					});
+					t.showSelect=false;
+					t.isloading=false;
+					t.$vux.toast.show({
+						type:"success",
+						text: result.data.message,
+						position:"middle",
+						width:"2rem",
+					});
+				}catch(e){
+					t.isloading=false;
+					t.$vux.toast.show({
+						type:"cancel",
+						text: e.message,
+						position:"middle",
+						width:"2rem",
+					});
+				}
+			}else{
+				try{
+					t.isloading=true;
+					const result =await t.$server.addGood({
+						datingActivityId:t.datingId,
+						likingUserId:t.selectUserInfo.id,
+					});
+					t.showSelect=false;
+					t.isloading=false;
+					t.$vux.toast.show({
+						type:"success",
+						text: result.data.message,
+						position:"middle",
+						width:"2rem",
+					});
+					t.selectUserInfo.isGood=1;
+				}catch(e){
+					t.isloading=false;
+					t.$vux.toast.show({
+						type:"cancel",
+						text: e.message,
+						position:"middle",
+						width:"2rem",
+					});
+				}
+			}
+		},
+		async marriageLove(){//保存我中意的接口
+			const t=this;
+			if(t.chooseList.length<1){
+				t.$vux.toast.show({
+					type:"cancel",
+					text: "至少选择一个中意的人",
+					position:"middle",
+					width:"2rem",
+				});
+				return false;
+			}
+			try{
+				let arr=[],
+					length=t.chooseList.length,
+					youLove=[];
+				for(let i=0;i<length;i++){
+					arr.push({
+						datingActivityId:t.datingId,
+						likingUserId:t.chooseList[i].candidateId,
+						likingUserSex:t.chooseList[i].candidateSex,
+						priority:t.chooseList[i].ext.extInt,
+					});
+					youLove.push({
+						name:t.chooseList[i].jiaoyouUser.aliasName,
+						headimg:t.chooseList[i].jiaoyouUser.headimgAttachmentId,
+						extInt:t.chooseList[i].ext.extInt,
+						userId:t.chooseList[i].jiaoyouUser.id,
+						sex:t.chooseList[i].candidateSex,
+					})
+				}
+				t.isloading=true;
+				const result =await t.$server.marriageLove(arr);
+				console.log(JSON.stringify(result.data));
+				t.showChoose=false;
+				t.isloading=false;
+				t.isSelect=true;
+				t.youLove=youLove;
+				t.$vux.toast.show({
+					type:"success",
+					text: "提交成功",
+					position:"middle",
+					width:"2rem",
+				});
+			}catch(e){
+				t.showChoose=false;
+				t.isloading=false;
+				t.$vux.toast.show({
+					type:"cancel",
+					text: e.message,
+					position:"middle",
+					width:"2rem",
+				});
+				//console.log(JSON.stringify(e));
+			}
+		},
+		async marriageAgree(){//同意选择对方
+			const t=this;
+			t.$vux.confirm.show({
+				title:"接受Ta",
+				content:"确认接受对方?",
+				maskZIndex:98,
+				onCancel(){
+					t.$vux.toast.show({
+						type:"text",
+						text: "再等等看看",
+						position:"bottom",
+						width:"2rem",
+					});		
+				},
+				async onConfirm(){
+					try{
+						t.isloading=true;
+						const result =await t.$server.marriageAgree({
+							datingActivityId:t.datingId,
+							likingUserId:t.selectUserInfo.id,
+						});
+						t.showSelect=false;
+						t.isloading=false;
+						t.myMathch={
+							extInt:t.selectUserInfo.extInt,//序号
+							headimg:t.selectUserInfo.headimgAttachmentId,//头像
+							name:t.selectUserInfo.aliasName,//昵称
+							number:t.chatRoomInfo.number,//轮数
+							status:0,//是否公布
+							userId:t.selectUserInfo.id,//用户id
+							sex:t.selectUserInfo.sex,
+						}
+						t.$vux.toast.show({
+							type:"success",
+							text: "已接受",
+							position:"middle",
+							width:"2rem",
+						});		
+					}catch(e){
+						t.isloading=false;
+						t.$vux.toast.show({
+							type:"cancel",
+							text: e.message,
+							position:"middle",
+							width:"2rem",
+						});	
+					}
+				}
+			});
+		},
+		nextStep(){//主持人点开始,结束,公布
+			const t=this;
+			let dia={
+				title:"开始",
+				content:"确定开始活动吗?",
+			}
+			if(t.chatRoomInfo.status==1){
+				dia={
+					title:"结束",
+					content:"确定结束本轮活动吗?",
+				}
+				if(t.chatRoomInfo.number==4){
+					dia={
+						title:"抽奖",
+						content:"确定开始抽奖吗?",
+					}
+				}
+			}
+			if(t.chatRoomInfo.status==2){
+				dia={
+					title:"公布",
+					content:"确定公布匹配结果吗?",
+				}
+			}
+			if(t.chatRoomInfo.status==3){
+				dia={
+					title:"公布",
+					content:"确定公布下一组匹配结果吗?",
+				}
+			}
+			t.$vux.confirm.show({
+				title:dia.title,
+				content:dia.content,
+				maskZIndex:98,
+				onCancel(){
+					
+				},
+				async onConfirm(){
+					try{
+						t.isloading=true;
+						const result =await t.$server.marriageBtn({
+							activityId:t.datingId
+						});
+						t.isloading=false;
+						//t.chatRoomInfo=result.data.data;
+						t.$store.commit('CHAGECHATROOMINFO',result.data.data);//更新现场活动信息	
+						//t.chatRoomInfo.number=result.data.data.number;
+						console.log("按钮响应的数据:"+JSON.stringify(result.data));
+						t.$vux.toast.show({
+							type:"success",
+							text: "操作成功",
+							position:"middle",
+							width:"2rem",
+						});
+					}catch(e){
+						t.isloading=false;
+						console.log(JSON.stringify(e));
+					}
+				}
+			});
+		},
+		search(flag){
+			const t=this;
+			if(t.searchKey!=''){
+				let searchList=t.selectList.filter((v,i)=>{//元素为对象时,传递的是地址
+					return v.ext.extInt==t.searchKey||v.jiaoyouUser.aliasName.indexOf(t.searchKey)!=-1;
+				});
+				t.searchList=searchList;
+				//console.log(flag);
+				if(!flag){
+					$(".jy_bl_Choose_search input").blur();
+				}
+				t.listType=2;
+			}else{
+				t.searchList=[];
+				t.$vux.toast.show({
+					type:"text",
+					text: "请输入序号或昵称",
+					position:"bottom",
+					width:"2rem",
+				});
+			}
+		},
+		dragEnd:function(evt){
+          /*console.log('拖动前的索引：'+evt.oldIndex);
+          console.log('拖动后的索引：'+evt.newIndex);
+          console.log(this.chooseList);*/
+        },
+		delChoose(index){
+			const t=this;
+			for(let i=t.selectList.length;i--;){
+				if(t.chooseList[index].id==t.selectList[i].id){
+					t.selectList[i].choose=false;
+					break;
+				}
+			}
+			t.chooseList.splice(index,1);
+		},
+		choose(index){
+			const t=this;
+			if(t.listType==1){
+				for(let i=t.selectList.length;i--;){
+					if(t.loveList[index].id==t.selectList[i].id){
+						index=i;
+						break;
+					}
+				}
+			}else if(t.listType==2){
+				for(let i=t.selectList.length;i--;){
+					if(t.searchList[index].id==t.selectList[i].id){
+						index=i;
+						break;
+					}
+				}
+			}
+			if(!t.selectList[index].choose){
+				if(t.chooseList.length<t.chooseMax){
+					t.selectList[index].choose=true;
+					t.chooseList.push(t.selectList[index])
+				}else{
+					t.$vux.toast.show({
+						type:"text",
+						text: "最多选择"+t.chooseMax+"位对象",
+						position:"bottom",
+						width:"2rem",
+					});
+				}
+			}else{
+				t.selectList[index].choose=false;
+				let chooseList=t.chooseList.filter(v=>{
+					return v.id!=t.selectList[index].id;
+				});
+				t.chooseList=chooseList;
+			}
+		},
+		setActiveItem(item){
+			this.activeItem = this.activeItem.id==item.id?{}:item;
+		},
+      listenChildMethod(){
+        this.activeItem={};
+      },
+      touchstart(event){
+        if(event.touches.length>1){
+          return;
+        }
+        this.record=true
+        this.showVedio=true
+        this.touchY = event.touches[0].clientY;
+        this.touchOffset=0;
+        window.api.startRecord({
+          path: api.cacheDir+"/"+new Date().getTime()+"-"+this.$store.state.userId+".amr"
+        });
+        setTimeout(()=>{
+          if(this.showVedio){
+            window.api.stopRecord((ret, err)=> {
+              if (ret) {
+                let path = ret.path;
+                let duration = ret.duration;
+                this.setAudio(path,duration)
+              }
+            });
+            this.record=false
+            this.showVedio=false;
+          }
+        },30000)
+        event.preventDefault();
+      },
+      touchmove(event){
+        let offsetY = Math.abs(event.touches[0].clientY-this.touchY)
+        let offset = offsetY;
+        if(offset>this.touchOffset)this.touchOffset=offset;
+      },
+      touchend(event){
+        if(event.touches.length>1){
+          return;
+        }
+        if(this.touchOffset<30){
+          if(this.showVedio){
+            window.api.stopRecord((ret, err)=> {
+              if (ret) {
+                let path = ret.path;
+                let duration = ret.duration;
+                this.setAudio(path,duration)
+              }
+            });
+            this.showVedio=false
+            this.record=false
+          }
+        }else{
+          //
+          if(this.showVedio){
+            window.api.stopRecord(function(ret, err) {
+            });
+            this.showVedio=false;
+            this.record=false
+          }
+        }
+      },
+      touchcancel(){
+        console.log("touchcancel")
+        if(this.showVedio){
+          window.api.stopRecord(function(ret, err) {
+          });
+          this.showVedio=false;
+          this.record=false
+        }
+      },
+      setAudio(path,duration){
+        if(duration<1){
+          this.$vux.toast.show({
+            type:"text",
+            text: '语音时长太短',
+            position:"middle",
+            width:"auto",
+          });
+          return;
+        }
+        this.setMessage(2,null,null,path,null,duration)
+      },
+      beginRecord(){
+        this.voice=!this.voice;
+        let allowRecording=false;
+        let resultList = window.api.hasPermission({
+          list:['microphone']
+        });
+        if(!resultList[0].granted){
+          window.api.requestPermission({
+            list:['microphone']
+          }, function(ret, err){
+            if(ret&&ret.list[0].granted){
+              allowRecording=true;
+            }else{
+              window.api.toast({
+                msg: '请在手机设置中授权应用访问麦克风',
+                duration: 2000,
+                location: 'bottom'
+              });
+              this.voice=!this.voice;
+            }
+          });
+        }
+      },
+		showKeyBoard(){
+			const t=this;
+			if(!t.UIChatBox){
+				return false;
+			}
+			t.showBoard=true;
+			t.showPh=false;
+			t.UIChatBox.show();
+			t.UIChatBox.popupKeyboard();
+		},
+		closeKeyBoard(){
+			const t=this;
+			if(!t.UIChatBox){
+				return false;
+			}
+			t.showBoard=false;
+			t.UIChatBox.hide();
+			t.UIChatBox.closeBoard();
+			t.UIChatBox.closeKeyboard();
+		},
+		getUserInfo(userId){
+			const t=this;
+			if(userId==t.$store.state.userInfo.id){
+				return false;
+			}
+			//console.log("获取用户信息:"+userId);
+			t.showInfo=true;
+			t.userId=userId;
+		},
+		prizeRunning(val){//抽奖转盘是否在转动
+			const t=this;
+			t.prizeRun=val;	
+		},
+		toStartPrize(){
+			const t=this;
+			t.startPrize=true;
+			clearInterval(t.prizeTimeout);
+		},
+		endPrize(index){//抽奖结束
+			const t=this;
+			const msg=t.prizeArr[index];//index==0?'意中人':(index==1||index==6)?'三等奖':(index==2||index==7)?'四等奖':(index==3||index==8)?'参与奖':(index==4||index==9)?'二等奖':index==5?'一等奖':'';
+			if(msg){
+				t.$vux.toast.show({
+					type:"text",
+					text: "恭喜获得 "+msg,
+					position:"bottom",
+					width:"2rem",
+				});
+			}
+			setTimeout(()=>{
+				t.showZy=false;//隐藏抽奖奖盘
+			},1500);
+		},
+		giftAniEnd(gift){//把礼物发到服务器
+			const t=this;
+			if(gift){
+				console.log("连点结束:"+JSON.stringify(gift));
+				if(gift.sendobj){//自己发的
+					try{
+						t.$server.chartroomGift({
+							"objectId":t.datingId,
+							giftId:gift.sendobj.giftId,
+							amount:gift.num
+						}).then((res)=>{
+							console.log("送花结果:"+JSON.stringify(res));				
+						});
+					}catch(e){
+						console.log(e);
+					}	
+				}
+			}	
+		},
+		async sendGiftUser(giftObj){
+			const t=this;
+			if(giftObj){
+				try{
+					const result =await t.$server.giveGift({
+						'receiverUser.id':t.selectUserInfo.id,
+						objectId:t.datingId,
+						giftId:giftObj.id,
+						amount:1,
+					});
+					t.$vux.toast.show({
+						type:"success",
+						text: result.data.message,
+						position:"middle",
+						width:"2rem",
+					});
+					t.showGiftUser=false;
+				}catch(e){
+					t.$vux.toast.show({
+						type:"cancel",
+						text: e.message,
+						position:"middle",
+						width:"2rem",
+					});
+				}
+			}else{
+				t.showGiftUser=false;
+			}
+		},
+		async sendGift(giftObj){
+			if(giftObj){
+				this.giftEndlist.push(giftObj);
+			  let sendobj={};
+			  sendobj.giftId = giftObj.id
+			  sendobj.giftImage = this.$utils.getFullPath(giftObj.giftImage)
+			  sendobj.giftName = giftObj.giftName
+			  sendobj.giftJiaobi = giftObj.jiaobi
+			  sendobj.userName=this.$store.state.userInfo.aliasName;
+			  sendobj.userId=this.$store.state.userInfo.id;
+			  sendobj.userImage=this.$utils.getFullPath(this.$store.state.userInfo.headimgAttachmentId);
+			  this.flower.putFlower(sendobj.userName,1,sendobj.userImage,sendobj.giftId,sendobj.giftImage,sendobj);
+			  this.$store.state.rongCloud.sendCommandMessage({
+				conversationType: 'CHATROOM',
+				targetId: this.datingId,
+				name: 'gift',
+				data: JSON.stringify(sendobj)
+			  },(ret, err)=> {
+				if (ret.status == 'prepare') {
+				  console.log(JSON.stringify(ret.result.message));
+				}else if (ret.status == 'success') {
+				  console.log(ret.result.message.messageId);
+				  //this.saveMessage(1,null,null,null,null,'','[送出礼物]',ret.result.message.messageId,null,null,sendobj)
+				}else if (ret.status == 'error'){
+				  let remark='发送失败';
+				  if(err.code=='30014'){
+					remark='发送处理失败'
+				  }else if(err.code=='31009'){
+					remark='您被对方屏蔽'
+				  }else if(err.code=='405'){
+					remark='您被对方加入黑名单'
+				  }
+				  console.log(JSON.stringify(err))
+				 // this.saveMessage(1,null,null,null,null,remark,'[送出礼物]',new Date().getTime(),null,null,sendobj)
+				}
+			  })
+			}else{
+				this.showGift=false;
+			}
+		},
+		async getGift(){
+			try{
+				let list = await this.$server.getGiftList()
+				this.giftList = list.data.data||[];
+			}catch(e){
+				console.log(JSON.stringify(e));
+			}
+		},
+		openWin(){
+			//console.log("openwin")
+			const t=this;
+			//t.showPh=false;
+			
+			t.showWin=true;
+		},
+		hiddenInfo(){
+			this.showWin=false;
+			setTimeout(()=>{
+				this.showInfo=false;
+			},800)
+		},
+		async getSingle(){//获取活动详情
+			const t=this;
+			try{
+				//console.log("ddddddddddddddddddd");
+				const result =await t.$server.blindDatingSingle({
+					datingDetailsId:t.datingId
+				});
+				t.owner=result.data.data;
+				if(t.owner.jiaoyouUser.id==t.$store.state.userInfo.id){
+					t.isManage=true;
+				}
+				if(t.owner.isCandidate==0&&!t.isManage){//没报名(不是群主)
+					t.$router.replace({name:"activityDetail",query:{id:t.datingId}});
+					t.$vux.toast.show({
+						type:"cancel",
+						text: "请先报名!",
+						position:"middle",
+						width:"auto",
+					});
+					return Promise.reject({message:"请先报名"});
+				}
+				if(t.owner.config){
+					t.numberPeople=[t.owner.config.oneLikeCount||5,t.owner.config.twoLikeCount||1,t.owner.config.threeLikeCount||1];//没个环节的可选对象数量
+				}
+					
+				t.title=t.owner.jiaoyouUser.aliasName;
+				if(window.api){
+					t.$db. updateActiveState(t.datingId,t.$store.state.userId,t.owner.state)
+					t.$store.dispatch("getConversationList")
+				}
+				//console.log("活动详情:"+JSON.stringify(result.data));
+			}catch(e){
+				console.log(e);
+			}
+		},
+		getExpContent(content){
+			const t=this;
+			let imgArr2=content.match(/\[.+?\]/g);
+			if(imgArr2){
+				imgArr2.map(item1=>{
+					emotion.map(emo=>{
+						if(emo.text==item1){
+							content = content.replace(item1,'<img class="imgcontent" src="static/emotion/'+emo.name+'.png"/>');
+						}
+					})
+				})
+			}
+			return content;
+		},
+		setMessage(type,text,imgUrl,audio,location,duration){
+			const _t = this;
+			//发送消息
+			const tp = type==1?"PRIVATE":type==2?"GROUP":type==3?"CHATROOM":type==4?"DISCUSSION":"SYSTEM ";//1单聊2群组3聊天室4讨论组5系统
+			let sendObj={}
+			if(text){
+			  sendObj={
+				conversationType: tp,
+				targetId: _t.datingId,
+				text: text,
+				extra: '',
+				actType:6,
+			  }
+			  this.$store.state.rongCloud.sendTextMessage(sendObj, function(ret, err) {
+				if (ret.status == 'prepare') {
+				  console.log("prepare:",{msg: JSON.stringify(ret.result.message)});
+				}else if (ret.status == 'success') {
+				  console.log("success:",{msg: ret.result.message.messageId});
+				  _t.saveMessage(type,text,imgUrl,audio,location,'',text,ret.result.message.messageId,null,null)
+				}else if (ret.status == 'error'){
+				  let remark='发送失败';
+				  if(err.code=='30014'){
+					remark='发送处理失败'
+				  }else if(err.code=='31009'){
+					remark='您被对方屏蔽'
+				  }else if(err.code=='405'){
+					remark='您被对方加入黑名单'
+				  }
+				  console.log("remark:",remark)
+				  _t.saveMessage(type,text,imgUrl,audio,location,remark,text,new Date().getTime(),null,null)
+				}
+			  });
+			}else if(audio){
+			  sendObj={
+				conversationType: tp,
+				targetId: _t.datingId,
+				voicePath: audio,
+				duration: duration,
+				extra: '',
+				actType:6,
+			  }
+			  this.$store.state.rongCloud.sendVoiceMessage(sendObj, function(ret, err) {
+				console.log(JSON.stringify(ret));
+				console.log(JSON.stringify(err));
+				if (ret.status == 'prepare') {
+				  console.log(JSON.stringify(ret.result.message));
+				}else if (ret.status == 'success') {
+				  console.log(ret.result.message.messageId+"rrrrrrrrrrrrrrrrrrr");
+				  _t.saveMessage(type,text,imgUrl,audio,location,duration,'[语音]',ret.result.message.messageId,null,null)
+				}else if (ret.status == 'error'){
+				  let remark='发送失败';
+				  if(err.code=='30014'){
+					remark='发送处理失败'
+				  }else if(err.code=='31009'){
+					remark='您被对方屏蔽'
+				  }else if(err.code=='405'){
+					remark='您被对方加入黑名单'
+				  }else if(err.code=='22406'){
+					remark='您不是群成员'
+				  }
+				  _t.saveMessage(type,text,imgUrl,audio,location,remark,'[语音]',new Date().getTime(),null,null)
+				}
+			  });
+			}
+		},
+    saveMessage(type,text,imgUrl,audio,location,status,tip,messageId,lon,lat){//保存消息到本地
+        let _t= this;
+        let remark = status;
+       //
+        let icon=this.owner.coverimgImages?this.owner.coverimgImages:this.owner.jiaoyouUser.headimgAttachmentId;
+        let name=this.owner.datingTitle;
+        let activeType=this.owner.activityMethod
+        _t.$db.insertOrUpdateUnreadCountName(_t.datingId,type,icon,name,1,tip,new Date().getTime(),messageId,_t.$store.state.userId,_t.$store.state.userId,this.owner.state,activeType)
+        _t.$db.insertConversation(_t.datingId,type,(_t.$store.state.userInfo.headimgAttachmentId),_t.$store.state.userInfo.aliasName,_t.$store.state.userId,text,new Date().getTime(),remark,_t.$store.state.userId,location,imgUrl,audio,messageId,lon,lat)
+		
+        _t.getNewMessageList();
+        _t.$store.dispatch("getConversationList")
+      },
+	  getNewMessageList(status){
+        let _t = this;
+        const dataChats=this.$db.getConversation(this.datingId,this.$store.state.userId,this.limit);
+        this.$db.resetCount(this.datingId,this.$store.state.userId);
+		_t.$store.commit('CHANGECHATROOMMESSAGELIST',dataChats)
+		_t.$nextTick(()=>{//滚动到底部
+			$(".jy_act_lt").animate({"scrollTop":$(".jy_act_lt_list").outerHeight(true)},500);
+		})
+      },
+     joinChatRoom(){
+		const t=this;
+		t.isloading=true;
+      this.$store.commit('CHANGECURRENTCHATROOMID',this.datingId)
+	  this.getNewMessageList();
+	  if(!this.$store.state.rongCloud){
+		console.log("融云初始化失败");
+		t.isloading=false;
+		return false;
+	  }
+      this.$store.state.rongCloud.joinChatRoom({
+        chatRoomId: this.datingId,
+        defMessageCount: -1
+      }, async (ret, err)=> {
+		//alert(ret.status)
+        if (ret.status == 'success'){
+        //  api.toast({ msg: JSON.stringify(ret.status) });
+          this.$store.state.rongCloud.setConversationNotificationStatus({
+            conversationType: 'CHATROOM',
+            targetId: this.datingId,
+            notificationStatus: 'DO_NOT_DISTURB'
+          }, function(ret, err) {
+            console.log('设置免打扰结果：'+JSON.stringify(ret))
+          })
+		  
+			 try{
+				 await t.actStatus();//获取活动状态
+			 }catch(e){
+				console.log("获取活动状态"+JSON.stringify(e));
+			}
+			t.isloading=false;
+        } else
+			t.isloading=false;
+			
+         // api.toast({ msg: err.code });
+      })
+    },
+    quitChatRoom(){
+		const t=this;
+		this.$store.commit('CHANGECURRENTCHATROOMID',null);
+		this.$store.commit('CHANGECHATROOMMESSAGELIST',[]);//清空聊天记录
+		this.$store.state.rongCloud&&this.$store.state.rongCloud.quitChatRoom({
+			chatRoomId: this.datingId
+		},async function(ret, err) {
+			if (ret.status == 'success'){
+				api.toast({ msg: "离开活动现场" });
+				try{
+					const result=await t.$server.actLeave({
+						datingDetailsId:t.datingId,
+					});
+					
+				}catch(e){
+					console.log(JSON.stringify(e));
+				}
+			}else{
+				api.toast({ msg: err.code });
+			}
+				
+		})
+    },
+		async actStatus(){//获取活动状态
+			const t=this;
+			try{
+				console.log("开始请求活动状态");
+				let	result = await t.$server.actStatus({
+					datingDetailsId:t.datingId
+				});
+				console.log("请求活动状态成功:"+JSON.stringify(result.data));
+				//t.myLove=result.data.data.beLikeList||[];//中意我的人
+				//t.youLove=result.data.data.likeList||[];//我中意的人
+				//t.currMatchUsers=result.data.data.allMatchUser||[];//当前已匹配的人
+				//t.onlineUser=result.data.data.onlineUser||[];//在线用户
+				//t.chatRoomInfo=result.data.data;//活动信息
+				t.$store.commit('CHAGECHATROOMINFO',result.data.data);//更新现场活动信息	
+				//t.agreePrize=result.data.data.agreePrize;//是否加入奖池
+				//t.isSign=result.data.data.status2||false;//是否已经签到
+				/*if(t.isSign){
+					t.$vux.toast.show({
+						type:"text",
+						text: "您的序号为: "+t.isSign+" ,请牢记!",
+						position:"middle",
+						width:"auto",
+						time:3000,
+					});
+				}*/
+				/*if(result.data.data.matchOtherUser){//已经匹配成功的
+					t.isMatch=true;
+					t.myMathch=result.data.data.matchOtherUser;
+				}*/
+				if(result.data.data.state==5){//活动结束
+					t.isActEnd=true;
+					//t.actStatusRes=true;//不显示结果弹窗
+				}
+			}catch(e){
+				console.log(JSON.stringify(e));
+			}
+		},
+		qcode(){
+			const t=this;
+			if(t.isManage){//主持人
+				t.showQcode=true;
+				return false;
+			}
+			const api=window.api||"";
+			if(api){
+				const FNScanner = api.require('FNScanner');
+				FNScanner.openScanner({
+					autorotation: true//扫描页面是否自动旋转
+				}, async function(ret, err) {
+					//console.log(JSON.stringify(ret));
+					if (ret) {
+						if(ret.eventType=="success"){
+							let param=t.Fn.toWxUrl(ret.content);
+							if(param.name=="sign"&&param.query.id){//签到
+								try{
+									const result =await t.$server.blindDateSignIn({
+										datingActivityId:param.query.id
+									});
+									//console.log("签到成功:"+JSON.stringify(result.data));
+									t.isSign=result.data.data.ext.extInt;
+									alert("签到成功,您的序号为:"+result.data.data.ext.extInt);
+									
+									/*
+									t.$vux.toast.show({
+										type:"success",
+										text: result.data.message,
+										position:"middle",
+										width:"auto",
+									});*/
+								}catch(e){
+									t.$vux.toast.show({
+										type:"cancel",
+										text: e.message,
+										position:"middle",
+										width:"auto",
+									});
+								}
+							}else if(ret.content.indexOf('http://')==0  || ret.content.indexOf('https://')==0){
+								alert("连接:"+ret.content);
+							}else if(ret.content.indexOf('type')!=-1&&ret.content.indexOf('from')!=-1){//旧版的app内签到
+								let data=JSON.parse(ret.content);
+								if(data.type=="signIn"&&data.from=='blindDate'){//相亲签到
+									try{
+										const result =await t.$server.blindDateSignIn({
+											datingActivityId:data.id
+										});
+										//console.log("签到成功:"+JSON.stringify(result.data));
+										alert("签到成功,您的序号为:"+result.data.data.ext.extInt);
+										/*
+										t.$vux.toast.show({
+											type:"success",
+											text: result.data.message,
+											position:"middle",
+											width:"auto",
+										});*/
+									}catch(e){
+										t.$vux.toast.show({
+											type:"cancel",
+											text: e.message,
+											position:"middle",
+											width:"auto",
+										});
+									}
+								}
+							}else{
+								alert(ret.content);
+							}
+						}else if(ret.eventType=="cameraError"){
+							t.$vux.toast.show({
+								type:"cancel",
+								text: "访问摄像头失败",
+								position:"middle",
+								width:"auto",
+							})
+						}else if(ret.eventType=="albumError"){
+							t.$vux.toast.show({
+								type:"cancel",
+								text: "访问相册失败",
+								position:"middle",
+								width:"auto",
+							})
+						}else if(ret.eventType=="fail"){
+							t.$vux.toast.show({
+								type:"cancel",
+								text: "扫码失败",
+								position:"middle",
+								width:"auto",
+							});
+						}
+					} else {
+						alert(JSON.stringify(err));
+					}
+				});
+			}else if(t.$store.state.isWeixin){
+				scanQRCode&&scanQRCode();
+			}else{
+				t.$vux.toast.show({
+					type:"cancel",
+					text: "当前设备不支持该功能",
+					position:"middle",
+					width:"auto",
+				});
+			}
+		},
+    }
+  }
+</script>
+<style lang="scss" scoped>
+  .jy_lt_right{
+    .jy_lt_msg{
+      position: relative;
+      .remark{
+        position: absolute;
+		width:100%;
+		text-align:right;
+		right:100%;
+		margin-right:0.1rem;
+        bottom: 0;
+        font-size: 0.3rem;
+        color:#fff;
+      }
+    }
+  }
+  .jy_lt_left{
+    .jy_lt_msg{
+      position: relative;
+      .remark{
+        position: absolute;
+        left:100%;
+		width:100%;
+		margin-left:0.1rem;
+        bottom: 0;
+        font-size: 0.3rem;
+        color:#fff;
+      }
+    }
+  }
+  .vedio-cls{
+    position: absolute;
+    z-index: 10;
+    left: 0;
+    top:0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.6);
+    div{
+      text-align: center;
+      color: #FFF;
+    }
+    div:first-child{
+      display: inline-block;
+      margin-left: 50%;
+      width: 200px;
+      height: 80px;
+      transform:translateX(-50%);
+      margin-top: 70%;
+      position:relative;
+      span{
+        width:5px;
+        height: 5px;
+        bottom:20px;
+        position:absolute;
+        background:#46a91e;
+        animation: bodong 0.5s infinite  ease;
+      }
+
+      span:first-child{
+        left:83.5px;
+        animation-delay:.3s;
+      }
+
+      span:nth-child(2){
+        left:90.5px;
+        animation-delay:.4s;
+
+      }
+      span:nth-child(3){
+        left:97.5px;
+        animation-delay:.6s;
+      }
+      span:nth-child(4){
+        left:104.5px;
+        animation-delay:.8s;
+      }
+      span:nth-child(5){
+        left:111.5px;
+        animation-delay:1s;
+      }
+
+      @keyframes bodong{
+        0%{height:5px; }
+        30%{height:15px; }
+        60%{height:20px; }
+        80%{height:15px; }
+        100%{height:5px; }
+      }
+    }
+  }
+</style>

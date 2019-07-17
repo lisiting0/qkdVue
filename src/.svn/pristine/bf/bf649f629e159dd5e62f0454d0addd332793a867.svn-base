@@ -1,0 +1,477 @@
+<template>
+  <div class="main" @click="windowClick">
+    <Loading v-if="isloading"></Loading>
+    <div class="header">
+      <div class="top">
+        <a class="left" @click="goback"><i class="iconfont">&#xe613;</i></a>
+        <a class="right"><i class="iconfont"></i></a>{{title}}
+      </div>
+    </div>
+    <div class="title fixed" style="margin-top: 1.22rem;">
+      <div class="underline" ref="underline" :style="{left:underlineLeft}"></div>
+      <div @click="getList(1)" :class="{active:active==1}">待评价</div>
+      <div @click="getList(2)" :class="{active:active==2}">已评价</div>
+      <div @click="getList(3)" :class="{active:active==3}">我的评价</div>
+    </div>
+    <myScroller :style="$store.state.isBrowser?'padding:3.2rem 0 0;':'padding: 4rem 0 0;'" :infinite="infinite" :refresh="refresh" :loadRefresh="loadRefresh" :loadInfinite="loadInfinite" ref="myScroller">
+      <div class="myscoll">
+        <div class="comment_con">
+            <template v-if="listArr">
+              <template v-if="listArr.length>0">
+                  <div class="comment_arr" v-for="(item,index) in listArr" :key="item.id">
+                    <template v-if="active==1">
+                      <div class="user border-bottom">
+                        <i class="user_img" :style="item.jiaoyouUser?'background-image:url('+getFullPath(item.jiaoyouUser.headimgAttachmentId)+');':''" @click="toUserInfo(item.jiaoyouUser.id,item.jiaoyouUser.silentState)"></i>
+                        <div>
+                          <i class="news_icon"></i>
+                          <p>{{item.jiaoyouUser&&item.jiaoyouUser.aliasName}}</p>
+                          <p>{{item.datingStarttime}}</p>
+                        </div>
+                      </div>
+                      <div class="active_link border-bottom" @click="toActiveDetail(item.id)">
+                        <div>
+                          <span class="jy-type xy" v-if="item.activityMethod==1">选缘</span>
+                          <span class="jy-type qy" v-if="item.activityMethod==2">抢缘</span>
+                          <span class="jy-type jy" v-if="item.activityMethod==3">竞缘</span>
+                          <span class="jy-type zy" v-if="item.activityMethod==4">中缘</span>
+                          <span class="jy-type py" v-if="item.activityMethod==5">配缘</span>
+                          {{item.datingDesc}}
+                          <i class="iconfont">&#xe702;</i>
+                        </div>
+                      </div>
+                      <div class="xpj_panel">
+                        <!--<span class="jy_type">高德汇KTV</span>-->
+                      <div class="xpj" @click.stop="showComment(item.id)"><i class="pj_icon"></i>写评价</div>
+                    </div>
+                    </template>
+                    <template v-if="active==2">
+                      <div class="user">
+                        <i class="user_img" :style="item.rUser?'background-image:url('+getFullPath(item.rUser.headimgAttachmentId)+');':''" @click="toUserInfo(item.rUser.id,item.rUser.silentState)"></i>
+                        <div>
+                          <i class="news_icon"></i>
+                          <p>{{item.rUser&&item.rUser.aliasName}}</p>
+                          <p>{{item.createDate}}</p>
+                        </div>
+                      </div>
+                      <div class="comment_text">
+                        <span>评价：</span>
+                        <span>{{item.content}}</span>
+                      </div>
+                      <div class="active_link border-bottom" @click="toActiveDetail(item.id)">
+                        <div>
+                          <span class="jy-type xy" v-if="item.object&&item.object.activityMethod==1">选缘</span>
+                          <span class="jy-type qy" v-if="item.object&&item.object.activityMethod==2">抢缘</span>
+                          <span class="jy-type jy" v-if="item.object&&item.object.activityMethod==3">竞缘</span>
+                          <span class="jy-type zy" v-if="item.object&&item.object.activityMethod==4">中缘</span>
+                          <span class="jy-type py" v-if="item.object&&item.object.activityMethod==5">配缘</span>
+                          {{item.object&&item.object.datingDesc}}
+                          <i class="iconfont">&#xe702;</i>
+                        </div>
+                      </div>
+                    </template>
+                    <template v-if="active==3">
+                      <div class="user">
+                        <i class="user_img" :style="item.user?'background-image:url('+getFullPath(item.user.headimgAttachmentId)+');':''" @click="toUserInfo(item.user.id,item.user.silentState)"></i>
+                        <div>
+                          <i class="question_icon"></i>
+                          <p>{{item.user&&item.user.aliasName}}</p>
+                          <p>{{item.createDate}}</p>
+                        </div>
+                      </div>
+                      <div class="comment_text">
+                        <span>评价：</span>
+                        <span>{{item.content}}</span>
+                      </div>
+                      <div class="active_link" @click="toActiveDetail(item.object.id)">
+                        <div>
+                          <span class="jy-type xy" v-if="item.object&&item.object.activityMethod==1">选缘</span>
+                          <span class="jy-type qy" v-if="item.object&&item.object.activityMethod==2">抢缘</span>
+                          <span class="jy-type jy" v-if="item.object&&item.object.activityMethod==3">竞缘</span>
+                          <span class="jy-type zy" v-if="item.object&&item.object.activityMethod==4">中缘</span>
+                          <span class="jy-type py" v-if="item.object&&item.object.activityMethod==5">配缘</span>
+                          {{item.object&&item.object.datingDesc}}
+                          <i class="iconfont">&#xe702;</i>
+                        </div>
+                      </div>
+                    </template>
+                  </div>
+                  <!--<div class="comment_arr">-->
+                    <!--<div class="user">-->
+                      <!--<i class="user_img" :style="'background-image:url('+imgs.w3+');'"></i>-->
+                      <!--<div>-->
+                        <!--<i class="question_icon"></i>-->
+                        <!--<p>一只小兔纸</p>-->
+                        <!--<p>2018-09-17 18:00</p>-->
+                      <!--</div>-->
+                    <!--</div>-->
+                    <!--<div class="comment_text">-->
+                      <!--<span>评价：</span>-->
+                      <!--<span>小姐姐很漂亮，很贴心，希望还能约会，为什么不愿意给我QQ号呢，很心痛啊啊啊啊啊啊！！！</span>-->
+                    <!--</div>-->
+                    <!--<div class="active_link">-->
+                      <!--<div>-->
+                        <!--<span class="jy_type">选缘</span>-->
+                        <!--周末无聊K歌-->
+                        <!--<i class="iconfont">&#xe702;</i>-->
+                      <!--</div>-->
+                    <!--</div>-->
+                  <!--</div>-->
+                  <!--<div class="comment_arr">-->
+                    <!--<div class="user">-->
+                      <!--<i class="user_img" :style="'background-image:url('+imgs.w4+');'"></i>-->
+                      <!--<div>-->
+                        <!--<i class="question_icon"></i>-->
+                        <!--<p>一只小兔纸</p>-->
+                        <!--<p>2018-09-17 18:00</p>-->
+                      <!--</div>-->
+                    <!--</div>-->
+                    <!--<div class="comment_text">-->
+                      <!--<span>评价：</span>-->
+                      <!--<span>小姐姐很漂亮，很贴心，希望还能约会，为什么不愿意给我QQ号呢，很心痛啊啊啊啊啊啊！！！</span>-->
+                    <!--</div>-->
+                    <!--<div class="active_link">-->
+                      <!--<div>-->
+                        <!--<span class="jy_type">选缘</span>-->
+                        <!--周末无聊K歌-->
+                        <!--<i class="iconfont">&#xe702;</i>-->
+                      <!--</div>-->
+                    <!--</div>-->
+                  <!--</div>-->
+              </template>
+            </template>
+          </div>
+      </div>
+    </myScroller>
+    <div v-show="showTextarea" class="commentAdd" @click.stop>
+      <textarea :ref="'textarea'" v-model="commentObj.comment" placeholder="请输入..." :style="{height:textareaHeight+'px'}"/>
+      <div @click.stop="sendComment()">发送</div>
+    </div>
+  </div>
+</template>
+
+<script>
+  import w1 from '../../images/w1.jpg';
+  import w2 from '../../images/w2.jpg';
+  import w3 from '../../images/w3.jpg';
+  import w4 from '../../images/w4.jpg';
+  import Loading from '../loading.vue';
+  import recentVisit from './recentVisit.data';
+  import myScroller from '@other/myScroller.vue';
+
+  let fontsize = parseInt(document.documentElement.style.fontSize);
+  export default {
+    name: 'myEvaluation',
+    components: {
+      Loading,
+      myScroller,
+    },
+    data() {
+      return {
+        isloading: false,
+        imgs: {w1: w1, w2: w2, w3: w3, w4: w4},
+        showPopover: false,
+        title: '我的评价',
+        active: 1,
+        people: recentVisit.recentVisit,
+        showCommentIndex: 0,
+        showTextarea: 0,
+        commentObj: {
+          momentId: null,
+          parentId: null,
+          userId: null,
+          comment: null
+        },
+        textareaHeight: 0,
+        listArr: [],
+        //分页参数
+        pageNo: 1,
+        isRead: false,
+        isEnd: false,
+        loadRefresh: true,//下拉刷新
+        loadInfinite: true, //上拉加载
+      }
+    },
+    watch:{
+      isEnd(val) {
+        const t=this;
+        if(val){
+          t.$refs.myScroller.finishInfinite(true);
+        }else{
+          t.$refs.myScroller.finishInfinite(false);
+        }
+      },
+    },
+    mounted() {
+      this.active = this.$route.query.active || 1;
+    },
+    computed:{
+      underlineLeft:function(){
+        return (this.active-1)*document.body.clientWidth*0.33 +'px'
+      },
+    },
+    methods: {
+      goback() {
+        this.$router.go(-1)
+      },
+      showComment(momentId) {
+        let obj = {
+          momentId: null,
+          parentId: null,
+          userId: null,
+          comment: null
+        }
+        obj.momentId = momentId
+        this.textareaHeight = 1.5 * fontsize
+        this.commentObj = obj
+        this.showTextarea = momentId
+        let pid = 'textarea';
+        this.$nextTick(function () {
+          $((this.$refs)[pid]).focus()
+        })
+      },
+      windowClick() {
+        if (this.showTextarea != 0) {
+          this.showTextarea = 0
+        }
+      },
+      getFullPath(path) {
+        return this.$utils.getFullPath(path)
+      },
+      toActiveDetail(id) {
+        this.$router.push({
+          path: "/act",
+          query: {
+            id: id
+          }
+        })
+      },
+      toUserInfo(id,silentState) {
+        this.$router.push({
+          path: "userInfo",
+          query: {
+            id: id,
+            silentState: silentState
+          }
+        })
+      },
+      async getList(active, flag) {
+        const _this = this;
+        if (_this.isRead) {
+          return false;
+        }
+        _this.isRead = true;
+        if (_this.isRefresh || flag || _this.active != active) {
+          _this.pageNo = 1;
+          if (flag) {
+            _this.isloading = true;
+          }
+        }
+        try {
+          let data = {
+            page: _this.pageNo,
+            rows: _this.$store.state.pageSize
+          };
+          if (!_this.listArr || _this.isRefresh || flag || _this.active != active) {
+            _this.$refs.myScroller.scrollTo(1);
+            _this.listArr = [];
+            _this.active = active;
+          }
+          let result = null;
+          if (_this.active == 1) {
+            result = await _this.$server.get2CommentDating(data);
+          } else if (_this.active == 2) {
+            data = {
+              businessType: 5,
+              userId: _this.$store.state.userInfo.id,
+            }
+            result = await _this.$server.commentList(data);
+          } else {
+            data = {
+              businessType: 5,
+              rid: _this.$store.state.userInfo.id,
+            }
+            result = await _this.$server.commentList(data);
+          }
+          if (result.data.list) {
+            _this.listArr.push(...result.data.list);
+          }
+          if (result.data.count <= _this.$store.state.pageSize * _this.pageNo || result.data.list.length < _this.$store.state.pageSize) {//判断是否最后一页
+            _this.isEnd = true;
+          } else {
+            _this.isEnd = false;
+            _this.$refs.myScroller.finishInfinite(false);
+          }
+
+        } catch (e) {
+          console.log(e)
+          _this.isEnd = true;
+          return Promise.reject("error")
+        }
+        _this.isRead = false;
+        _this.isloading = false;
+        _this.isRefresh = false;
+        _this.pageNo++;
+      },
+      infinite(done) {//上拉加载(防止初始内容不满一屏会无限加载)
+        const t = this;
+        if (t.isEnd) {
+          done(true);
+          return false;
+        }
+        console.log("加载");
+        t.getList(this.active).then(() => {
+          if (t.isEnd) {
+            done(true);
+          } else {
+            done();
+          }
+        });
+      },
+      refresh(done) {//下拉刷新
+        const t = this;
+        console.log("刷新");
+        t.isRefresh = true;
+        t.getList(this.active).then((res) => {
+          done();
+        });
+      },
+      async sendComment() {
+        const t = this;
+        const index = t.commentObj.index;
+        try {
+          if (!t.commentObj.comment) {
+            t.$vux.toast.show({
+              type: "text",
+              text: "评论内容不能为空",
+              position: "bottom",
+              width: "auto",
+            });
+            return;
+          }
+          const result = await t.$server.postComment({
+            businessType: 5,
+            objectId: t.commentObj.momentId,
+            content: t.commentObj.comment
+          })
+          t.showTextarea = 0;
+          t.$vux.toast.show({
+            type: "text",
+            text: "评论成功",
+            position: "bottom",
+            width: "auto",
+          });
+          this.listArr.splice(index, 1);
+        } catch (e) {
+        }
+      },
+    }
+  }
+</script>
+<style scoped lang="scss">
+  .title {
+    font-size: 0;
+    margin-top: 1.39rem;
+    padding: 0.28rem 0 0;
+    height: 1.32rem;
+    line-height: 1.32rem;
+    background-color: #f2f2f2;
+    div.underline{
+      position:absolute;
+      width: 33.33%;
+      top:0.28rem;
+      height: 1.32rem;
+      z-index: 1000;
+      background-color: rgba(0,0,0,0);
+      transition: 0.2s all linear;
+      &::before {
+        content: "";
+        margin-top:-6px;
+        width: 20%;
+        height: 1.32rem;
+        display: inline-block;
+        border-bottom: 2px solid #ff4300;
+      }
+    }
+    div {
+      position: relative;
+      font-size: 0.44rem;
+      display: inline-block;
+      color: #9a9a9d;
+      box-sizing: border-box;
+      width: 33.33%;
+      text-align: center;
+      background-color: #fff;
+      overflow: hidden;
+    }
+    div.active {
+      color: #000;
+    }
+  }
+
+  .main {
+    padding-bottom: 0;
+    &:before {
+      background-color: #3a3845;
+    }
+    .header {
+      position: fixed;
+      width: 100%;
+      z-index: 10;
+      .top {
+        background-color: #3a3845;
+        color: #FFF;
+        font-size: 0.52rem;
+        position: relative;
+        i {
+          font-size: 0.52rem;
+        }
+        a {
+          position: absolute;
+          padding: 3px;
+        }
+        .left {
+          left: 0.325rem;
+        }
+        .right {
+          right: 0.325rem;
+        }
+      }
+    }
+    .myscoll {
+      background-color: #f8f8fc;
+    }
+    .list-wrapper {
+      background: none;
+    }
+    .commentAdd {
+      position: fixed;
+      left: 0;
+      width: 100%;
+      bottom: 0;
+      border-top: 1px solid #ccc;
+      background-color: #fff;
+      padding: 0.2rem;
+      textarea {
+        padding: 0.1rem;
+        -webkit-box-sizing: border-box;
+        box-sizing: border-box;
+        font-size: 0.4rem;
+        background-color: #f2f2f2;
+        resize: none;
+        width: 77.5%;
+        outline: none;
+        border: 0;
+        vertical-align: top;
+      }
+      div {
+        height: 1.5rem;
+        line-height: 1.5rem;
+        display: inline-block;
+        width: 16%;
+        text-align: center;
+        background-color: #f2f2f2;
+        border-radius: 5px;
+      }
+    }
+  }
+</style>

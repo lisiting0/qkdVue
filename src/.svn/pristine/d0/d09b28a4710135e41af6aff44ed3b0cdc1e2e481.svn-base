@@ -1,0 +1,363 @@
+import Vue from 'vue';
+import router from './routers';
+import App from './App';
+ 
+import 'babel-polyfill';//添加依赖 babel-runtime和babel-polyfill实现ES6转ES5
+ 
+import './sass/index.scss';//使用require导入css文件
+
+import './js/jquery-1.8.3.min';
+import './js/index';
+import utils from './utils/utils'
+import http from '@/utils/http';
+import db from '@/utils/db.js';
+import common from '@/utils/common';
+import {Fn} from '@js/api';
+import server from '@/server/getData';
+import util from '@/server/util';
+import {ToastPlugin,LoadingPlugin,ConfirmPlugin,AlertPlugin} from 'vux';
+import animate from 'animate.css'
+//import FastClick from 'fastclick'
+import {pan,swipe,swipeup,swipeleft,swiperight,swipedown} from '@/assets/js/vuetouch'
+import {store} from './store/index.js';
+
+//FastClick.attach(document.body);
+Vue.use(ToastPlugin);
+Vue.use(LoadingPlugin)
+Vue.use(ConfirmPlugin)
+Vue.use(AlertPlugin)
+Vue.use(animate)
+// let vconsole = new vConsole();
+
+// const vm=new Vue({
+//  el: '#app',
+//  router,
+// });
+function getFullPath(url){
+  if(/^http*/.test(url)){
+    return url;
+  }else{
+    return utils.getFullPath(path);
+  }
+}
+function imageCache(el, binding,type){
+  if (window.api){
+    setTimeout(function() {
+      window.api.imageCache({
+        url: getFullPath(binding.value),
+        thumbnail: false
+      }, function (ret) {
+        if (ret) {
+          if(type=='img'){
+            el.setAttribute("src", ret.url);
+            console.log(ret.url)
+          }else{
+            el.setAttribute("style", {'background-image':'url('+(ret.url)+')'});
+          }
+        }
+      });
+    });
+  }else{
+    setTimeout(()=>{
+      imageCache(el, binding);
+    },500)
+  }
+}
+// Vue.directive('cache-src', (el, binding)=>{
+//   imageCache(el, binding,'img')
+// })
+// Vue.directive('cache-background-image', (el, binding)=>{
+//   imageCache(el, binding,'background')
+// })
+Vue.prototype.$utils = utils;
+Vue.prototype.$util = util;
+Vue.prototype.$http = http;
+Vue.prototype.$server = server;
+Vue.prototype.$db = db;
+Vue.prototype.$common = common;
+Vue.prototype.Fn = Fn;
+async function initApp(){
+	function compare(v1){//v1代表线上获取
+	  let arrv1=v1.split('.');
+	  let arrv2=store.state.version.split('.');
+	// console.log(JSON.stringify(arrv1)+JSON.stringify(arrv2)+(arrv1[2]>arrv2[2]))
+	  if(parseInt(arrv1[0])>parseInt(arrv2[0])){
+		  return true;
+	  }else if(parseInt(arrv1[0])<parseInt(arrv2[0])){
+	    return false;
+    }
+	  if(parseInt(arrv1[1])>parseInt(arrv2[1])){
+		  return true;
+	  }else if(parseInt(arrv1[1])<parseInt(arrv2[1])){
+      return false;
+    }
+	  if(parseInt(arrv1[2])>parseInt(arrv2[2])){
+		return true;
+	  }
+	  return false;
+	}
+	store.commit("CHANGESTORE",{name:"isBrowser",value:false});//是否应用外浏览器打开
+	/*try{
+	  let result = await server.getBaseConfig()
+	  store.commit("CHANGEIMAGEURL",result.data.data)
+	}catch (e) {
+	  console.log(e)
+	}*/
+	window.api.removeLaunchView({
+	  animation: {
+		type: 'fade',
+		duration: 500
+	  }
+	});
+	window.api.addEventListener({//其他应用/浏览器等打开本app
+		name:'appintent'
+	},function(ret,err){
+		const appParam = ret.appParam;
+		if(appParam.type=="router"){
+			if(appParam.from=="alipays"){
+				store.commit("EDITUSERINFO",{key:"aliUserId",value:appParam.aliUserId});
+				store.commit("EDITUSERINFO",{key:"aliUserName",value:appParam.aliUserName});
+			}
+		}
+		//console.log(JSON.stringify(ret));
+	});
+	
+	window.api.addEventListener({
+	  name:'pause'
+	}, function(ret, err){
+	  store.commit("CHANGEACTIVE",false)
+	});
+	window.api.addEventListener({
+	  name:'resume'
+	}, function(ret, err){
+	  store.commit("CHANGEACTIVE",true)
+	});
+	let keybackTimes=0;
+	window.api.addEventListener({
+	  name: 'keyback'
+	}, function(ret, err) {
+
+	  if(store.state.handleRoute){
+		store.commit("CHANGEHANDLEROUTE",false)
+		return;
+	  }
+	  if(vm.$route.name=="home"||vm.$route.name=="friend"||vm.$route.name=="love"||vm.$route.name=="search"||vm.$route.name=="user"||vm.$route.name=='login'||vm.$route.name=='fillInUserInfo'||vm.$route.name=='registered'){
+		if(keybackTimes==1){
+		  window.api.closeWidget({silent:true});
+		}else{
+		  keybackTimes=1;
+		  setTimeout(()=>{
+			keybackTimes=0;
+		  },2000)
+		  window.api.toast({
+			msg: "再按一次退出",
+			duration: 2000,
+			location: 'bottom'
+		  });
+		}
+	  }else{
+		window.api.historyBack({}, function(ret, err) {
+		  console.log('返回一次')
+		});
+	  }
+	});
+	const vm=new Vue({
+	  el: '#app',
+	  // 把 store 对象提供给 “store” 选项，这可以把 store 的实例注入所有的子组件
+	  store,
+	  router,
+	  components: {App},
+	  template: '<App/>',
+	});
+	//alert(JSON.stringify(api.safeArea));
+	let fs = window.api.require('fs');
+	let database = window.api.require('db');
+	// let dbPath = 'fs://db/';
+	let dbPath = 'box://db/';
+	//判断数据库是否存在
+	let ret = fs.existSync({
+	  path: dbPath + 'db.db'
+	});
+	if (ret.exist) {
+	  if(1==2){
+		fs.removeSync({
+		  path: dbPath + 'db.db'
+		}); //删除旧库
+		let ret = fs.copyToSync({
+		  oldPath: 'widget://db.db',
+		  newPath: dbPath
+		});
+	  }
+	  database.openDatabase({
+		name: 'db',
+		path: dbPath + 'db.db'
+	  }, function(ret2, err2) {
+		if (ret2.status) {
+		  console.log("数据库启动")
+		} else {
+		  Vue.$vux.toast.show({
+			type:"text",
+			text: "数据库启动失败，请退出应用重试",
+			position:"middle",
+			width:"auto",
+		  });
+		}
+	  });
+	} else {
+	  let ret = fs.copyToSync({
+		oldPath: 'widget://db.db',
+		newPath: dbPath
+	  });
+	  if (ret.status) {
+		database.openDatabase({
+		  name: 'db',
+		  path: dbPath + 'db.db'
+		}, function(ret2, err2) {
+		  if (ret2.status) {
+			console.log("数据库初始启动")
+		  } else {
+			Vue.$vux.toast.show({
+			  type:"text",
+			  text: "数据库启动失败，请退出应用重试",
+			  position:"middle",
+			  width:"auto",
+			});
+		  }
+		});
+	  } else {
+		Vue.$vux.toast.show({
+		  type:"text",
+		  text: "数据库启动失败，请退出应用重试",
+		  position:"middle",
+		  width:"auto",
+		});
+	  }
+
+	}
+	try{
+		let ver = await server.appVersion({
+			os:window.api.systemType=='ios'?'IOS':'Android'
+		})
+		const needupdate = compare(ver.data.list[0].version)
+		if(needupdate){
+		  window.api.confirm({
+			title: '',
+			msg: ver.data.list[0].des,
+			buttons: ["确定", "取消"]
+		  }, function(ret, err) {
+			if (ret.buttonIndex == 1) {
+			  if(window.api.systemType=='ios'){
+				window.api.installApp({
+				  appUri: ver.data.list[0].url
+				});
+			  }else{
+				window.api.download({
+				  url: ver.data.list[0].url,
+				  report: true
+				}, function(ret, err) {
+				  if (ret && 0 == ret.state) { /* 下载进度 */
+					// window.api.toast({
+					//   msg: "正在下载应用" + ret.percent + "%",
+					//   duration: 2000
+					// });
+					window.api.showProgress({
+					  title: 'DownLoad...',
+					  text: ret.percent+'%',
+					});
+				  }
+				  if (ret && 1 == ret.state) { /* 下载完成 */
+					window.api.hideProgress();
+					window.api.installApp({
+					  appUri: ret.savePath
+					});
+				  }
+				  if(!ret){
+					window.api.hideProgress();
+					window.api.toast({
+					  msg: JSON.stringify(err),
+					  duration: 2000
+					});
+				  }
+				});
+			  }
+			}else{
+			  if(ver.data.list[0].mandatoryUpgrade==1){
+				window.api.closeWidget({silent:true});
+			  }
+			}
+		  })
+		}else{
+		  console.log('不需要升级')
+		}
+	}catch(e){
+		console.log(e);
+	}
+}
+function initBrowser(){
+	if(navigator.userAgent.toLowerCase().match(/MicroMessenger/i)=="micromessenger"){
+		store.commit("CHANGESTORE",{name:"isWeixin",value:true});//是否微信打开
+		if(navigator.userAgent.toLowerCase().match(/windowswechat/i)=="windowswechat"){
+			store.commit("CHANGESTORE",{name:"isWindowsWechat",value:true});//是否微信pc版打开
+		}
+		if(navigator.userAgent.toLowerCase().match(/wechatdevtools/i)=="wechatdevtools"){
+			store.commit("CHANGESTORE",{name:"isWechatdevtools",value:true});//是否微信开发者工具
+		}
+	}
+	store.commit("CHANGESTORE",{name:"isBrowser",value:true});//是否应用外浏览器打开
+	  /*try{
+		let result = await server.getBaseConfig();
+		store.commit("CHANGEIMAGEURL",result.data.data)
+		
+	  }catch (e) {
+		console.log(e)
+	  }*/
+		/*server.getBaseConfig().then((res)=>{
+			store.commit("CHANGEIMAGEURL",res.data.data)
+		});*/
+		//console.log("1111111111111")
+	  const vm=new Vue({  //pc端调试时请取消注释
+		el: '#app',
+		// 把 store 对象提供给 “store” 选项，这可以把 store 的实例注入所有的子组件
+		store,
+		router,
+		components: {App},
+		template: '<App/>',
+	 });
+	  store.dispatch("initMessageCount");
+	 /* if(store.state.isWeixin){//禁用微信自带的物理返回按钮
+			let keybackTimes=0;
+		  window.addEventListener("popstate", function(e) {
+			 if(store.state.handleRoute){
+				store.commit("CHANGEHANDLEROUTE",false);
+				return;
+			  }
+				//window.history.back();
+				window.backTimeout=setTimeout(() => {
+				   vm.$router.push({path:'/'});
+				 },500);
+				 vm.$router.back();
+				Vue.$vux.toast.show({
+				  type:"text",
+				  text: "返回一次",
+				  position:"bottom",
+				  width:"auto",
+				});
+		  }, false);	
+	  }*/
+} 
+let initTimeout;
+server.getBaseConfig().then((res)=>{
+	store.commit("CHANGEIMAGEURL",res.data.data)
+});
+if(store.state.isApp||store.state.isiOSApp){
+	window.apiready=()=>{
+		window.apireadyWindow();//活动浮窗
+		clearTimeout(initTimeout);
+		initApp();
+	}
+	initTimeout=setTimeout(()=>{//兼容一下
+		initBrowser();
+	},3000);
+}else{
+	initBrowser();
+}

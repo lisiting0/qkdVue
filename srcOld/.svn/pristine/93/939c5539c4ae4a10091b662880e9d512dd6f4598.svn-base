@@ -1,0 +1,88 @@
+<template>
+<div class="main jy_all_top  jy_new_act">
+	<Loading v-if="isloading"></Loading>
+	<div class="header">
+		<div class="top">
+			<Back class="left"><i class="iconfont">&#xe613;</i></Back><a class="right"><i class="iconfont">&#xe679;</i></a><p>详情</p>
+		</div>
+	</div>
+	<div class="jy_new_act_top">
+		<ul class="jy_new_act_top_list">
+			<li></li>
+		</ul>
+	</div>
+	<div class="jy_new_act_b">
+		<div class="jy_new_act_block">
+			<div class="jy_new_act_uinfo">
+				<i class="jy_new_act_uinfo_img"></i>
+				<h4><em> 1.3km</em>佐佐木希<i class="jy_auth_age" :class="{jy_auth_age_man:$store.state.userInfo.sex==2}">{{$store.state.userInfo.sex==1?'&#xe64a;':'&#xe605;'}}26</i></h4>
+				<p class="jy_new_act_uinfo_tip"><span>你买单</span><i class="jy_act_ico">&#xe66c;吃饭</i><i class="jy_act_ico jy_act_ico_xy">选缘</i><em class="jy_ico_ask">&#xe682;</em></p>
+			</div>
+			<p class="jy_new_act_desc">周末有没有一起吃饭的呀，好想吃个大餐哦！！！</p>
+			<ul class="jy_new_act_gift">
+				<li>参加有礼<em>(送给参加者)</em>：<div class="jy_new_act_gift_r"><i></i><p>亚菲儿女士香水50ml*1</p><p>价值:2000元</p></div></li>
+				<li>携礼参加<em>(送给发起者)</em>：<div class="jy_new_act_gift_r"><i></i><p>亚菲儿女士香水50ml*1</p><p>价值:2000元</p></div></li>
+			</ul>
+		</div>
+		<div class="jy_new_act_block">
+			<p class="jy_new_act_p"><i>&#xe667;</i>约会时间：05-19 18:00:00</p>
+			<p class="jy_new_act_p"><i>&#xe677;</i>约会地点：星巴克（萝岗万达店）</p>
+			<p class="jy_new_act_p"><i>&#xea59;</i>对象：男　　　可协商携带好友</p>
+			<p class="jy_new_act_p"><i class="icon_bi"></i>报名费用：10乾坤币</p>
+			<p class="jy_new_act_p"><i class="icon_bib"></i>保证金：100元<em></em></p>
+		</div>
+		<div class="jy_new_act_block">
+			<p class="jy_new_act_time">选择对象时间：2018-05-18 10:00:00</p>
+		</div>
+		<div class="jy_new_act_block">
+			<p class="jy_new_act_p"><i>&#xe636;</i>认证要求：　　<i>&#xe69c;</i>　<i>&#xe697;</i></p>
+			<p class="jy_new_act_p"><i>&#xe69d;</i>年龄：不低于30岁</p>
+			<p class="jy_new_act_p"><i>&#xe675;</i>身高：不低于175cm</p>
+			<p class="jy_new_act_p"><i>&#xe666;</i>学历：本科及以上</p>
+		</div>
+		<div class="jy_new_act_block">
+			<p class="jy_new_act_p"><i>&#xe67e;</i>约会后续：谈人生、谈理想</p>
+		</div>
+		<div class="jy_new_act_block">
+			<p class="jy_new_act_t"><i>&#xe702;</i>已报名(12)</p>
+		</div>
+	</div>
+	<p class="identity_act">
+		<em class="blue">关注活动</em>
+		<em class="pink">立即报名</em>
+	</p>
+</div>
+</template>
+<script>
+import Loading from '@other/loading.vue';
+import Back from '@other/back.vue';
+import myScroller from '@other/myScroller.vue';
+export default {
+	name: 'setSort',
+	data () {
+		return {
+			isloading:false,
+			
+		}
+	},
+	components: {
+		Loading,
+		Back,
+		myScroller,
+	},
+	watch:{	
+		
+	},
+	mounted () {
+		const t=this;
+		
+		
+	},
+	destroyed () {
+		
+	},
+	methods:{
+	
+	}
+}
+</script>

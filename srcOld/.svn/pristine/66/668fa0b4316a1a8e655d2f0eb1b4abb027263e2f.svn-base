@@ -1,0 +1,195 @@
+<template>
+	<div class="main jy_all_top jy_baiduMap">
+		<Loading v-if="isloading"></Loading>
+		<div class="header">
+			<div class="top">
+				<Back class="left"><i class="iconfont">&#xe613;</i></Back><p>地图</p>
+			</div>
+		</div>
+		<div class="jy_baiduMap_search">
+			<i @click.stop="showCity=true">{{location}}</i><input type="text" v-model="searchKey" placeholder="请输入搜索关键字">
+		</div>
+		<baidu-map class="jy_baiduMap_map" 
+			:center="center" 
+			:zoom="zoom" 
+			:pageCapacity="100"  
+			:double-click-zoom="false" 
+			:pinch-to-zoom="false" 
+			@ready="handler" 
+			@dragend="dragend" 
+		>
+			<baidu-map>
+				<bm-view class="map"></bm-view>
+				<bm-local-search :panel="false" :nearby="nearby" :forceLocal="false" :keyword="keyword" :auto-viewport="false" :location="location" @searchcomplete="searchcomplete"></bm-local-search>
+			</baidu-map>
+			<div class="bMap_my_btn">
+				<i @click="addZoom(true)">&#xe61f;</i>
+				<i @click="addZoom(false)">&#xe66e;</i>
+			</div>
+		</baidu-map>
+		<div class="jy_baiduMap_list">
+			<ul class="jy_bMap_address_list">
+				<li v-for="item,index in addressList" @click.stop="setAdress(item)"><h4>{{item.title}}</h4><p>{{item.address}}</p></li>
+			</ul>
+		</div>
+		 <group style="display: none">
+            <popup-picker title="约会地点" :data="listData" :columns="3" v-model="city" ref="picker" :show.sync="showCity"></popup-picker>
+          </group>
+	</div>
+</template>
+<script>
+import Vue from 'vue'
+import Loading from '@other/loading.vue';
+import BaiduMap from 'vue-baidu-map'
+import Back from '@other/back.vue';
+import {store} from '../../store/index';
+ import { Group,PopupPicker } from 'vux'
+ 
+Vue.use(BaiduMap, {
+  ak: store.state.baiduKey
+})
+export default {
+	name: 'bMap',//baiduMap这名字跟地图冲突
+	props:{
+		
+	},
+	components: {
+	  Back,
+	  Loading,
+	  Group,
+	  PopupPicker,
+    },
+	data(){
+		return {
+			isloading:false,
+			center:{
+				lng :113.307649675,
+				lat :23.1200491021,
+			},
+			nearby:{
+				center: {//广州中心点
+					lng :113.307649675,
+					lat :23.1200491021,
+				},
+				radius: 1000
+			},
+			zoom: 16,
+			location: '广州',	
+			keyword: ["大厦","号","道","店","街","园","公寓","路","会所","城"],
+			addressList:[],//搜索到的地址列表
+			BMap:null,
+			map:null,
+			searchTimeout:null,
+			searchKey:"",
+			showCity:false,
+			city:[],
+			listData:[],
+		}
+	},
+	watch:{
+		searchKey(val){
+			const t=this;
+			if(val!=''){
+				t.keyword=val.split(" ");
+			}else{
+				t.keyword=t.key;
+			}
+			t.nearby={
+				center: t.center,
+				radius: 1000
+			};
+		},
+		city(val){
+			const t=this;
+			console.log(val,t.listData)
+			t.location=t.$refs.picker.getNameValues();
+		}
+	},
+	async mounted(){
+		const t=this;
+		t.key=t.keyword;
+		try{
+			let listData = await t.$server.getDistrict();
+			t.listData = listData.data.data;
+		}catch(e){
+			console.log(JSON.stringify(e));
+		}
+	},
+	methods:{
+		setAdress(address){
+			const t=this;
+			t.center=address.point;
+		},
+		searchcomplete(LocalResult){
+			const t=this;
+			console.log(LocalResult)
+			if(LocalResult){
+				clearTimeout(t.searchTimeout);
+				t.searchTimeout=setTimeout(()=>{
+					let length=LocalResult.length;
+					let addressList=[];
+					if(length){
+						for(let i=0;i<length;i++){
+							addressList.push(...LocalResult[i]["Ar"]);
+						}
+					}else{
+						addressList.push(...LocalResult["Ar"]);
+					}
+					let fAdress=addressList.filter((v,i)=>{
+						return v.type==0;
+					});
+					fAdress.sort((a,b)=>{
+						return Math.sqrt(Math.pow(Math.abs(a.point.lat-t.center.lat),2)+Math.pow(Math.abs(a.point.lng-t.center.lng),2))-Math.sqrt(Math.pow(Math.abs(b.point.lat-t.center.lat),2)+Math.pow(Math.abs(b.point.lng-t.center.lng),2));
+					});
+					t.addressList=fAdress;
+					$(".jy_baiduMap_list").animate({"scrollTop":0},0);
+					t.isloading=false;
+				},10);
+			}
+		},
+		addZoom(flag){//地图缩放大小
+			let zoom=this.zoom;
+			if(flag){
+				zoom++;
+			}else{
+				zoom--;
+			}
+			this.zoom=zoom>19?19:zoom<5?5:zoom;
+		},
+		async handler ({BMap, map}) {
+			const t=this;
+			t.BMap=BMap;
+			t.map=map;
+			try{
+				let location = await t.$store.dispatch("getMylocation");
+				if(location.city){
+					t.center={
+						lng :location.lon,
+						lat :location.lat,
+					}
+					t.nearby={
+						center: t.center,
+						radius: 1000
+					};
+					t.location=location.city;
+					//t.keyword=location.streetName;
+				}
+			}catch(e){
+				console.log(JSON.stringify(e));
+			}
+		},
+		dragend(type, target, pixel, point){
+			const t=this;
+			t.isloading=true;
+			t.center=t.map.getCenter();
+			t.nearby={
+				center: t.center,
+				radius: 1000
+			};
+		}
+	},
+	destroyed(){
+		
+	}
+}
+</script>

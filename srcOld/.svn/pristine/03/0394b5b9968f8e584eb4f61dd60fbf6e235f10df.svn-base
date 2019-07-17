@@ -1,0 +1,281 @@
+<template>
+  <div class="main">
+    <Loading v-if="isloading"></Loading>
+    <div class="header">
+      <div class="top">
+        <Back class="left"><i class="iconfont">&#xe613;</i></Back><a class="right"><i class="iconfont"></i></a>查找好友
+      </div>
+    </div>
+    <div class="wrapper" ref="wrapper">
+      <div class="input">
+        <i class="iconfont">&#xe661;</i>
+        <span id="searchinput"></span>
+        <i @click="clearInput" v-if="value.length>0" class="iconfont">&#xe67c;</i>
+      </div>
+    </div>
+    <div class="content">
+      <div v-for="(item) in list" :key="item.id" >
+        <router-link replace :to="{name:'userInfo',query:{id:item.id}}" tag="div" :style="{'background-image':'url('+$utils.getFullPath(item.headimgAttachmentId)+')'}"></router-link>
+        <div @click.stop="intoChat(item)">
+          <p>{{item.aliasName}}</p>
+          <p>{{item.selfLabel}}</p>
+        </div>
+        <div>
+            <span  @click="followFriend(item.id)">关注</span>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+<script>
+  import Loading from '@other/loading.vue';
+  import Back from '@other/back.vue';
+
+  export default {
+    name: 'addFriend',
+    data () {
+      return {
+        isloading:false,
+        myScrollerHeight:0,
+        UIInput:null,
+        inputid:0,
+        value:'',
+        list:[],
+      }
+    },
+    watch: {
+
+    },
+    mounted () {
+      this.myScrollerHeight = $(".header").height() + (0.75) * parseInt(document.documentElement.style.fontSize);
+      this. UIInput = window.api.require('UIInput');
+      this.UIInput.open({
+        rect: {
+          x: document.body.clientWidth*0.075 + (0.6) * parseInt(document.documentElement.style.fontSize),
+          y: this.myScrollerHeight+9,
+          w: document.body.clientWidth*0.85 - (1) * parseInt(document.documentElement.style.fontSize),
+          h: 32
+        },
+        styles: {
+          bgColor: '#fff',
+          size: 14,
+          color: '#000',
+          placeholder: {
+            color: '#ccc'
+          }
+        },
+        autoFocus: true,
+        maxRows: 1,
+        placeholder: '请输入娇友昵称',
+        keyboardType: 'search',
+      }, (ret) =>{
+        if (ret.eventType == 'show') {
+          this.inputid = ret.id;
+        } else if(ret.eventType == 'change'){
+          this.UIInput.value({id: this.inputid},(ret)=> {
+            if (ret) {
+              this.value = ret.msg;
+            }
+          });
+        } else if(ret.eventType == 'search'){
+          this.getUserByPhoneAndName()
+        }
+      });
+
+    },
+    destroyed () {
+      this.UIInput.close({
+        id:this.inputid
+      });
+    },
+    components: {
+      Loading,
+      Back,
+    },
+    methods: {
+      async followFriend(id){ //关注好友接口
+        this.$vux.loading.show()
+        let result= await this.$server.followFriend(id);
+        this.$vux.loading.hide()
+        this.$vux.toast.show({
+          type:"success",
+          text: '已关注',
+          position:"middle",
+          width:"auto",
+        });
+        this.list = this.list.filter(v=>{
+          return v.id != id;
+        })
+      },
+      intoChat(item){
+        let query={
+          id:item.id,
+          name:item.aliasName,
+        }
+        this.$router.replace({
+          path: "/chatWindow",
+          query:query
+        })
+      },
+      async getUserByPhoneAndName(){
+        if(!this.value){
+          return;
+        }
+        let result = await this.$server.getUserByPhoneAndName({
+          page:1,
+          rows:1000,
+          aliasName:this.value
+        })
+        this.list = result.data.data.list;
+        console.log(JSON.stringify(result))
+      },
+      clearInput(){
+        this.UIInput.value({
+          id: this.inputid,
+          msg: "",
+        },(ret)=> {
+
+        });
+        this.list=[]
+      },
+      toItem(item){
+        if(item==='lable'){
+          this.$router.push({
+            path: "/lable"
+          })
+        }
+        if(item==='groupChat'){
+          this.$router.push({
+            path: "/groupChat"
+          })
+        }
+      }
+
+    }
+  }
+</script>
+<style scoped lang="scss">
+  .main{
+    &:before{
+      background-color:#3a3845 ;
+    }
+    .header{
+      .top{
+        background-color:#3a3845 ;
+        color:#FFF;
+        font-size: 0.52rem;
+        position: relative;
+        i{
+          font-size: 0.52rem;
+        }
+        a{
+          position:absolute;
+          padding:3px;
+        }
+        .left{
+          left:0.325rem;
+        }
+        .right{
+          right:0.325rem;
+        }
+      }
+    }
+    .wrapper{
+      position: relative;
+      box-sizing: border-box;
+      background-color: #F7F7F7;
+      padding:5px 0;
+      .input{
+        width: 85%;
+        padding: 0 10px;
+        margin: 0 auto;
+        height: 40px;
+        line-height: 40px;
+        display: flex;
+        background-color: #FFF;
+        justify-content: space-between;
+        border-radius: 8px;
+        span{
+          flex-grow: 1;
+        }
+        i:first-child{
+          font-size: 14px;
+          color:#CCCCCC;
+        }
+        i:last-child{
+          font-size: 14px;
+          color:#CCCCCC;
+        }
+      }
+    }
+  }
+  .content {
+    padding: 0 0.3rem;
+    background-color: #FFF;
+    & > div {
+      position: relative;
+      display: flex;
+      align-items: center;
+      height: 2rem;
+      line-height: 2rem;
+      border-bottom: 1px solid #f2f2f2;
+      & > div:first-child {
+        width: 1.4rem;
+        height: 1.4rem;
+        background-size: cover;
+        background-position: center;
+        border-radius: 50%;
+      }
+      & > div:nth-of-type(2) {
+        width: 6rem;
+        p {
+          line-height: 2;
+          padding: 0 0 0 0.2rem;
+          font-size: 0.48rem;
+          img {
+            margin-left: 0.1rem;
+            width: 0.35rem;
+            height: 0.35rem;
+          }
+        }
+        p:last-child {
+          font-size: 0.36rem;
+          color: #9a9a9d;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+      }
+      & > div:last-child {
+        position: absolute;
+        right: 0;
+        width: 1.8rem;
+        text-align: center;
+        color: #ffa443;
+        font-size: 0.36rem;
+        span {
+          border: 1px solid #ffa443;
+          display: inline-block;
+          width: 100%;
+          height: 0.7rem;
+          line-height: 0.75rem;
+          border-radius: 5px;
+          &.hxgz{
+            border: 1px solid #f2f2f2;
+            color: #d0cdd1;
+          }
+          i{
+            &.hxgz_icon{
+              vertical-align: 0.04rem;
+              display: inline-block;
+              width: 0.22rem;
+              height: 0.16rem;
+              background: url("../../images/hxgz_icon.png") no-repeat;
+              background-size: 100% 100%;
+            }
+          }
+        }
+      }
+    }
+  }
+</style>

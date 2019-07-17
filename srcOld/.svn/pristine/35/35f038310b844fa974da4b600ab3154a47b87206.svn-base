@@ -1,0 +1,358 @@
+<template>
+  <div :class="'main jy_all_top '+((blindDateSingle.state==3&&blindDateSingle.isCandidate==0)?'active':((blindDateSingle.state==3&&blindDateSingle.isCandidate==1)||blindDateSingle.state==6)?'live':'end')">
+    <Loading v-if="isloading"></Loading>
+    <div class="header">
+      <div class="top">
+        <Back class="left"><i class="iconfont">&#xe613;</i></Back>
+        <p>活动详情</p>
+      </div>
+    </div>
+    <template v-if="blindDateSingle">
+      <div class="at_img at_img_auto" v-if="blindDateSingle.datingDetailsExt">
+        <img class="at_i_img" :src="getFullPath(blindDateSingle.datingDetailsExt.extString)"/>
+        <div class="at_zc">{{specialType[blindDateSingle.datingDetailsExt.extInt5]}}专场</div>
+      </div>
+      <div class="at_desc">
+        <div class="at_title">{{blindDateSingle.datingTitle}}</div>
+        <div class="at_count"><i class="iconfont">&#xe642;</i><span :class="{active:blindDateSingle.state==3&&blindDateSingle.isCandidate==0}">{{blindDateSingle.followCount}}</span>人关注<i class="iconfont" style="margin-left: 1rem">&#xe612;</i><span :class="{active:blindDateSingle.state==3&&blindDateSingle.isCandidate==0}">{{blindDateSingle.enrollCount}}</span>人报名
+        </div>
+      </div>
+      <div class="at_con"><i class="iconfont">&#xe6b6;</i>{{blindDateSingle.activityStarttime}}</div>
+      <!--<router-link tag="div" :to="{name:'addressMap',query:{city:blindDateSingle.cityName,address:blindDateSingle.datingLocation}}" class="at_con at_address"><i class="iconfont">&#xe62c;</i><span>{{blindDateSingle.datingLocation}}</span><i class="iconfont">&#xe702;</i></router-link>-->
+      <div class="at_con at_address"><i class="iconfont">&#xe62c;</i><span>{{blindDateSingle.datingLocation}}</span></div>
+      <div class="at_con"><i class="iconfont">&#xe6e1;</i><em>{{Fn.toFixed(blindDateSingle.enrollFee)}}</em> 元</div>
+      <div class="at_con" v-if="blindDateSingle.datingDetailsExt"><i class="iconfont">&#xe651;</i>{{specialType[blindDateSingle.datingDetailsExt.extInt5]}}专场
+      </div>
+      <router-link tag="div" class="at_con at_con_last" :to="{name:'registrationStaff',query:{id:id}}" v-if="blindDateSingle.candidateList">
+        <i class="iconfont">&#xe668;</i>
+        已报名人员
+        <i class="iconfont right">&#xe702;</i>
+      </router-link>
+
+
+
+      <div class="image_div">
+        <div style="background-image:url(static/activityDetailStatic/static_02.jpg);height:10.98rem;width:100%">
+        </div>
+        <div style="background-image:url(static/activityDetailStatic/static_03.jpg);height:6.45rem;width:100%">
+        </div>
+        <div style="background-image:url(static/activityDetailStatic/static_04.jpg);height:8.11rem;width:100%">
+          <img style="width: 8.48rem;margin-top: 1.95rem" src="static/activityDetailStatic/gif1.gif"/>
+        </div>
+        <div style="background-image:url(static/activityDetailStatic/static_05.jpg);height:10.08rem;width:100%;">
+          <img style="width: 6.74rem;margin-top: 2.05rem" src="static/activityDetailStatic/gif2.gif"/>
+        </div>
+        <div style="background-image:url(static/activityDetailStatic/static_06.jpg);height:9.25rem;width:100%;">
+        </div>
+        <div style="background-image:url(static/activityDetailStatic/static_07.jpg);height:10.76rem;width:100%;">
+        </div>
+        <div style="background-image:url(static/activityDetailStatic/static_08.jpg);height:10.07rem;width:100%;">
+        </div>
+        <div style="background-image:url(static/activityDetailStatic/static_09.jpg);height:9.15rem;width:100%;">
+        </div>
+        <div style="background-image:url(static/activityDetailStatic/static_10.jpg);height:10.09rem;width:100%;">
+        </div>
+      </div>
+      <div class="action_footer">
+        <div class="gzfx">
+			<p v-if="blindDateSingle.isFollow==1" @click="unfollowBlindDating"><i class="iconfont">&#xe67b;</i><i>取消关注</i>
+			</p>
+			<p v-else @click="followBlindDating"><i class="iconfont">&#xe61e;</i><i>关注</i></p>
+          <p v-if="!$store.state.isWeixin"><i class="iconfont">&#xe604;</i><i>分享</i></p>
+        </div>
+        <template v-if="blindDateSingle&&blindDateSingle.jiaoyouUser&&blindDateSingle.jiaoyouUser.id!=$store.state.userInfo.id&&blindDateSingle.isStartEnroll==1&&blindDateSingle.isStopEnroll==0&&blindDateSingle.state==3">
+			<div class="ljbm" v-if="blindDateSingle.isCandidate == 1" @click="unbmBlindDating">取消报名</div>
+			<div class="ljbm" v-else @click="bmBlindDating">立即报名</div>
+        </template>
+        <router-link tag="div" v-if="(blindDateSingle.state==3 || blindDateSingle.state==6) && blindDateSingle.isCandidate==1 || $store.state.userInfo.identity==1" :to="{name:'blindDate',query:{id:id}}" class="jrxc">进入现场</router-link>
+      </div>
+    </template>
+    <div v-transfer-dom>
+      <popup v-model="showPay" height="100%" :hide-on-blur=false position="bottom" :popup-style="{zIndex:600}" :should-scroll-top-on-show="true">
+        <div class="top_userInfo" v-if="showPayWin">
+          <blindDatePay :actDatingId="id" :enrollFee="blindDateSingle.enrollFee"  @openPayWin="openPayWin" @hiddenPayWin="hiddenPayWin"></blindDatePay>
+        </div>
+      </popup>
+    </div>
+  </div>
+</template>
+
+<script>
+  import Loading from '@other/loading.vue';
+  import Back from '@other/back.vue';
+  import blindDatePay from './blindDatePay.vue';
+  import {Popup, TransferDom} from 'vux'
+import { wxShare } from '@js/wxjssdk'
+  export default {
+    name: "activityDetailStatic",//静态详情页面
+    components: {
+      Loading,
+      Back,
+      blindDatePay,
+      Popup,
+    },
+    directives: {
+      TransferDom
+    },
+    data() {
+      return {
+        isloading: false,
+        id: null,
+        specialType: null,//专场类型
+        arrImg: [],
+        blindDateSingle: {},
+        showPayWin: false,
+        showPay: false,
+        lineType: {"1": "线上", "2": "线下"},
+      }
+    },
+    watch: {},
+    computed: {
+      contentCpt() {
+        const t = this;
+        if (this.blindDateSingle.datingDetailsExt) {
+          let content = t.blindDateSingle.datingDetailsExt.extString2;
+          const imgReg = /<img.*?(?:>|\/>)/gi;
+          const srcReg = /src=[\'\"]?([^\'\"]*)[\'\"]?/i;
+          const arr = t.blindDateSingle.datingDetailsExt.extString2.match(imgReg);
+          if (arr) {
+            let arrImg = [];
+            arr.forEach((v, i) => {
+              const src = v.match(srcReg)[1];
+              arrImg.push({
+                id: i,
+                src
+              });
+              let reg = new RegExp('<img src=\"' + src + '\"', 'g');
+              content = content.replace(reg, '<img data-id="' + i + '" src="' + t.$utils.getFullPath(src) + '"');
+            });
+            t.arrImg = arrImg;
+          }
+          return content;
+        }
+      },
+      activityProcessHtml() {
+        const t = this;
+        if (this.blindDateSingle.datingDetailsExt) {
+          let content = t.blindDateSingle.datingDetailsExt.extString3;
+          const imgReg = /<img.*?(?:>|\/>)/gi;
+          const srcReg = /src=[\'\"]?([^\'\"]*)[\'\"]?/i;
+          const arr = t.blindDateSingle.datingDetailsExt.extString3.match(imgReg);
+          if (arr) {
+            let arrImg = [];
+            arr.forEach((v, i) => {
+              const src = v.match(srcReg)[1];
+              arrImg.push({
+                id: i,
+                src
+              });
+              let reg = new RegExp('<img src=\"' + src + '\"', 'g');
+              content = content.replace(reg, '<img data-id="' + i + '" src="' + t.$utils.getFullPath(src) + '"');
+            });
+            t.arrImg = arrImg;
+          }
+          return content;
+        }
+      },
+      tipsHtml() {
+        const t = this;
+        if (this.blindDateSingle.datingDetailsExt) {
+          let content = t.blindDateSingle.datingDetailsExt.extString5;
+          const imgReg = /<img.*?(?:>|\/>)/gi;
+          const srcReg = /src=[\'\"]?([^\'\"]*)[\'\"]?/i;
+          const arr = t.blindDateSingle.datingDetailsExt.extString5.match(imgReg);
+          if (arr) {
+            let arrImg = [];
+            arr.forEach((v, i) => {
+              const src = v.match(srcReg)[1];
+              arrImg.push({
+                id: i,
+                src
+              });
+              let reg = new RegExp('<img src=\"' + src + '\"', 'g');
+              content = content.replace(reg, '<img data-id="' + i + '" src="' + t.$utils.getFullPath(src) + '"');
+            });
+            t.arrImg = arrImg;
+          }
+          return content;
+        }
+      }
+
+    },
+    mounted() {
+      const t = this;
+      t.id = t.$route.query.id;
+      t.getSpecialType();
+      t.getBlindDateSingle();
+      $("body").addClass("gray");
+	  wxShare&&wxShare({
+		  title: '叮咚~你有一份惊喜，点击领对象', // 分享标题
+		  desc: '2019年1月5日“乾坤有爱-玫瑰相约”广州单身职工新年相亲会', // 分享描述
+		  link: "http://qkd.iceinfo.net/wx/html/activityDetail.html", // 分享链接
+		  imgUrl: t.$store.state.baseFrontEndURL+'static/logo.png', // 分享图标
+		  debug:false
+	  },{
+		success(){
+			alert("分享成功");
+		},
+		cancel(){
+			alert("分享失败");
+		}
+	  });
+    },
+    destroyed() {
+      $("body").removeClass("gray");
+    },
+    methods: {
+      openPayWin() {
+        const t = this;
+        t.showPay = true;
+      },
+      hiddenPayWin(flag) {
+        this.showPay = false;
+        if (flag) {
+          this.$set(this.blindDateSingle, "isCandidate", 1)
+        }
+        setTimeout(() => {
+          this.showPayWin = false;
+        }, 800)
+      },
+      async getSpecialType() {
+        const t = this;
+        try {
+          const apiDict = await this.$server.apiDict({type: "blind_dating_special_type"});
+          let item = apiDict.data.data;
+          for (let i = 0; i < item.length; i++) {
+            if (!t.specialType) {
+              t.specialType = {};
+            }
+            t.specialType[item[i].value] = item[i].label;
+          }
+        } catch (e) {
+          console.log(JSON.stringify(e));
+        }
+      },
+      getFullPath(path) {
+        return this.$utils.getFullPath(path)
+      },
+      async getBlindDateSingle() {
+        const _this = this;
+        const result = await _this.$server.blindDatingSingle({
+          datingDetailsId: _this.id
+        });
+        _this.blindDateSingle = result.data.data;
+		//if(_this.$store.state.gotoBlindDatepay){
+		//	_this.showPayWin=true;
+		//	store.commit("CHANGESTORE",{name:"gotoBlindDatepay",value:false});//是否需要弹出支付
+		//}
+		/*if(_this.blindDateSingle.isCandidate==1){//已经报名
+			//_this.$router.push({name:'registrationStaff',query:{id:_this.id}});
+		}else if(_this.blindDateSingle.jiaoyouUser.id!=_this.$store.state.userInfo.id){
+			_this.showPayWin=true;
+		}*/
+      },
+      showBigImg(e) {
+        if (e.target.nodeName == 'IMG') {
+          this.showPhoto(e.target.src)
+        }
+      },
+      async followBlindDating() { //关注活动接口
+        this.$vux.loading.show()
+        await this.$server.followBlindDating(this.id);
+        this.$vux.loading.hide()
+        this.$vux.toast.show({
+          type: 'text',
+          text: '关注成功',
+          position: 'middle',
+          width: 'auto',
+        })
+        this.$set(this.blindDateSingle, "isFollow", 1)
+      },
+      async unfollowBlindDating() { //取消关注活动接口
+        this.$vux.loading.show()
+        await this.$server.unfollowBlindDating(this.id);
+        this.$vux.loading.hide()
+        this.$vux.toast.show({
+          type: 'text',
+          text: '取消关注成功',
+          position: 'middle',
+          width: 'auto',
+        })
+        this.$set(this.blindDateSingle, "isFollow", 0)
+      },
+      bmBlindDating() { //参加活动接口
+        const t = this;
+        // t.$router.push({name:'blindDatePay',query:{id:t.id}});
+        t.showPayWin = true;
+      },
+      async unbmBlindDating() { //取消参加活动接口
+		const t=this;
+		  t.$vux.confirm.show({
+			content: "确定取消报名吗?",
+			onCancel () {
+			},
+			async onConfirm () {
+				try{
+					t.isloading=true;
+					await t.$server.unCandidateBlindDating({id:t.id});
+					t.isloading=false;
+					t.$vux.toast.show({
+						type: 'success',
+						text: '取消成功',
+						position: 'middle',
+						width: 'auto',
+					});
+					t.$set(t.blindDateSingle, "isCandidate", 0)
+				}catch(e){
+					t.$vux.toast.show({
+						type: 'cancel',
+						text: e.message,
+						position: 'middle',
+						width: 'auto',
+					})
+					t.isloading=false;
+				}
+			}
+		});   
+      },
+    }
+  }
+</script>
+
+<style scoped lang="scss">
+  .jy_isBrowser{
+    .main{
+      padding-top: 1.39rem!important;
+    }
+  }
+  .active .at_img .at_zc {
+    background-color: #ff0000!important;
+  }
+  .active .at_desc .at_count i {
+    color:#b2b2b2;
+  }
+  .active .at_con i, .active .at_con em {
+    color: #ff0000;
+  }
+  .at_con{
+   i.right{
+     color:#b2b2b2;
+     position: absolute;
+     right: 0;
+   }
+  }
+  .at_con_last{
+    border-bottom: none;
+  }
+  .image_div{
+    font-size: 0;
+    overflow: hidden;
+    background-color: #FFF;
+    div{
+      background-position: center;
+      background-size: 100% 100%;
+      text-align: center;
+    }
+  }
+
+</style>

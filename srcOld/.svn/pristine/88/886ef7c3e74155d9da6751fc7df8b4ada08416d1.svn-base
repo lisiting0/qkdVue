@@ -1,0 +1,605 @@
+<template>
+  <div style="height: 100%;overflow-y: auto" ref="scroll" @scroll="scroll($event)">
+        <div class="login">
+          <Loading v-if="isloading"></Loading>
+		  <div class="logintop">
+			<router-link :to="{name:'loginApp',query:$route.query}" class="right iconfont">已有账号,登录&#xe702;</router-link>
+		  </div>
+		  <p class="join_text" v-if="qkId && qkName">您的好友{{qkName}}邀请你加入乾坤岛</p>
+
+          <selectPhoto :cutting="true" @fileBack="fileBack" :class="{cur:1|| qkId && qkName}">
+            <div class="registered_logo" :style="'background-image:url('+userIcon+');'">
+              <i v-if="!userIcon" class="iconfont">&#xe663;</i>
+            </div>
+          </selectPhoto>
+
+          <p class="logo_name">上传清晰本人近照，<span style="color: #ff3552;" @click="showToast=true">查看示例</span></p>
+          <div class="div_input">
+            <input class="userName" v-model="loginName" type="text" placeholder="您的真实姓名">
+          </div>
+          <div class="div_input">
+            <label class="userName" @click="visibility=true" :class="{grey:!birthday}">{{birthday?birthday:'请选择您的生日'}}</label><i class="birthday_i iconfont">&#xe702;</i>
+            <group style="display: none">
+              <datetime v-model="birthday" :start-date="startDate" :end-date="endDate" confirm-text="确定" cancel-text="取消" :show.sync="visibility" :default-selected-value="endDate"></datetime>
+            </group>
+          </div>
+          <div class="div_input">
+            <div class="male-cls">
+              <input type="radio" id="male" name="sex" v-model="sex" value="2"/>
+              <label for="male">男</label>
+              <input type="radio" id="female" name="sex" v-model="sex" value="1"/>
+              <label for="female">女</label>
+            </div>
+          </div>
+          <div class="div_input">
+            <input class="userName" v-model="phone" type="text" placeholder="请输入您的手机号">
+          </div>
+          <div class="div_input">
+            <input class="verification" v-model="verificationCode" type="text" placeholder="请输入验证码">
+            <span @click="getVerificationCode" :style="colorRed">{{verificationCodeContent}}</span>
+          </div>
+          <div v-if="qkId" class="div_input">
+            <label style="padding: 0 0.22rem;" class="userName grey">推荐人乾坤号:{{qkId}}</label>
+          </div>
+          <div @click="login" class="btn_login" :class="{'btn_logined':showOpacity}">{{$store.state.gotoBlindDatepay=='baoming'?'下一步':qkId && qkName?'加入乾坤岛':'确定'}}</div>
+        </div>
+        <i class="iconfont showjiantou" :class="{hide:hide}">&#xe690;</i>
+        <p class="showtotop" :class="{hide:!hide}" @click="totop"><i class="iconfont">&#xe690;</i></p>
+    <div class="content">
+      <div style="background-image:url(static/introduce/introduce_02.jpg);height:7.19rem;">
+      </div>
+      <video poster="static/introduce/poster.jpg" :width="width" :height="height" preload="auto" src="http://qkd.iceinfo.net/userfiles/qkdIntroduce.mp4" controls="controls" >
+      </video>
+      <div style="background-image:url(static/introduce/introduce_04.jpg);height:6.69rem;">
+      </div>
+      <div style="background-image:url(static/introduce/introduce_05.jpg);height:7.97rem;">
+      </div>
+      <div style="background-image:url(static/introduce/introduce_06.jpg);height:7.96rem;">
+      </div>
+      <div style="background-image:url(static/introduce/introduce_07.jpg);height:7.54rem;">
+      </div>
+      <div style="background-image:url(static/introduce/introduce_08.jpg);height:9.04rem;">
+        <img src="static/introduce/qrcode.png">
+      </div>
+    </div>
+    <div v-transfer-dom>
+      <x-dialog v-model="showToast" class="dialog-demo" hide-on-blur :dialog-style="{'max-width': '96%', width: '96%'}">
+        <div class="dialog_header" style="padding: 0.2rem;clear: both;">
+          <span style="font-size: 0.48rem;color: #000;font-weight: 500;">示例</span>
+          <span style="float: right;line-height: 0.7rem;" @click="showToast=false"><i class="iconfont" style="font-size: 0.6rem;">&#xe7de;</i></span>
+        </div>
+        <div>
+          <img src="../../images/user_true_img.png" alt="" style="width: 100%;height: 100%;">
+        </div>
+      </x-dialog>
+    </div>
+  </div>
+</template>
+<script>
+  import md5 from 'js-md5';
+  import login_logo from '../../images/registered/logo.png';
+  import otherLogin from './otherLogin.vue';
+  import agreement from './agreement.vue';
+  import Loading from '@other/loading.vue';
+  import {TransferDom, Actionsheet, PopupPicker, Group, Datetime, XDialog} from 'vux'
+  import selectPhoto from '../plugs/selectPhoto'
+
+  export default {
+    name: 'login',
+    components: {
+      Actionsheet,
+      PopupPicker,
+      Loading,
+      otherLogin,
+      agreement,
+      selectPhoto,
+      Group,
+      Datetime,
+      XDialog
+    },
+    directives: {
+      TransferDom
+    },
+    data() {
+      return {
+        hide:false,
+        isloading: false,
+        colorRed: {'color': '#ff788c', 'border-color': '#ff788c'},
+        file: null,
+        iconUrl:null,
+        userIcon: '',
+        showToast: false,
+        loginName: '',
+        visibility: false,
+        birthday: '',
+        sex: null,
+        phone:'',
+        verificationCode: '',
+        verificationCodeContent: "发送",
+        verificationCodeUse: true,
+        verificationCodeTime: 60,
+        qkId: '',
+        qkName: '',
+        width:640,
+        height:368,
+      }
+    },
+    computed: {
+      endDate(){
+        let nowYear = this.$utils.format(new Date(),'yyyy')
+        return (nowYear-18)+'-'+this.$utils.format(new Date(),'MM-dd');
+      },
+      startDate(){
+        let nowYear = this.$utils.format(new Date(),'yyyy')
+        return (nowYear-70)+'-'+this.$utils.format(new Date(),'MM-dd');
+      },
+      showOpacity() {
+        return !!((this.file||this.userIcon)&&this.loginName&&this.birthday&&this.sex&&this.phone&&this.verificationCode);
+      },
+      handleRoute() {
+        return this.$store.state.handleRoute;
+      },
+    },
+    watch: {
+      verificationCode(curVal) {
+        if (curVal && typeof curVal == 'string') {
+          this.verificationCode = curVal.match(/^\d{0,6}/)[0];
+        }
+      }
+    },
+    created() {
+      this.width=window.screen.width||document.documentElement.clientWidth||window.innerWidth
+      this.height=this.width*368/640
+    },
+	  async mounted(){
+		const t=this;
+		
+      if(t.$store.state.qrcode.pid&&t.$store.state.qrcode.id){
+		try{
+			let userInfo = await t.$server.getUserInfo({userId: t.$store.state.qrcode.id});
+			if(t.$store.state.qrcode.pid==userInfo.data.data.jyNumber){
+				t.qkId = t.$store.state.qrcode.pid;
+				t.qkName = userInfo.data.data.aliasName;
+			}
+		}catch(e){
+			console.log(JSON.stringify(e));
+		}
+      }
+		//alert(JSON.stringify(this.$store.state.otherLogin)+"---------"+this.$store.state.gotoBlindDatepay);
+	},
+    methods: {
+      totop(){
+        this.$refs.scroll.scrollTop=0;
+        this.hide=false;
+      },
+      scroll(e){
+        if(this.$refs.scroll.scrollTop>10){
+          this.hide=true;
+        }else{
+          this.hide=false;
+        }
+      },
+      getVerificationCode: function () {
+        if (!this.verificationCodeUse) {
+          return false;
+        }
+        if (!this.$utils.isPhoneNum(this.phone)) {
+          this.$vux.toast.show({
+            type: "text",
+            text: "请输入正确的手机号",
+            position: "middle",
+            width: "auto",
+          });
+          return false;
+        }
+        this.verificationCodeUse = false
+        this.$vux.loading.show()
+        this.$server.get_code({phoneNumber: this.phone}).then((result) => {
+          this.$vux.loading.hide()
+          let interval = setInterval(() => {
+            this.verificationCodeTime--;
+            if (this.verificationCodeTime == -1) {
+              clearInterval(interval);
+              this.verificationCodeUse = true
+              this.verificationCodeTime = 60
+              this.colorRed = {'color': '#ff788c', 'border-color': '#ff788c'}
+              this.verificationCodeContent = "发送"
+            } else {
+              this.colorRed = {}
+              this.verificationCodeContent = this.verificationCodeTime + "(s)"
+            }
+          }, 1000)
+          // this.colorRed={'color':'red'}
+          this.colorRed = {}
+          this.verificationCodeContent = this.verificationCodeTime + "(s)"
+        }, (err) => {
+          this.verificationCodeUse = true;
+        })
+        return;
+      },
+      async fileBack (obj) {
+        const t = this
+        if(obj.serverId){
+          let result = await t.$server.wxMpMedia({
+            mediaId:obj.serverId[0]
+          })
+          t.userIcon = t.$utils.getFullPath(result.data.data&&result.data.data.path)
+          t.iconUrl = result.data.data&&result.data.data.path;
+        }else{
+          t.file = obj.file[0]//提交的图片
+          t.$utils.getBase64(t.file, (url) => {
+            t.userIcon = 'data:image/png;base64,' + url   //显示的图片
+          })
+        }
+      },
+      async login() {
+        const _this = this;
+        if (!_this.file&&!_this.userIcon) {
+          _this.$vux.toast.show({
+            type: "text",
+            text: "请上传头像",
+            position: "middle",
+            width: "auto",
+          });
+          return;
+        }
+        if (_this.loginName == '') {
+          _this.$vux.toast.show({
+            type: "text",
+            text: "请填写您的真实姓名",
+            position: "middle",
+            width: "auto",
+          });
+          return;
+        }
+        if (_this.birthday == '') {
+          _this.$vux.toast.show({
+            type: "text",
+            text: "请选择您的生日",
+            position: "middle",
+            width: "auto",
+          });
+          return;
+        }
+        if (_this.sex == null) {
+          this.$vux.toast.show({
+            type: 'cancel',
+            text: '请选择性别',
+            position: 'middle',
+            width: 'auto',
+          })
+          return
+        }
+        if (_this.phone == '') {
+          _this.$vux.toast.show({
+            type: "text",
+            text: "请输入您的手机号码",
+            position: "middle",
+            width: "auto",
+          });
+          return;
+        }
+        if (this.verificationCode == "") {
+          _this.$vux.toast.show({
+            type: "text",
+            text: "请填写验证码",
+            position: "middle",
+            width: "auto",
+          });
+          return;
+        }
+        let location = {};
+        this.$vux.loading.show()
+        try {
+          location = await _this.$store.dispatch("getMylocation");
+        } catch (e) {
+          _this.$vux.loading.hide()
+          _this.$vux.toast.show({
+            type: "text",
+            text: "获取定位失败",
+            position: "middle",
+            width: "auto",
+          });
+          return;
+        }
+
+		try{
+			let headimgAttachmentId = _this.iconUrl;
+			if(_this.file){
+			  let param = new FormData() //创建form对象
+			  param.append('file', _this.file, _this.file.name) //单个图片 ，多个用循环 append 添加
+			  let result1 = await _this.$server.uploadPic(param)
+			  headimgAttachmentId = result1.data.data.path
+			}
+			let data = {
+			  source:4,
+			  longitude: location.lon,
+			  latitude: location.lat,
+			  headimgAttachmentId: headimgAttachmentId,
+			  aliasName: _this.loginName,
+			  birthday: _this.birthday,
+			  sex: _this.sex,
+			  loginName: _this.phone,
+			  code: _this.verificationCode,
+			  pid: _this.qkId,//推荐人
+			}
+			window.$api.setStorage('loginData', data);
+			let result = await _this.$server.fillingData(data);
+			_this.$store.commit("CHANGEACCESSTOKEN", result.data.data);
+			let userInfo = await _this.$server.getUserInfo({userId: result.data.data.userId});
+			_this.$vux.loading.hide()
+			_this.$store.commit("LOGIN", userInfo.data.data);
+		}catch(e){
+			_this.$vux.loading.hide()
+			alert(JSON.stringify(e));
+		}
+		let hasWrong=false;
+        if (_this.$store.state.otherLogin.isBind) {
+          try {
+            let bind;
+            if (_this.$store.state.otherLogin.type == 'wx') {
+              bind = await _this.$server.bindwx({
+                accessToken: _this.$store.state.otherLogin.accessToken,
+                openId: _this.$store.state.otherLogin.openId,
+              });
+            } else if (_this.$store.state.otherLogin.type == 'qq') {
+              bind = await _this.$server.bindqq({
+                accessToken: _this.$store.state.otherLogin.accessToken,
+              });
+            } else if (_this.$store.state.otherLogin.type == 'wxmp') {
+              bind = await _this.$server.WxMpbind({
+                unionid: _this.$store.state.otherLogin.unionid,
+                openid: _this.$store.state.otherLogin.openid,
+              });
+            }
+           /* _this.$vux.toast.show({
+              type: "text",
+              text: "绑定账号成功",
+              position: "bottom",
+              width: "2rem",
+            });*/
+
+          } catch (e) {
+			   _this.$store.commit("LOGINOUT");//清空登录信息
+				hasWrong=true;
+				console.log("绑定出错:"+JSON.stringify(e));
+          }
+        }
+		if(hasWrong){
+			return false;
+		}
+        setTimeout(()=>{
+			if (_this.$store.state.otherLogin.isBind) {
+				if(_this.$store.state.gotoBlindDatepay){
+					if(_this.$store.state.gotoBlindDatepay=='baoming'){
+						_this.$router.replace({
+						  name: "blindDatePay",
+						  query: {id:_this.$store.state.otherLogin.params.query.id}
+						});
+					}else if(_this.$store.state.gotoBlindDatepay=='guanzhu'){
+						_this.$router.replace({
+						  name: "activityDetailStatic",
+						  query: {id:_this.$store.state.otherLogin.params.query.id}
+						});
+					}
+					_this.$store.commit("CHANGESTORE",{name:"gotoBlindDatepay",value:false});//
+				}else if(_this.$route.query.redirectUrl||(_this.$store.state.otherLogin.params.query&&_this.$store.state.otherLogin.params.query.redirectUrl)){
+					let params=_this.Fn.toWxUrl("#/?state="+(_this.$route.query.redirectUrl||(_this.$store.state.otherLogin.params.query&&_this.$store.state.otherLogin.params.query.redirectUrl)),":");
+					//alert(JSON.stringify(params));
+					let url=params.name+".php";
+					if(params.query){
+						Object.keys(params.query).forEach(attr => {
+							if(url.indexOf("?")!=-1){
+								url+='&'+attr+"="+params.query[attr];
+							}else{
+								url+='?'+attr+"="+params.query[attr];
+							}
+						});
+					}
+					//alert(_this.$store.state.phpURL+"/mobile/"+url)
+					window.location.href=_this.$store.state.phpURL+"/mobile/"+url;
+				}else if (_this.$store.state.otherLogin.type == 'wxmp'&&_this.$store.state.otherLogin.params.name) {
+					if(_this.$store.state.otherLogin.params.name=='login'){
+						_this.$router.replace({
+						  path: '/home'
+						})
+					}else{
+						_this.$router.replace({
+						  name: _this.$store.state.otherLogin.params.name,
+						  query: _this.$store.state.otherLogin.params.query
+						});
+					}
+				}else if(_this.$store.state.redirect){
+					_this.$router.replace(_this.$store.state.redirect);
+				}else {
+					_this.$router.replace({
+					  path: '/home'
+					})
+				  }
+			}else if(_this.$store.state.redirect){
+					_this.$router.replace(_this.$store.state.redirect);
+			} else {
+			  _this.$router.replace({
+				path: '/home'
+			  })
+			}
+		},10)
+      }
+    },
+
+    destroyed() {
+    }
+  }
+</script>
+<style scoped lang="scss">
+  @import '../../sass/base.scss';
+  .showjiantou{
+    position:absolute;z-index:2;bottom:0;left:50%;margin-top:-0.4rem;animation: jy_s1_ani 1s infinite  ease;
+  }
+  .showtotop{
+    position:absolute;z-index:2;bottom:10px;right: 20px;width: 50px;height: 50px;
+    background-color: #FFF;text-align: center;
+    i{
+      font-size: 30px !important;color: #CCCCCC;
+    }
+  }
+  .hide{
+    display: none;
+  }
+  @keyframes jy_s1_ani {
+    0%{
+      transform:translateY(0%);@include opacity(0);
+    }
+    30%{
+      transform:translateY(-30%);@include opacity(100);
+    }
+    70%{
+      transform:translateY(-70%);@include opacity(100);
+    }
+    100%{
+      transform:translateY(-100%);@include opacity(0);
+    }
+  }
+  .content{
+    font-size: 0;
+    div{
+      width:100%;
+      background-position: center;
+      background-size: 100% 100%;
+      text-align: center;
+      img{
+        width: 2.58rem;
+        height: 2.9rem;
+        margin-top: 0.13rem;
+      }
+    }
+  }
+  .logo_name {
+    color: #999999;
+    text-align: center;
+    font-size: 0.44rem;
+    font-weight: 400;
+    margin-top: 0.4rem;
+  }
+  .shade{
+    display: block !important;
+    width: 2.68rem;
+    height: 2.68rem;
+    margin: 2.22rem auto 0;
+	&.cur{
+		margin: 1rem auto 0;
+	}
+  }
+  .logintop{
+      color:#999;
+      font-size: 0.4rem;
+	  -webkit-box-sizing:border-box;
+	  box-sizing:border-box;
+      margin-left: -0.85rem;
+	  padding:0 0.3rem;
+      i{
+        font-size: 0.52rem;
+      }
+      a{
+        position:absolute;
+        padding:0.1rem 0;
+		color:#999;
+		font-size: 0.4rem;
+      }
+      .left{
+        left:0.325rem;
+      }
+      .right{
+        right:0.325rem;
+      }
+    }
+  .registered_logo {
+      overflow: hidden;
+      width: 100%;
+      height: 100%;
+      box-sizing: border-box;
+      border: 1px solid rgba(255, 255, 255, 0.5);
+      border-radius: 50%;
+      background-size: cover;
+      background-position: center;
+      background-color: rgba(255, 255, 255, 0.15);
+      i {
+        display: block;
+        font-size: 1.5rem;
+        width: 2.66rem;
+        height: 2.66rem;
+        line-height: 2.66rem;
+        text-align: center;
+        color: #FFF;
+        background-color: #d3d3d3;
+      }
+    }
+  .div_input {
+    .grey{
+      color: #c6cad1 !important;
+    }
+    .male-cls {
+      padding: 0.58rem 0 0.58rem 0.37rem;
+      border-bottom: 1px solid #f9f9f9;
+      label {
+        color: #d2d5db;
+        font-size: 0.5rem;
+        margin-right: 1.2rem;
+      }
+      label::before {
+        content: "\a0"; /*不换行空格*/
+        display: inline-block;
+        vertical-align: middle;
+        font-size: 0.5rem;
+        width: 0.8em;
+        height: 0.8em;
+        margin-right: .4em;
+        border-radius: 50%;
+        border: 1px solid rgba(210,213,219, 0.5);
+        line-height: 1;
+        padding: .2em;
+        background-clip: content-box;
+      }
+      input[type="radio"] {
+        position: absolute;
+        clip: rect(0, 0, 0, 0);
+      }
+      input[type="radio"]:checked + label::before {
+        background-color: #000;
+        background-clip: content-box;
+      }
+    }
+    position: relative;
+    input::-webkit-input-placeholder {
+      color: #c6cad1;
+    }
+    input::-moz-placeholder { /* Mozilla Firefox 19+ */
+      color: #c6cad1;
+    }
+    input:-moz-placeholder { /* Mozilla Firefox 4 to 18 */
+      color: #c6cad1;
+    }
+    input:-ms-input-placeholder { /* Internet Explorer 10-11 */
+      color: #c6cad1;
+    }
+    .birthday_i{
+      position: absolute;
+      right: 0.2rem;
+      top:0.6rem;
+      color:#d2d5db;
+    }
+    span {
+      position: absolute;
+      width: 1.58rem;
+      height: 0.8rem;
+      line-height: 0.8rem;
+      text-align: center;
+      top: 0.44rem;
+      right: 0.16rem;
+      color: #aaa8aa;
+      border: 1px solid;
+      border-color: #aaa8aa;
+      border-radius: 0.4rem;
+    }
+  }
+</style>

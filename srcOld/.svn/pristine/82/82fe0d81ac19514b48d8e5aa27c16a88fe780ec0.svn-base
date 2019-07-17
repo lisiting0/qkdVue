@@ -1,0 +1,189 @@
+<template>
+	<div class="main jy_all_top jy_actInfo jy_state_top">
+		<Loading v-if="isloading"></Loading>
+		<div class="header">
+			<div class="top">
+				<Back class="left"><i class="iconfont">&#xe613;</i></Back><p>活动信息</p>
+			</div>
+		</div>
+		<div class="jy_block_t">
+			<ul class="jy_aInfo_t">
+				<li v-if="owner">
+					<i v-if="owner.coverimgImages" :style="'background-image:url('+$utils.getFullPath(owner.coverimgImages)+')'"></i>
+					<template v-if="isBlindDate">
+						<h4>{{owner.datingDesc}}</h4>
+						<p>{{owner.areaName}}</p>
+					</template>
+					<template v-else>
+						<h4>一起{{owner.datingThemes==1?'去旅行':owner.datingThemes==2?'吃饭':owner.datingThemes==3?'看电影':owner.datingThemes==4?'唱歌':owner.datingThemes==5?'运动':''}}·{{owner.areaName}}</h4>
+						<p>{{owner.datingDesc}}</p>
+					</template>
+					
+				</li>
+			</ul>	
+		</div>
+		<div class="jy_block_t">
+			<p class="jy_aInfo_tit">群成员({{count+1}})</p>
+			<router-link tag="ul" :to="{name:'actMember',query:{id:$route.query.id,type:$route.query.type}}" class="jy_aInfo_member">
+				<li v-if="owner" class="jy_qz" :class="{jy_bl:isBlindDate}"><i :style="'background-image:url('+$utils.getFullPath(owner.jiaoyouUser.headimgAttachmentId)+')'"></i><p>{{owner.jiaoyouUser.aliasName}}</p></li>
+				<template v-if="phList">
+					<li v-for="item,index in phList"><i :style="'background-image:url('+$utils.getFullPath(item.jiaoyouUser.headimgAttachmentId)+')'"></i><p>{{item.jiaoyouUser.aliasName}}</p></li>
+				</template>
+				<!--<li class="jy_aInfo_member_add"><i></i><p>邀请好友</p></li>-->
+			</router-link>
+			<ul class="jy_aInfo_line">
+				<router-link v-if="!isBlindDate" tag="li" :to="{name:'act',query:{id:$route.query.id}}">活动详情</router-link>
+				<router-link v-else tag="li" :to="{name:'activityDetail',query:{id:$route.query.id}}">活动详情</router-link>
+				<!--<li>分享活动</li>-->
+			</ul>
+		</div>
+		<div class="jy_block_t"  v-if="!$store.state.isBrowser">
+			<ul class="jy_aInfo_line">
+				<li class="jy_aInfo_member_switch" v-if="owner&&owner.jiaoyouUser.id==$store.state.userInfo.id">全员禁言<inline-x-switch v-model="xswitch"></inline-x-switch></li>
+				<li class="jy_aInfo_member_switch">消息免打扰<inline-x-switch v-model="notificationStatus"></inline-x-switch></li>
+			</ul>
+		</div>
+		<!--<p class="jy_auth_btn" @click.stop="cancelCandidate">退出活动</p>-->
+	</div>
+</template>
+<script>
+	import Loading from '@other/loading.vue';
+	import Back from '@other/back.vue';
+	import { InlineXSwitch } from 'vux'
+	export default {
+	name: 'recharge',
+	data () {
+		return {
+			isloading:false,
+			xswitch:false,
+			notificationStatus:false,
+			phList:null,//排行榜列表
+			owner:null,
+			count:-1,
+			isBlindDate:this.$route.query.type=='blindDate'?true:false,
+		}
+	},
+    components: {
+      Loading,
+	  Back,
+	  InlineXSwitch,
+    },
+	destroyed () {
+		$("body").removeClass("gray");
+	},
+    watch:{
+      async notificationStatus(newV){
+        let code=await this.$store.dispatch('conversationNotificationStatus',{
+          conversationType:'GROUP',
+          targetId:this.$route.query.id,
+          notificationStatus:newV?"DO_NOT_DISTURB":"NOTIFY"
+        })
+        this.notificationStatus = !code;
+        this.$db.updateNotificationStatus(this.$route.query.id,this.$store.state.userId,code)
+        this.$store.dispatch("getConversationList")
+      }
+    },
+    async mounted () {
+		const t=this;
+		$("body").addClass("gray");
+		if(t.isBlindDate){
+			await t.getBlindSingle();
+			t.getBlindPh();
+		}else{
+			await t.getSingle();//获取活动详情
+			t.getPh();
+		}
+		
+      let code=await this.$store.dispatch('conversationNotificationStatus',{
+        conversationType:'GROUP',
+        targetId:t.$route.query.id
+      })
+      this.notificationStatus = !code;
+    },
+    methods :{
+		async getPh(val){
+			const t=this;
+			try{
+				const result= await t.$server.getDatingCandidateList({
+					datingId:t.$route.query.id,
+					page:1,
+					rows:5
+				});	
+				t.phList=result.data.list;
+				t.count=result.data.count;
+			}catch(e){
+				console.log(e);
+			}
+		},
+		async getBlindPh(val){
+			const t=this;
+			try{
+				const result= await t.$server.blindDatingBaoming({
+					datingId:t.$route.query.id,
+					rows:5
+				});
+				t.phList=result.data.list;
+				t.count=result.data.count;
+			}catch(e){
+				console.log(JSON.stringify(e));
+			}
+			
+		},
+		async getSingle(){//获取活动详情
+			const t=this;
+			try{
+				const result =await t.$server.getSingle({
+					datingDetailsId:t.$route.query.id
+				});
+				t.owner=result.data.data;
+			}catch(e){
+				console.log(e);
+			}
+		},
+		async getBlindSingle(){//获取活动详情
+			const t=this;
+			try{
+				//console.log("ddddddddddddddddddd");
+				const result =await t.$server.blindDatingSingle({
+					datingDetailsId:t.$route.query.id
+				});
+				t.owner=result.data.data;
+				//console.log("活动详情:"+JSON.stringify(result.data));
+				
+			}catch(e){
+				console.log(e);
+			}
+		},
+		async cancelCandidate(){//取消参加活动
+			let t = this
+			this.$vux.confirm.show({
+				content: "确定退出活动吗?",
+				onCancel () {
+				},
+				async onConfirm () {
+					try{
+						t.isloading=true;
+						if(t.isBlindDate){
+							await t.$server.unCandidateBlindDating({id:t.$route.query.id});
+						}else{
+							await t.$server.unCandidate({id:t.$route.query.id});
+						}
+						t.isloading=false;
+						t.$vux.toast.show({
+							type: 'success',
+							text: '退出成功',
+							position: 'middle',
+							width: 'auto',
+						});
+						t.$router.push({name:'love'});
+					}catch(e){
+						console.log(e);
+						t.isloading=false;
+					}
+				}
+			})
+		},
+    }
+  }
+</script>
+

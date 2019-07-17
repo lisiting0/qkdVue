@@ -1,0 +1,313 @@
+<template>
+  <div class="main jy_all_top jy_baiduMap">
+    <Loading v-if="isloading"></Loading>
+    <div class="header">
+      <div class="top">
+        <a class="left" @click="hidden"><i class="iconfont">&#xe613;</i></a>
+		<a class="right" @click="makeSure">确定</a>
+        <p>地图</p>
+      </div>
+    </div>
+    <div class="jy_baiduMap_search">
+      <i @click.stop="showCity=true">{{location}}</i><input type="text" v-model="searchKey" placeholder="请输入搜索关键字">
+    </div>
+    <baidu-map class="jy_baiduMap_map"
+               :center="center"
+               :zoom="zoom"
+               :pageCapacity="100"
+               :double-click-zoom="false"
+               :pinch-to-zoom="false"
+               @ready="handler"
+               @tilesloaded="tilesloaded"
+               @dragstart="dragstart"
+    >
+      <baidu-map>
+        <bm-view class="map"></bm-view>
+      </baidu-map>
+      <div class="bMap_my_btn">
+        <i @click="addZoom(true)">&#xe61f;</i>
+        <i @click="addZoom(false)">&#xe66e;</i>
+      </div>
+      <div class="bMap_my_curPos">
+        <i @click="setCurPos">当前位置</i>
+      </div>
+    </baidu-map>
+    <div class="jy_baiduMap_list">
+      <ul class="jy_bMap_address_list">
+        <li v-if="curPos&&curPos.poiList.length>0" :class="{cur:uid==curPos.poiList[0].uid}" @click.stop="setAdress(curPos.poiList[0])">
+          <h4>{{curPos.poiList[0].name}}(当前位置)</h4>
+          <p>{{curPos.poiList[0].address}}</p></li>
+        <li v-for="item,index in addressList" :class="{cur:uid==item.uid}" @click.stop="setAdress(item)"><h4>
+          {{item.title}}</h4>
+          <p>{{item.address}}</p></li>
+      </ul>
+    </div>
+    <group style="display: none">
+      <popup-picker title="约会地点" :data="listData" :columns="2" v-model="city" ref="picker" :show.sync="showCity" :popup-style="{zIndex:600}"></popup-picker>
+    </group>
+  </div>
+</template>
+<script>
+  import Vue from 'vue'
+  import Loading from '@other/loading.vue';
+  import BaiduMap from 'vue-baidu-map'
+  import Back from '@other/back.vue';
+  import {store} from '../../store/index';
+  import {Group, PopupPicker, TransferDom, Popup} from 'vux'
+
+  Vue.use(BaiduMap, {
+    ak: store.state.baiduKey
+  })
+  export default {
+    name: 'bMap',//baiduMap这名字跟地图冲突
+    props: ["keyPlace"],
+    directives: {
+      TransferDom
+    },
+    components: {
+      Back,
+      Loading,
+      Group,
+      PopupPicker,
+      Popup
+    },
+    data() {
+      return {
+        isloading: false,
+        center: '广州市',
+        searchCenter: '广州市',
+        zoom: 16,
+        location: '广州市',
+        keyword: "",
+        addressList: [],//搜索到的地址列表
+        BMap: null,
+        map: null,
+        searchTimeout: null,
+        moveTimeout: null,
+        searchKey: "",
+        showCity: false,
+        city: [],
+        listData: [],
+        curPos: null,//当前位置
+        notMove: false,//是否改变搜索列表数据
+        uid: null,//当前选中的坐标
+		address:{point:{},coord:{}},
+      }
+    },
+    computed: {},
+    watch: {
+      searchKey(val) {//搜索关键字
+        const t = this;
+        if (val != '') {
+          t.keyword = val.split(" ");
+        } else {
+          t.keyword = t.key;
+        }
+        t.notMove = false;
+      },
+      keyword: {//搜索的关键字发生变化
+        handler(newVal, oldVal) {
+          const t = this;
+		  if(t.map){
+			  clearTimeout(t.searchTimeout);
+			  t.searchCenter = t.map.getCenter();
+			  t.searchTimeout = setTimeout(() => {
+				console.log("关键字改变:" + JSON.stringify(newVal));
+				t.localSearch.searchNearby(newVal, t.searchCenter, 3000);
+			  }, 20);
+		  }
+        }
+      },
+      searchCenter: {//地图中心点发生变化
+        handler(newVal, oldVal) {
+          const t = this;
+          if (!t.notMove) {
+            clearTimeout(t.searchTimeout);
+            t.searchTimeout = setTimeout(() => {
+              console.log("中心点改变:" + JSON.stringify(newVal));
+              t.isloading = true;
+              t.localSearch.searchNearby(t.keyword, newVal, 3000);
+            }, 20);
+          }
+        }
+      },
+      city(val) {//选择城市
+        const t = this;
+        t.notMove = false;
+        t.center = t.$refs.picker.getNameValues().split(" ")[1];
+      },
+	  keyPlace(val){
+		const t=this;
+		t.keyword=val||["大厦", "号", "道", "店", "街", "园", "公寓", "路", "会所", "城"];
+		t.key = t.keyword;
+	  }
+    },
+	updated(){
+		console.log("更新")
+	},
+    async mounted() {
+      const t = this;
+	  t.keyword=t.keyPlace||["大厦", "号", "道", "店", "街", "园", "公寓", "路", "会所", "城"];
+      t.key = t.keyword;
+      try {
+        let listData = await t.$server.getDistrict();
+        t.listData = listData.data.data;
+        t.$emit('openWin');
+      } catch (e) {
+        console.log(JSON.stringify(e));
+      }
+      t.setCurPos();
+    },
+    methods: {
+		makeSure(){
+			this.$emit('address', this.address);
+		},
+      hidden(){
+        this.$emit('hidden');
+      },
+      tilesloaded() {
+        const t = this;
+        if (t.map) {
+          clearTimeout(t.moveTimeout);
+          t.moveTimeout = setTimeout(() => {
+            //t.center=t.map.getCenter();
+            if (!t.notMove) {
+              t.searchCenter = t.map.getCenter();
+            }
+          }, 50);
+        }
+      },
+      async setCurPos() {
+        const t = this;
+        try {
+          let location = await t.$store.dispatch("getMylocation");
+          if (location.city) {
+            t.notMove = false;
+            /*let convertor = new t.BMap.Convertor();
+                      convertor.translate([{lng :location.lon,lat :location.lat}], 1, 5, (data)=>{
+                          console.log("坐标转换:"+JSON.stringify(data));
+                          t.center={
+                              lng :data.points[0].lng,
+                              lat :data.points[0].lat,
+                          }
+                          t.curPos.lng=data.points[0].lng;
+                          t.curPos.lat=data.points[0].lat;
+                      })*/
+            t.center = {
+              lng: location.poiList[0].coord.lon,
+              lat: location.poiList[0].coord.lat,
+            }
+            t.curPos = location;
+			t.address=t.curPos.poiList&&t.curPos.poiList[0]||{point:{},coord:{}};
+            //console.log("当前位置:"+JSON.stringify(t.curPos));
+            t.uid = location.poiList && location.poiList[0].uid;
+          } else {
+            t.$vux.toast.show({
+              type: "text",
+              text: "定位失败",
+              position: "bottom",
+              width: "2rem",
+            });
+          }
+        } catch (e) {
+          t.$vux.toast.show({
+            type: "text",
+            text: "定位失败",
+            position: "bottom",
+            width: "2rem",
+          });
+        }
+      },
+      setAdress(address) {//点击列表定位
+        const t = this;
+        t.notMove = true;
+		if(!address.point){
+			address.point={
+			  lng: address.coord.lon,
+			  lat: address.coord.lat,
+			}
+		}
+		if(!address.province){
+			address.province=t.curPos.province;
+		}
+		if(!address.title){
+			address.title=address.name;
+		}
+        t.center = address.point;
+        t.uid = address.uid;
+		t.address=address;
+		//console.log(JSON.stringify(address));
+      },
+      searchcomplete(LocalResult) {//location/nearby改变时触发
+        const t = this;
+        if (LocalResult) {
+          let length = LocalResult.length;
+          let addressList = [];
+          if (length) {
+            for (let i = 0; i < length; i++) {
+              addressList.push(...LocalResult[i]["Ar"]);
+            }
+          } else {
+            addressList.push(...LocalResult["Ar"]);
+          }
+          let has = {};
+          let fAdress = addressList.filter((v, i) => {
+            let curHas = false;
+            if (has[v.uid]) {
+              curHas = true;
+            }
+            has[v.uid] = true;
+            if (t.curPos) {
+              return v.type == 0 && v.title != t.curPos.poiList[0].name && !curHas;
+            }
+            return v.type == 0 && !curHas;
+          });
+          fAdress.sort((a, b) => {
+            return Math.sqrt(Math.pow(Math.abs(a.point.lat - t.searchCenter.lat) * 10000, 2) + Math.pow(Math.abs(a.point.lng - t.searchCenter.lng) * 10000, 2)) - Math.sqrt(Math.pow(Math.abs(b.point.lat - t.searchCenter.lat) * 10000, 2) + Math.pow(Math.abs(b.point.lng - t.searchCenter.lng) * 10000, 2));
+          });
+          console.log("搜索结果列表:" + fAdress.length);
+          t.addressList = fAdress;
+          $(".jy_baiduMap_list").animate({"scrollTop": 0}, 0);
+          t.isloading = false;
+        } else {
+          t.isloading = false;
+        }
+      },
+      addZoom(flag) {//地图缩放大小
+        let zoom = this.zoom;
+        if (flag) {
+          zoom++;
+        } else {
+          zoom--;
+        }
+        this.zoom = zoom > 19 ? 19 : zoom < 5 ? 5 : zoom;
+      },
+      async handler({BMap, map}) {
+        const t = this;
+        t.BMap = BMap;
+        t.map = map;
+        //t.center=t.map.getCenter();
+        t.localSearch = new BMap.LocalSearch(map, {
+          onSearchComplete(result) {
+            //console.log("result:"+JSON.stringify(result))
+            t.searchcomplete(result);
+            t.geocoder.getLocation(t.searchCenter, function (res) {
+              if (res) {
+                t.location = res.addressComponents.city;
+              }
+            });
+          }
+        });
+        t.geocoder = new BMap.Geocoder();//逆地址解析
+        //map.setCenter(t.center);
+      },
+      dragstart(type, target, pixel, point) {
+        this.notMove = false;
+        this.uid = null;
+      },
+    },
+    destroyed() {
+		console.log("destroyed")
+    }
+  }
+</script>

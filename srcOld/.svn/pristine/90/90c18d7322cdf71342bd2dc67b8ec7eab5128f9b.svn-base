@@ -1,0 +1,137 @@
+<template>
+  <div class="qrcode">
+    <Loading v-if="isloading"></Loading>
+    <div class="qrcode-header">
+      <div class="top">
+        <Back class="left" v-if="!isShow"><i class="iconfont">&#xe613;</i></Back>邀请好友
+      </div>
+    </div>
+    <div style="text-align:center;" :style="$store.state.isWeixin?'padding-top: 2.4rem;':'padding-top: 2.8rem;'">
+      <div class="qrcode_panel">
+        <p>告诉小伙伴,你在乾坤岛等Ta</p>
+        <vue-qr :logoSrc="imageUrl" :text="qrcodeValue" :size="150" :margin="0" :logoMargin="5" :logoCornerRadius="4"></vue-qr>
+        <p>扫一扫</p>
+        <p>登陆乾坤岛</p>
+      </div>
+      <div class="button" >已邀请了{{$store.state.userInfo.agentNumber}}个好友,赚了{{$store.state.userInfo.agentNumber*30}}个乾坤币</div>
+    </div>
+  </div>
+</template>
+<script>
+  import Loading from '@other/loading.vue';
+  import Back from '@other/back.vue';
+  import VueQr from 'vue-qr'
+  import imageUrl from '../../images/logo_240.png'
+  import { wxShare } from '@js/wxjssdk'
+
+  export default {
+    name: 'qrCode',
+    components: {
+      Loading,
+      Back,
+      VueQr
+    },
+    data() {
+      return {
+        isloading: false,
+        qrcodeValue: this.$store.state.baseURL+'/api/account/publicAddressLoginUrl?&state=user__pid_'+ this.$store.state.userInfo.jyNumber+"_name_"+this.$store.state.userInfo.aliasName,
+        imageUrl: imageUrl,
+        isShow: false,
+      }
+    },
+    watch: {
+    },
+    created() {
+    },
+    destroyed() {
+    },
+    mounted() {
+      this.isShow = this.$route.query.isShow;
+      const t = this;
+      let shareTitle="来乾坤岛领对象啦，乾坤岛是一个纯粹、高效、安全的约会交友平台";
+      let shareDesc="乾坤道以帮助异性男女安全的、高效的、高成功率的约会交友为主要出发点，通过设置的一系列机制，解决陌生异性交友约会中的时间成本高、机会成本高、欺骗消费、诈骗频发、人身安全风险大等问题。";
+      let shareLink = this.qrcodeValue;
+     // console.log(shareLink);
+      wxShare&&wxShare({
+        title: shareTitle, // 分享标题
+        desc: shareDesc, // 分享描述
+        link: shareLink, // 分享链接
+        imgUrl: t.$store.state.baseFrontEndURL+'static/logo.png', // 分享图标
+        debug:false
+      },{
+        success(){
+          //	alert("分享成功");
+        },
+        cancel(){
+          //alert("分享失败");
+        }
+      });
+    },
+    methods: {
+
+    }
+  }
+</script>
+<style scoped lang="scss">
+  .qrcode {
+    background-image: url("../../images/qrcode_bg.jpg");
+    background-repeat: no-repeat;
+    background-size: cover;
+    background-position: center;
+    overflow: auto;
+    min-height: 100%;
+    font-weight: normal;
+    .qrcode-header {
+      padding-top: 0.75rem;
+      width: 100%;
+      background-color: #FFFFFF;
+      position: fixed;
+      .top {
+        color: #000000;
+        font-size: 0.52rem;
+        position: relative;
+        i {
+          font-size: 0.52rem;
+        }
+        a {
+          position: absolute;
+          padding: 3px;
+        }
+        .left {
+          left: 0.325rem;
+        }
+      }
+    }
+  }
+  .qrcode_panel{
+    width: 9.16rem;
+    height: 10.86rem;
+    margin: 0 auto 1rem;
+    background: url("../../images/code_border.png") no-repeat;
+    background-size: cover;
+
+    p{
+      &:nth-of-type(1){
+        font-size: 0.48rem;
+        color: #3f3c3f;
+        line-height: 3rem;
+      }
+      &:nth-of-type(2),&:nth-of-type(3){
+        font-size: 0.56rem;
+        color: #3f3c3f;
+        line-height: 1rem;
+      }
+    }
+  }
+  .button{
+    width: 9rem;
+    height: 1.6rem;
+    line-height: 1.6rem;
+    margin:0 auto;
+    background: url("../../images/code_button.png") no-repeat;
+    background-size: cover;
+    font-size: 0.48rem;
+    color: #ffffff;
+  }
+</style>
+

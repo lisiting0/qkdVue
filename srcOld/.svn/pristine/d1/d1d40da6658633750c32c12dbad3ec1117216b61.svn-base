@@ -1,0 +1,299 @@
+<template>
+  <div class="main">
+    <Loading v-if="isloading"></Loading>
+    <!--<div class="top">-->
+    <!--<router-link :to="{name:'friendlist'}" class="friendl"></router-link><a class="add"></a>好友-->
+    <!--</div>-->
+    <div class="header">
+      <div class="top">
+        <Back class="left"><i class="iconfont">&#xe613;</i></Back>
+        <a v-if="!$store.state.isBrowser" class="right" @click="deleteNotice"><i class="iconfont">&#xe679;</i></a>{{type==1?'用户中心':type==2?'活动通知':'资金中心'}}
+      </div>
+    </div>
+    <div style="position: relative">
+      <div class="wrapper" ref="wrapper" :style="{height:myScrollerHeight+'px'}">
+        <div class="itemcls" v-for="item,index in systemList" :key="index">
+          <p>
+            {{datetimes(item.time)}}
+          </p>
+          <div>
+            <div>
+              <img v-if="type==1" :src="imgs.yonghu"/>
+              <img v-else-if="type==2" :src="imgs.huodong"/>
+              <img v-else :src="imgs.zijin"/>
+            </div>
+            <div>
+              <p>{{item.TEXT}}</p>
+              <div v-if="item.CONTENT_TYPE==1" :class="{unuse:item.CONSUME==1}">
+                <a @click="userApply(item.CONSUME,item.URL,1,item.ID)">同意</a>
+                <a @click="userApply(item.CONSUME,item.URL,0,item.ID)">拒绝</a>
+                <a @click="toHomePage(item.URL)">看ta的主页</a>
+              </div>
+              <div v-else-if="item.CONTENT_TYPE==2">
+                <a @click="tolink('gift')">查看详情</a>
+              </div>
+              <a v-else-if="item.CONTENT_TYPE==0&&item.URL" @click="tolink(item.URL)">点击查看</a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+<script>
+  import { Swipeout, SwipeoutItem, SwipeoutButton } from 'vux'
+  import zijin from '../../images/message/zijin.png';
+  import yonghu from '../../images/message/yonghu.png';
+  import huodong from '../../images/message/huodong.png';
+  import Loading from '@other/loading.vue';
+  import BScroll from 'better-scroll'
+  import Back from '@other/back.vue';
+
+  export default {
+    name: 'messageDetail',
+    data () {
+      return {
+        imgs:{zijin,yonghu,huodong},
+        scroll:null,
+        myScrollerHeight:0,
+        isloading:false,
+        loadRefresh:false,//下拉刷新
+        loadInfinite:false, //上拉加载
+        type:1,//1用户，2活动，3资金
+        systemList:[],
+      }
+    },
+    computed:{
+      datetimes:function(){
+        return (datetime)=>{
+          return this.$utils.getMessageTimeFromNow(datetime,this.now);
+        }
+      },
+      getNewNotice:function(){
+        return this.$store.state.getNewNotice;
+      }
+    },
+    watch:{
+      getNewNotice(newV){
+        if(newV==true){
+          this.$store.commit('CHANGEGETNEWNOTICE',false)
+          this.getNewNoticeList();
+        }
+      }
+    },
+    mounted () {
+      this.$store.commit('CHANGEGETNEWNOTICE',false)
+      this.type = this.$route.query.type
+      this.myScrollerHeight = document.body.clientHeight-$(".header").height()-0.75*parseInt(document.documentElement.style.fontSize)-3;
+      this.getNewNoticeList();
+    },
+    destroyed () {
+      this.scroll && this.scroll.destroy()
+    },
+    components: {
+      Loading,
+      Swipeout,
+      SwipeoutItem,
+      SwipeoutButton,
+      Back,
+    },
+    methods: {
+      async userApply(consume,id,state,detailId){
+        if(consume==1){
+          return false;
+        }
+        this.$vux.loading.show();
+        if(state==1){
+          await this.$server. acceptUserApply(id)
+        }else{
+          await this.$server. refuseUserApply(id)
+        }
+        this.$vux.loading.hide();
+        this.$db.setConsume(detailId,this.$store.state.userId)
+        this.getNewNoticeList();
+      },
+      deleteNotice(){
+          window.api.actionSheet({
+            cancelTitle: '取消',
+            buttons: ['清空所有消息']
+          }, (ret, err)=> {
+            if(ret.buttonIndex==1){
+              //清空
+              this.$vux.loading.show();
+              this.$db.deleteNotice(this.$store.state.userId,this.type)
+              this.$vux.loading.hide();
+              this.getNewNoticeList();
+            }
+          });
+      },
+      getNewNoticeList(){
+        this.systemList = this.$db.getSystemMessageDetails(this.type,this.$store.state.userId);
+        // console.log("systemListDetails:"+JSON.stringify(this.systemList))
+        this.$db.resetSystemMessage(this.$store.state.userId,this.type);
+      },
+      refresh(done) {//下拉刷新
+        console.log("刷新 ");
+        setTimeout(()=>{
+          console.log("刷新完成");
+          done();
+        },1000);
+      },
+      search(){
+        this.searchText;
+        if(!this.searchText){
+          this.rongConversationList = this.$store.state.rongConversationList;
+        }else{
+          let list = this.$store.state.rongConversationList;
+          this.rongConversationList = list.filter(item=>{
+            return item.bname.indexOf(this.searchText)!=-1
+          })
+        }
+      },
+      toFriendList(){
+        // this.$router.push({
+        //   path: "/myFocus",
+        //   query:{
+        //     active:'1'
+        //   }
+        // })
+        this.$router.push({
+          path: "/friendlist",
+        })
+      },
+      deleteItem(key){
+        this.$db.deleteCount(key,this.$store.state.userId)
+        this.$store.dispatch("getConversationList")
+      },
+      stickItem(key,stick){
+        this.$db.stickCount(key,this.$store.state.userId,stick);
+        this.$store.dispatch("getConversationList")
+      },
+      intoItem(id,name){
+        this.$router.push({
+          path: "/chatWindow",
+          query:{
+            id:id,
+            name:name,
+          }
+        })
+      },
+      toHomePage(id){
+        id = id.replace(/ /g,'')
+        this.$router.push({
+          path: "/userInfo",
+          query:{
+            id:id,
+          }
+        })
+      },
+      tolink(url){
+        if(url){
+          if(url.indexOf('?')!=-1){
+            let querystr = url.split("?")[1]
+            let queryArr = querystr.split("&");
+            let query = {}
+            queryArr.map(v=>{
+              query[v.split("=")[0]] = v.split("=")[1]
+            })
+            this.$router.push({
+              path: "/"+url,
+              query:query
+            })
+          }else{
+            this.$router.push({
+              path: "/"+url,
+            })
+          }
+        }
+      },
+    }
+  }
+</script>
+<style scoped lang="scss">
+  .main{
+    &:before{
+      background-color:#3a3845 ;
+    }
+    padding-bottom: 0;
+    .header{
+      .top{
+        background-color:#3a3845 ;
+        color:#FFF;
+        font-size: 0.52rem;
+        position: relative;
+        i{
+          font-size: 0.52rem;
+        }
+        a{
+          position:absolute;
+          padding:3px;
+        }
+        .left{
+          left:0.325rem;
+        }
+        .right{
+          right:0.325rem;
+        }
+      }
+    }
+    .myscrollerdiv{
+      overflow-y:auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+    }
+    .wrapper{
+      position: relative;
+      box-sizing: border-box;
+      overflow-y:auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+    }
+    .itemcls{
+      margin: 0.7rem 0;
+      &>p{
+        text-align: center;
+      }
+      &>div{
+        div{
+          display: inline-block;
+        }
+        &>div:first-child{
+          margin-left: 0.43rem;
+          width: 1.2rem;
+          height: 1.2rem;
+          border-radius: 50%;
+          vertical-align: top;
+          img{
+            width: 100%;
+            height: 100%;
+
+          }
+        }
+        &>div:last-child{
+          padding: 0.33rem;
+          background-color: #FFF;
+          margin-left: 0.3rem;
+          width: 7.3rem;
+          border-radius: 5px;
+          p{
+            font-size: 0.44rem;
+            margin-bottom: 0.7rem;
+          }
+          a{
+            margin-right: 0.3rem;
+            color:#29cce4;
+            font-size: 0.42rem;
+          }
+          .unuse{
+            a{
+              color:#ACA899;
+            }
+          }
+        }
+      }
+    }
+  }
+  button{
+    outline: 0;
+  }
+</style>

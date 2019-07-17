@@ -1,0 +1,338 @@
+<template>
+  <div class="shade" v-show="showPopover">
+    <div @click="close">
+      <transition enter-active-class="slideInDown" leave-active-class="slideOutDown">
+        <div v-show="showPopover" class="popover" @click.stop>
+          <div v-if="type==null">
+            <p><i class="location_icon"></i>地区</p>
+            <div>
+              <span @click="location=''" :class="{active:location==''}">不限</span>
+              <span @click="showPlacePicker" :class="{active:location==1}" style="width: 50%;">{{place===''?'选择地点':place}}</span>
+            </div>
+            <group style="display: none">
+              <popup-picker :data="areaData" :columns="3" v-model="selectArea" show-name ref="placePicker" :show.sync="shPlacePicker"></popup-picker>
+            </group>
+          </div>
+          <div>
+            <p><i class="time_icon"></i>约会时间</p>
+            <div>
+              <span @click="datingTime=''" :class="{active:datingTime==''}">不限</span>
+              <div @click="datingTime=1" :class="{active:datingTime==1}" class="date_range">
+                <span class="startDate" @click="shStartDate=true">{{startDate}}</span><span class="jgf">~</span><span class="endDate" @click="shEndDate=true">{{endDate}}</span>
+              </div>
+              <group style="display: none">
+                <datetime v-model="startDate" :class="{active:datingTime==1}" @on-confirm="onConfirm" :show.sync="shStartDate"></datetime>
+              </group>
+              <group style="display: none">
+                <datetime v-model="endDate" :class="{active:datingTime==1}" @on-confirm="onConfirm" :show.sync="shEndDate"></datetime>
+              </group>
+            </div>
+          </div>
+          <div>
+            <p><i class="sex_icon"></i>性别</p>
+            <div>
+              <span @click="sex=''" :class="{active:sex==''}">不限</span>
+              <span @click="sex=2" :class="{active:sex==2}">男</span>
+              <span @click="sex=1" :class="{active:sex==1}">女</span>
+            </div>
+          </div>
+          <div>
+            <p><i class="verification_icon"></i>报名要求</p>
+            <div>
+              <span @click="auth" :class="{active:withoutAuth}">不限</span>
+              <span @click="authentication.idcard==1?authentication.idcard='':authentication.idcard=1" :class="{active:authentication.idcard}">身份认证</span>
+              <span @click="authentication.car==1?authentication.car='':authentication.car=1" :class="{active:authentication.car}">车辆认证</span>
+              <span @click="authentication.video==1?authentication.video='':authentication.video=1" :class="{active:authentication.video}">视频认证</span>
+              <span @click="authentication.house==1?authentication.house='':authentication.house=1" :class="{active:authentication.house}">房产认证</span>
+              <span @click="authentication.health==1?authentication.health='':authentication.health=1" :class="{active:authentication.health}">健康认证</span>
+            </div>
+          </div>
+          <button @click="makesure">确定</button>
+        </div>
+      </transition>
+    </div>
+  </div>
+</template>
+<script>
+  import {PopupPicker,Group,Datetime} from 'vux'
+
+  export default {
+    name: "jyFilter",
+    props: {
+      showPopover: {
+        type: Boolean,
+        default: false,
+      }
+    },
+    components: {
+      PopupPicker,
+      Group,
+      Datetime,
+    },
+    data() {
+      return {
+        visibility1:false,
+        visibility2:false,
+        visibility3:false,
+        sex: "",//0男1女""不限
+        location: "",//1选择""不限
+        shPlacePicker:false,
+        areaData: [],
+        selectArea: [],
+        place: '',
+        datingTime: "",//1选择""不限
+        shStartDate:false,
+        shEndDate:false,
+        startDate: this.getToday(),
+        endDate: this.getToday(),
+        authentication: {//认证信息0不需要1需要
+          idcard: "",
+          car: "",
+          house: "",
+          health: "",
+          video: "",
+        },
+        type:null,
+      }
+    },
+    computed: {
+      withoutAuth() {
+        return this.authentication.idcard == "" && this.authentication.car == "" && this.authentication.house == "" && this.authentication.health == "" && this.authentication.video == ""
+      },
+      handleRoute(){
+        return this.$store.state.handleRoute;
+      },
+    },
+    watch:{
+      handleRoute(newV){
+        if(!newV){
+          this.visibility1=false;
+          this.visibility2=false;
+          this.visibility3=false;
+        }
+      },
+      selectArea(){
+        if(this.$refs.placePicker){
+          this.place = this.$refs.placePicker.getNameValues();
+        }
+      },
+    },
+    mounted() {
+      this.getDistrict();
+      this.type = this.$route.query.type
+    },
+    methods: {
+      auth() {
+        this.authentication.idcard = "";
+        this.authentication.car = "";
+        this.authentication.house = "";
+        this.authentication.health = "";
+        this.authentication.video = "";
+      },
+      async getDistrict() {
+        let listData = await this.$server.getDistrict();
+        this.areaData = listData.data.data;
+      },
+      getToday() {//获取当前月第一天
+        let myDate = new Date();
+        let year = myDate.getFullYear();//获取当前年
+        let yue = myDate.getMonth() + 1;//获取当前月
+        let ri = myDate.getDate();//获取当前日
+        return year + '-' + yue + '-' + ri;
+      },
+      showPlacePicker(){
+        this.location=1;
+        this.shPlacePicker=!this.shPlacePicker;
+      },
+      onConfirm() {
+        let start = new Date(this.startDate.replace("-", "/").replace("-", "/"));
+        let end = new Date(this.endDate.replace("-", "/").replace("-", "/"));
+        if (end < start) {
+          this.$vux.toast.show({
+            type: "text",
+            text: "开始日期不能大于结束日期",
+            position: "bottom",
+            width: "2rem",
+          })
+          return false;
+        }
+      },
+      close(){
+        this.$emit('close',false)
+      },
+      makesure() {
+        this.$emit('makesure', this.sex, this.authentication, this.selectArea,this.datingTime, this.startDate, this.endDate)
+      },
+    }
+  }
+</script>
+<style scoped lang="scss">
+  @keyframes slideInDown {
+    from {
+      transform: translate3d(0, -100%, 0);
+    }
+    to {
+      transform: translate3d(0, 0, 0);
+    }
+  }
+
+  @keyframes slideOutDown {
+    from {
+      transform: translate3d(0, 0, 0);
+    }
+    to {
+      transform: translate3d(0, -100%, 0);
+    }
+  }
+
+  .slideInDown {
+    animation-name: slideInDown;
+  }
+
+  .slideOutDown {
+    animation-name: slideOutDown;
+  }
+
+  .slideOutDown, .slideInDown {
+    animation-duration: 0.3s;
+  }
+
+  .shade {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 100;
+    overflow: hidden;
+    & > div {
+      position: relative;
+      top: 2.14rem;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.5);
+      overflow: hidden;
+    }
+  }
+
+  .popover {
+    background-color: #efefef;
+    padding: 0 0.5rem;
+    & > div {
+      color: #908f92;
+      padding: 0.1rem 0;
+      border-bottom: 1px solid #b9b9b9;
+      &:last-of-type {
+        border-bottom: none;
+      }
+      p {
+        height: 1.4rem;
+        line-height: 1.4rem;
+        font-size: 0.36rem;
+        font-weight: 500;
+        i {
+          display: inline-block;
+          width: 0.26rem;
+          height: 0.36rem;
+          background-repeat: no-repeat;
+          background-size: 100% 100%;
+          margin-right: 0.2rem;
+          &.location_icon {
+            background-image: url("../../images/position_icon.png");
+          }
+          &.time_icon {
+            background-image: url("../../images/position_icon.png");
+          }
+          &.sex_icon {
+            width: 0.33rem;
+            height: 0.31rem;
+            background-image: url("../../images/sex_icon.png");
+          }
+          &.verification_icon {
+            width: 0.31rem;
+            height: 0.35rem;
+            background-image: url("../../images/renzheng_icon.png");
+          }
+        }
+      }
+      div {
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        &:after {
+          content: "";
+          width: 46%;
+        }
+        span {
+          font-size: 0.34rem;
+          width: 23%;
+          height: 0.76rem;
+          line-height: 0.76rem;
+          text-align: center;
+          margin-bottom: 0.34rem;
+          box-sizing: border-box;
+          &.active {
+            background-color: #fff;
+            border-radius: 5px;
+            border: 1px solid #70c466;
+            color: #70c466;
+          }
+        }
+      }
+    }
+    .date_range{
+      width: 70%;
+      height: 0.76rem;
+      line-height: 0.76rem;
+      text-align: center;
+      &.active{
+        background-color:#fff;
+        border-radius: 5px;
+        border: 1px solid #70c466;
+        color: #70c466 !important;
+      }
+      span{
+        &.jgf{
+          width: 5%;
+        }
+        &.startDate{
+          position: relative;
+          width: 40%;
+          &:after{
+            content: "";
+            width: 0.34rem;
+            height: 0.34rem;
+            background: url("../../images/calendar_icon.png") no-repeat;
+            background-size: 100% 100%;
+            position: absolute;
+            top: 0.18rem;
+            right: -0.1rem;
+          }
+        }
+        &.endDate{
+          position: relative;
+          width: 40%;
+          text-align: left;
+          &:after{
+            content: "";
+            width: 0.34rem;
+            height: 0.34rem;
+            background: url("../../images/calendar_icon.png") no-repeat;
+            background-size: 100% 100%;
+            position: absolute;
+            top: 0.18rem;
+            right: 0.4rem;
+          }
+        }
+      }
+    }
+    button {
+      height: 1.13rem;
+      line-height: 1.13rem;
+      width: 100%;
+      margin-bottom: 0.54rem;
+      border: 1px solid #d4d4d4;
+      color: #70c466;
+      background-color: #fff;
+    }
+  }
+</style>

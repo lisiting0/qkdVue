@@ -1,0 +1,417 @@
+<template>
+  <div class="main">
+    <Loading v-if="isloading"></Loading>
+    <div class="header">
+      <div class="top">
+        <Back class="left"><i class="iconfont">&#xe613;</i></Back>
+        <a class="right"><i class="iconfont"></i></a>查找好友
+      </div>
+    </div>
+    <!--<div class="wrapper" ref="wrapper">-->
+    <!--<div class="input">-->
+    <!--<i class="iconfont">&#xe661;</i>-->
+    <!--<span id="searchinput"></span>-->
+    <!--<i @click="clearInput" v-if="value.length>0" class="iconfont">&#xe67c;</i>-->
+    <!--</div>-->
+    <!--</div>-->
+    <!--<div class="content">-->
+    <!--<div v-for="(item) in list" :key="item.id" >-->
+    <!--<router-link replace :to="{name:'userInfo',query:{id:item.id}}" tag="div" :style="{'background-image':'url('+$utils.getFullPath(item.headimgAttachmentId)+')'}"></router-link>-->
+    <!--<div @click.stop="intoChat(item)">-->
+    <!--<p>{{item.aliasName}}</p>-->
+    <!--<p>{{item.selfLabel}}</p>-->
+    <!--</div>-->
+    <!--<div>-->
+    <!--<span  @click="followFriend(item.id)">关注</span>-->
+    <!--</div>-->
+    <!--</div>-->
+    <!--</div>-->
+    <div class="fixed search_box">
+      <div class="search_input">
+        <i class="iconfont">&#xe661;</i>
+        <input placeholder="输入手机号、昵称、乾坤号皆可" v-model="key" type="search" @search="search">
+      </div>
+    </div>
+    <myScroller :style="$store.state.isBrowser?'padding:3.13rem 0 0;':'padding:4.03rem 0 0;'" :infinite="infinite" :refresh="refresh" :loadRefresh="loadRefresh" :loadInfinite="loadInfinite" ref="myScroller">
+      <div class="myscoll">
+        <div class="content">
+          <div v-for="(item) in list" :key="item.id">
+            <router-link replace :to="{name:'userInfo',query:{id:item.id}}" tag="div"  :style="{'background-image':'url('+$utils.getFullPath(item.headimgAttachmentId)+')'}"></router-link>
+            <div v-if="!$store.state.isWeixin" @click.stop="intoChat(item)">
+              <p>{{item.aliasName}}</p>
+              <p>{{item.selfLabel}}</p>
+            </div>
+            <div v-else>
+              <p>{{item.aliasName}}</p>
+              <p>{{item.selfLabel}}</p>
+            </div>
+            <div>
+              <span @click="followFriend(item.id)">关注</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </myScroller>
+  </div>
+</template>
+<script>
+  import Loading from '@other/loading.vue';
+  import Back from '@other/back.vue';
+  import myScroller from '@other/myScroller.vue';
+
+  export default {
+    name: 'addFriend',
+    data() {
+      return {
+        isloading: false,
+        // myScrollerHeight: 0,
+        // UIInput: null,
+        // inputid: 0,
+        // value: '',
+        key: '',
+        list: [],
+        //分页参数
+        pageNo: 1,
+        isRead: false,
+        isEnd: false,
+        loadRefresh: true,//下拉刷新
+        loadInfinite: true, //上拉加载
+      }
+    },
+    watch: {
+      isEnd(val) {
+        const t=this;
+        if(val){
+          t.$refs.myScroller.finishInfinite(true);
+        }else{
+          t.$refs.myScroller.finishInfinite(false);
+        }
+      },
+    },
+    mounted() {
+      // this.myScrollerHeight = $(".header").height() + (0.75) * parseInt(document.documentElement.style.fontSize);
+      // this.UIInput = window.api.require('UIInput');
+      // this.UIInput.open({
+      //   rect: {
+      //     x: document.body.clientWidth * 0.075 + (0.6) * parseInt(document.documentElement.style.fontSize),
+      //     y: this.myScrollerHeight + 9,
+      //     w: document.body.clientWidth * 0.85 - (1) * parseInt(document.documentElement.style.fontSize),
+      //     h: 32
+      //   },
+      //   styles: {
+      //     bgColor: '#fff',
+      //     size: 14,
+      //     color: '#000',
+      //     placeholder: {
+      //       color: '#ccc'
+      //     }
+      //   },
+      //   autoFocus: true,
+      //   maxRows: 1,
+      //   placeholder: '请输入娇友昵称',
+      //   keyboardType: 'search',
+      // }, (ret) => {
+      //   if (ret.eventType == 'show') {
+      //     this.inputid = ret.id;
+      //   } else if (ret.eventType == 'change') {
+      //     this.UIInput.value({id: this.inputid}, (ret) => {
+      //       if (ret) {
+      //         this.value = ret.msg;
+      //       }
+      //     });
+      //   } else if (ret.eventType == 'search') {
+      //     this.getUserByPhoneAndName()
+      //   }
+      // });
+
+    },
+    destroyed() {
+      // this.UIInput.close({
+      //   id: this.inputid
+      // });
+    },
+    components: {
+      Loading,
+      Back,
+      myScroller,
+    },
+    methods: {
+      async followFriend(id) { //关注好友接口
+        this.$vux.loading.show()
+        let result = await this.$server.followFriend(id);
+        this.$vux.loading.hide()
+        this.$vux.toast.show({
+          type: "success",
+          text: '已关注',
+          position: "middle",
+          width: "auto",
+        });
+        this.list = this.list.filter(v => {
+          return v.id != id;
+        })
+      },
+      intoChat(item) {
+        let query = {
+          id: item.id,
+          name: item.aliasName,
+        }
+        if(window.api){
+          this.$router.push({
+            path: "/chatWindow",
+            query:query
+          })
+        }else{
+          this.$router.push({
+            path: "/chatWindowWeb",
+            query:query
+          })
+        }
+        // this.$router.replace({
+        //   path: "/chatWindow",
+        //   query: query
+        // })
+      },
+      // async getUserByPhoneAndName() {
+      //   if (!this.value) {
+      //     return;
+      //   }
+      //   let result = await this.$server.getUserByPhoneAndName({
+      //     page: 1,
+      //     rows: 1000,
+      //     aliasName: this.value
+      //   })
+      //   this.list = result.data.data.list;
+      //   console.log(JSON.stringify(result))
+      // },
+      // clearInput() {
+      //   this.UIInput.value({
+      //     id: this.inputid,
+      //     msg: "",
+      //   }, (ret) => {
+      //
+      //   });
+      //   this.list = []
+      // },
+      // toItem(item) {
+      //   if (item === 'lable') {
+      //     this.$router.push({
+      //       path: "/lable"
+      //     })
+      //   }
+      //   if (item === 'groupChat') {
+      //     this.$router.push({
+      //       path: "/groupChat"
+      //     })
+      //   }
+      // },
+      search() {
+        const t = this;
+        if (t.Fn.trim(t.key) == '') {
+          t.$vux.toast.show({
+            type: "text",
+            text: '请输入要查找的好友昵称、手机号、乾坤号',
+            position: "bottom",
+            width: "2rem",
+          });
+          return false;
+        }
+        this.getList(this.key, true);
+      },
+      async getList(key,flag) {
+        const _this = this;
+        if (_this.isRead) {
+          return false;
+        }
+        _this.isRead = true;
+        if (_this.isRefresh || flag || key!= _this.key) {
+          _this.pageNo = 1;
+          if (flag) {
+            _this.isloading = true;
+          }
+        }
+        try {
+          if (!_this.list || _this.isRefresh || flag || key!= _this.key) {
+            _this.$refs.myScroller.scrollTo(1);
+            _this.list = [];
+          }
+          let result = await this.$server.getUserByPhoneAndName({
+            page: _this.pageNo,
+            rows: _this.$store.state.pageSize,
+			isNear:1,
+            aliasName: _this.key
+          })
+          if (result.data.data.list) {
+            _this.list.push(...result.data.data.list);
+          }
+          if (result.data.data.count <= _this.$store.state.pageSize * _this.pageNo || result.data.data.list.length < _this.$store.state.pageSize) {//判断是否最后一页
+            _this.isEnd = true;
+          } else {
+            _this.isEnd = false;
+            _this.$refs.myScroller.finishInfinite(false);
+          }
+        } catch (e) {
+          console.log(e)
+          _this.isEnd = true;
+        }
+        _this.isRead = false;
+        _this.isloading = false;
+        _this.isRefresh = false;
+        _this.pageNo++;
+      },
+      infinite(done) {//上拉加载(防止初始内容不满一屏会无限加载)
+        const t = this;
+        if (t.isEnd) {
+          done(true);
+          return false;
+        }
+        console.log("加载");
+        t.getList(t.key).then(() => {
+          if (t.isEnd) {
+            done(true);
+          } else {
+            done();
+          }
+        });
+      },
+      refresh(done) {//下拉刷新
+        const t = this;
+        console.log("刷新");
+        t.isRefresh = true;
+        t.getList(t.key).then((res) => {
+          done();
+        });
+      },
+    }
+  }
+</script>
+<style scoped lang="scss">
+  .main {
+    &:before {
+      background-color: #3a3845;
+    }
+    .header {
+      .top {
+        background-color: #3a3845;
+        color: #FFF;
+        font-size: 0.52rem;
+        position: relative;
+        z-index: 9;
+        i {
+          font-size: 0.52rem;
+        }
+        a {
+          position: absolute;
+          padding: 3px;
+        }
+        .left {
+          left: 0.325rem;
+        }
+        .right {
+          right: 0.325rem;
+        }
+      }
+    }
+    .wrapper {
+      position: relative;
+      box-sizing: border-box;
+      background-color: #F7F7F7;
+      padding: 5px 0;
+      .input {
+        width: 85%;
+        padding: 0 10px;
+        margin: 0 auto;
+        height: 40px;
+        line-height: 40px;
+        display: flex;
+        background-color: #FFF;
+        justify-content: space-between;
+        border-radius: 8px;
+        span {
+          flex-grow: 1;
+        }
+        i:first-child {
+          font-size: 14px;
+          color: #CCCCCC;
+        }
+        i:last-child {
+          font-size: 14px;
+          color: #CCCCCC;
+        }
+      }
+    }
+  }
+
+  .search_box .search_input input {
+    width: 90%;
+  }
+
+  .content {
+    padding: 0 0.3rem;
+    background-color: #FFF;
+    & > div {
+      position: relative;
+      display: flex;
+      align-items: center;
+      height: 2rem;
+      line-height: 2rem;
+      border-bottom: 1px solid #f2f2f2;
+      & > div:first-child {
+        width: 1.4rem;
+        height: 1.4rem;
+        background-size: cover;
+        background-position: center;
+        border-radius: 50%;
+      }
+      & > div:nth-of-type(2) {
+        width: 6rem;
+        p {
+          line-height: 2;
+          padding: 0 0 0 0.2rem;
+          font-size: 0.48rem;
+          img {
+            margin-left: 0.1rem;
+            width: 0.35rem;
+            height: 0.35rem;
+          }
+        }
+        p:last-child {
+          font-size: 0.36rem;
+          color: #9a9a9d;
+          overflow: hidden;
+          text-overflow: ellipsis;
+          white-space: nowrap;
+        }
+      }
+      & > div:last-child {
+        position: absolute;
+        right: 0;
+        width: 1.8rem;
+        text-align: center;
+        color: #ffa443;
+        font-size: 0.36rem;
+        span {
+          border: 1px solid #ffa443;
+          display: inline-block;
+          width: 100%;
+          height: 0.7rem;
+          line-height: 0.75rem;
+          border-radius: 5px;
+          &.hxgz {
+            border: 1px solid #f2f2f2;
+            color: #d0cdd1;
+          }
+          i {
+            &.hxgz_icon {
+              vertical-align: 0.04rem;
+              display: inline-block;
+              width: 0.22rem;
+              height: 0.16rem;
+              background: url("../../images/hxgz_icon.png") no-repeat;
+              background-size: 100% 100%;
+            }
+          }
+        }
+      }
+    }
+  }
+</style>

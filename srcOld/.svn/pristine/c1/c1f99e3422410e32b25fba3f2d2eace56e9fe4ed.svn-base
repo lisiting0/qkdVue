@@ -1,0 +1,147 @@
+<template>
+  <div style="position: relative; width: 80px;height: 20px;">
+    <div style="position: absolute;" :class="{rotateType:rotateType}">
+      <div class="box" >
+        <div class="wifi-symbol" :class="{animation:animation}">
+            <div class="wifi-circle first"></div>
+            <div class="wifi-circle second"></div>
+            <div class="wifi-circle third"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</template>
+<script>
+  const COMPONENT_NAME = 'voicePlayback'
+
+  export default {
+    name: COMPONENT_NAME,
+    props: {
+      animation: {
+        type: Boolean,
+        default: false
+      },
+      rotateType: {
+        type: String,
+        default: null
+      },
+      path: {
+        type: String,
+        default: null
+      }
+    },
+    watch:{
+      animation(newV){
+        let _this = this;
+        if(newV){
+          window.api.stopPlay();
+          if(/^http*/.test(_this.path)){
+            window.api.download({
+              url: _this.path,
+            }, function(ret, err) {
+              if (ret.state == 1) {
+                window.api.startPlay({
+                  path: ret.savePath
+                }, (ret, err)=> {
+                  _this.$emit('listenChildMethod',false)
+                });
+              } else {
+                _this.$emit('listenChildMethod',false)
+              }
+            });
+          }else{
+            window.api.startPlay({
+              path: _this.path
+            }, (ret, err)=> {
+              _this.$emit('listenChildMethod',false)
+            });
+          }
+        }else{
+          window.api.stopPlay();
+        }
+      }
+    },
+    methods:{
+      close(){
+        this.$emit('close', false)
+      }
+    }
+  }
+</script>
+<style scoped>
+  *{
+    margin: 0;
+    padding: 0;
+  }
+  .box {
+    width: 80px;
+    height: 20px;
+    line-height: 20px;
+    box-sizing: border-box;
+    position: relative;
+  }
+  .wifi-symbol {
+    width: 12px;
+    height: 12px;
+    margin-top: 4px;
+    box-sizing: border-box;
+    overflow: hidden;
+    position: relative;
+    transform: translateZ(0) rotate(135deg);
+  }
+  .rotateType{
+    position: absolute;
+    right: -67px;
+    top: -1px;
+  }
+  .rotateType div.wifi-symbol{
+    transform: translateZ(0) rotate(-45deg);
+  }
+  .jy_act_blind{
+	.wifi-circle {border: 1px solid #fff;}
+	.first { background: #fff;}
+  }
+  .wifi-circle {
+    border: 1px solid #999999;
+    border-radius: 50% 0 0 0;
+    position: absolute;
+    transform: rotate(0deg);
+  }
+
+  .first {
+    width: 4px;
+    height: 4px;
+    background: #cccccc;
+    top: 9px;
+    left: 9px;
+  }
+
+  .second {
+    width: 12px;
+    height: 12px;
+    top: 5px;
+    left: 5px;
+  }
+  .animation .second{
+    animation: fadeInOut 1s infinite 0.2s;
+  }
+
+  .third {
+    width: 20px;
+    height: 20px;
+    top: 1px;
+    left: 1px;
+  }
+  .animation .third{
+    animation: fadeInOut 1s infinite 0.4s;
+  }
+
+  @keyframes fadeInOut {
+    0% {
+      opacity: 0;
+    }
+    100% {
+      opacity: 1;
+    }
+  }
+</style>

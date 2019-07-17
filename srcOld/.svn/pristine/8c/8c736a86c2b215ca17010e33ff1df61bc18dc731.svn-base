@@ -1,0 +1,537 @@
+<template>
+  <div class="page">
+    <div class="prizeDraw">
+      <Loading v-if="isloading"></Loading>
+      <div class="prizeDraw-header">
+        <div class="top">
+          <Back class="left"><i class="iconfont">&#xe613;</i></Back>
+          <a class="right"></a>
+        </div>
+      </div>
+      <div class="title">
+        <div><img :src="imgs.title"/></div>
+        <div><img :src="imgs.title2"/></div>
+      </div>
+      <div class="setting">
+        <div>
+          <p>我的乾坤币</p>
+          <p>{{userMoney}}</p>
+        </div>
+        <div>
+          <div @click="visibilityBion=true">
+            <p>约会中奖率</p>
+            <p>{{winningRate}}<i class="iconfont">&#xe607;</i></p>
+          </div>
+          <div>
+            <p>花费乾坤币</p>
+            <p>{{payBion[0]}}</p>
+          </div>
+        </div>
+        <div @click="prizeSelect">
+          <p><i class="iconfont">&#xe6cd;</i>中奖目标</p>
+        </div>
+      </div>
+
+      <!--<div class="prize">-->
+      <!--<div class="circle">-->
+      <!--<div class="panel"></div>-->
+      <!--<div class="pointer" @click.shop="startPrize">-->
+      <!--<p>{{payBion[0]}}乾坤币</p>-->
+      <!--</div>-->
+      <!--</div>-->
+      <!--</div>-->
+      <jqPrize @endPrize="endPrize" @prizeRunning="prizeRunning" :datingId="datingId" :payBion="payBion[0]" :rate="rate" :imgPath="imgPath"></jqPrize>
+      <div class="message-swiper">
+        <template v-if="message">
+          <swiper :options="swiperOption2" ref="mySwiper2">
+            <slot v-for="(item,index) in message">
+              <swiper-slide v-if="index % 2 == 0">
+                <p>
+                  <a><span>{{item.user&&item.user.aliasName}}</span><span>{{item.type == 0 ? '美丽约会' : item.objId+'乾坤币'}}</span></a>
+                  <a v-if="index < message.length"><span>{{message[index+1]&&message[index+1].user&&message[index+1].user.aliasName}}</span><span>{{message[index+1]&&message[index+1].type== 0 ? '美丽约会' : message[index+1]&&message[index+1].objId+'乾坤币'}}</span></a>
+                </p>
+              </swiper-slide>
+            </slot>
+          </swiper>
+        </template>
+      </div>
+      <div class="remark">
+        <a><img src="../../images/prizedraw/a1.png"/></a>
+        <router-link :to="{name:'myPrize'}"><img src="../../images/prizedraw/a2.png"/></router-link>
+      </div>
+      <group style="display: none">
+        <popup-picker title="约会中奖率" :data="payBionList" v-model="payBion" ref="picker" :show.sync="visibilityBion"></popup-picker>
+      </group>
+    </div>
+    <transition enter-active-class="slideInUp" leave-active-class="slideOutUp">
+      <prizeSelect @touchmove.native.prevent @childMethod="childMethod" v-if="pagerouter=='prizeSelect'" :title="''" class="prizeSelect" ref="prizeSelect"></prizeSelect>
+    </transition>
+  </div>
+</template>
+<script>
+  import Loading from '@other/loading.vue';
+  import Back from '@other/back.vue';
+  import prizeSelect from './prizeSelect';
+  import title from '../../images/prizedraw/title.png';
+  import title2 from '../../images/prizedraw/title2.png';
+  import 'swiper/dist/css/swiper.css'
+  import {Group, PopupPicker} from 'vux'
+  import {swiper, swiperSlide} from 'vue-awesome-swiper'
+  import jqPrize from './jqPrize.vue';
+
+  let fontsize = parseInt(document.documentElement.style.fontSize);
+  export default {
+    name: 'prizeDraw',
+    components: {
+      Loading,
+      Back,
+      prizeSelect,
+      swiper,
+      swiperSlide,
+      Group,
+      PopupPicker,
+      jqPrize,
+    },
+    data() {
+      return {
+        pagerouter: '',
+        isloading: false,
+        isActive: true,
+        contentheight: 0,
+        imgs: {
+          title: title,
+          title2: title2,
+        },
+        userMoney:0,
+        winningRate: '15%',
+        rate: 0.15,
+        imgPath: '',
+        payBion: ['50'],
+        visibilityBion: false,
+        swiperOption2: {
+          direction: 'vertical',
+          loop: false,
+          height: 0.7 * fontsize,
+          autoplay: {
+            delay: 3000,
+            stopOnLastSlide: false,
+            disableOnInteraction: false,
+          },
+        },
+        message: [],
+        // [{
+        //   name: '浪子',
+        //     message: '宝马一辆',
+        // },
+        // {
+        //   name: '大侠',
+        //     message: '海景别墅一套',
+        // },
+        // {
+        //   name: '流浪的马',
+        //     message: '打火机一个',
+        // },
+        // {
+        //   name: '神仙姐姐',
+        //     message: '1000克拉钻石一颗',
+        // }],
+        payBionList: [[
+          {
+            name: '10%',
+            value: '50',
+
+          }, {
+            name: '20%',
+            value: '100'
+          }, {
+            name: '30%',
+            value: '200'
+          }]],
+        /** 中缘抽奖设置**/
+        rotate: 0,//转盘角度
+        evalNum: 360 / 6,//每份奖品对应的度数
+        prize: -1,//抽中的奖品下标
+        round: 10,//转盘转动的圈数
+        duration: 6000,//转盘转动时间ms
+        running: false,//转盘是否正在转
+        tranEnd: this.transitionEnd("transition"),
+        datingId: null,//活动Id
+        prizeRun: false,//抽奖转盘是否在转动
+      }
+    },
+    watch: {
+      payBion() {
+        if (this.$refs.picker) {
+          this.winningRate = this.$refs.picker.getNameValues();
+          let len = this.$refs.picker.getNameValues().length - 1;
+          this.rate = this.$refs.picker.getNameValues().substring(0, len) / 100;
+        }
+      }
+    },
+    beforeRouteUpdate(to, from, next) {
+      next();
+      this.pagerouter = to.params.pagerouter;
+    },
+    created() {
+
+    },
+    destroyed() {
+      const t = this;
+      t.$vux.toast.hide()
+    },
+    mounted() {
+      this.contentheight = document.body.clientHeight - $(".header").height() - $(".my-footer").height() - $(".title").height() - (1.35) * parseInt(document.documentElement.style.fontSize) - 3;
+      this.userMoney = this.$store.state.userInfo.userMoney;
+      const t = this;
+      t.recordAllList();
+      t.$nextTick(() => {
+        t.obj = $(".panel");
+        t.obj.css({transform: 'rotate(0deg)', WebkitTransform: 'rotate(0eg)', transitionDuration: '0ms'});
+        t.obj.bind(t.tranEnd, function () {
+          if (t.running) {
+            t.obj.css({
+              transform: 'rotate(' + (t.rotate) + 'deg)',
+              WebkitTransform: 'rotate(' + (t.rotate) + 'deg)',
+              transitionDuration: '0ms'
+            });
+            t.running = false;//转盘是否正在转
+            // const msg = t.prize == 0 ? '美丽约会' : (t.prize == 1 || t.prize == 4) ? '谢谢参与' : t.prize == 2 ? '150 乾坤币' : t.prize == 3 ? '100 乾坤币' : t.prize == 5 ? '50 乾坤币' : '';
+            const msg = t.prize == 0 ? '美丽约会': index == 1 ? '50 乾坤币' : (t.prize == 2 || t.prize == 5 || t.prize == 8) ? '谢谢参与' : t.prize == 3 ? '100 乾坤币' : t.winningRate == '10%' && t.prize == 4 ? '10 乾坤币' : t.winningRate == '20%' && t.prize == 4 ? '美丽约会' : t.prize == 6 ? '150 乾坤币' : t.winningRate == '10%' || t.winningRate == '20%' && t.prize == 7 ? '50 乾坤币' : t.winningRate == '30%' && t.prize == 7 ? '美丽约会' : t.prize == 9 ? '20 乾坤币' : '';
+            t.$vux.toast.show({
+              type: "text",
+              text: msg,
+              position: "middle",
+              width: "2rem",
+            });
+          }
+        });
+      });
+    },
+    methods: {
+      prizeSelect() {
+        this.$router.push({
+          path: '/prizeDraw/prizeSelect',
+        })
+      },
+      childMethod(content) {
+        console.log(content)
+        if (content != null) {
+          this.datingId = content.id;
+          this.imgPath = content.jiaoyouUser.headimgAttachmentId
+        }
+        this.$refs.prizeSelect.goback();
+      },
+      onChange(val) {
+        console.log('val change', val)
+      },
+      event(index) {
+        this.isActive = !!index;
+      },
+      startPrize() {
+        const t = this;
+        if (t.running) {
+          return false;
+        }
+        t.running = true;
+        // t.prize=Math.round(Math.random()*5);//0-5 模拟抽奖
+        t.prize = 1;
+        console.log("prize:" + t.prize)
+        t.rotate = t.evalNum * t.prize;
+        console.log("t.rotate:" + t.rotate);
+        t.obj.css({
+          transform: 'rotate(' + (t.round * 360 + t.rotate) + 'deg)',
+          WebkitTransform: 'rotate(' + (t.round * 360 + t.rotate) + 'deg)',
+          transitionDuration: t.duration + 'ms'
+        });
+      },
+      transitionEnd: function (type) {
+        var style = document.createElement("DIV").style,
+          transitionEnd = (function () {
+            var transEndEventNames
+            if (type == "transition") {
+              transEndEventNames = {
+                WebkitTransition: 'webkitTransitionEnd',
+                MozTransition: 'transitionend',
+                OTransition: 'oTransitionEnd oTransitionend',
+                transition: 'transitionend'
+              }
+            } else if (type == "animation") {
+              transEndEventNames = {
+                WebkitTransition: 'webkitAnimationEnd',
+                MozTransition: 'animationend',
+                OTransition: 'oAnimationEnd oAnimationend',
+                transition: 'animationend'
+              }
+            }
+            for (var name in transEndEventNames) {
+              if (typeof style[name] === "string") {
+                return transEndEventNames[name]
+              }
+            }
+          })();
+        return transitionEnd;
+      },
+      prizeRunning(val) {//抽奖转盘是否在转动
+        const t = this;
+        t.prizeRun = val;
+      },
+      endPrize(index, payBion) {//抽奖结束
+        const t = this;
+        const jb = index == 1 ? 50: index == 3 ? 100 : index == 4 ? 10 : index == 6 ? 150 : index == 7 ? 50 : index==9 ? 20: 0;
+        t.userMoney = parseInt(t.$store.state.userInfo.userMoney  + jb - payBion);
+        t.$store.commit('EDITUSERINFO',{key:"userMoney" ,value:t.userMoney})
+        // const msg = index == 0 ? '美丽约会' : (index == 1 || index == 4) ? '谢谢参与' : index == 2 ? '150 乾坤币' : index == 3 ? '100 乾坤币' : index == 5 ? '50 乾坤币' : '';
+        const msg = index == 0 ? '美丽约会': index == 1 ? '50 乾坤币' : (index == 2 || index == 5 || index == 8) ? '谢谢参与' : index == 3 ? '100 乾坤币' : (payBion == 50 && index == 4) ? '10 乾坤币' : (payBion == 100 && index == 4) ? '美丽约会' : index == 6 ? '150 乾坤币' : (payBion == 50 && index == 7) ? '50 乾坤币' : (payBion == 200 && index == 7) ? '美丽约会' : index == 9 ? '20 乾坤币' : '';
+        t.$vux.toast.show({
+          type: "text",
+          text: msg,
+          position: "bottom",
+          width: "2rem",
+        });
+        t.prizeRun = false;
+      },
+      async recordAllList() {
+        const _this = this
+        let result = await _this.$server.recordAllList();
+        if (result.data.list) {
+          _this.message.push(...result.data.list);
+        }
+      },
+    }
+  }
+</script>
+<style scoped lang="scss">
+  @keyframes slideInUp {
+    from {
+      transform: translate3d(0, 100%, 0);
+    }
+    to {
+      transform: translate3d(0, 0, 0);
+    }
+  }
+
+  @keyframes slideOutUp {
+    from {
+      transform: translate3d(0, 0, 0);
+    }
+    to {
+      transform: translate3d(0, 100%, 0);
+    }
+  }
+
+  .slideInUp {
+    animation-name: slideInUp;
+  }
+
+  .slideOutUp {
+    animation-name: slideOutUp;
+  }
+
+  .slideOutUp, .slideInUp {
+    animation-duration: 0.3s;
+  }
+
+  .page {
+    min-height: 100%;
+    background-color: #463056;
+  }
+
+  .prizeDraw {
+    font-weight: normal;
+    background-image: url("../../images/prizedraw/bg.jpg");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    overflow: auto;
+    .prizeDraw-header {
+      padding-top: 0.75rem;
+      width: 100%;
+      position: fixed;
+      .top {
+        color: #FFF;
+        font-size: 0.52rem;
+        position: relative;
+        i {
+          font-size: 0.52rem;
+        }
+        a {
+          position: absolute;
+          padding: 3px;
+        }
+        .left {
+          left: 0.325rem;
+        }
+        .right {
+          right: 0.325rem;
+        }
+      }
+    }
+    .title {
+      width: 100%;
+      margin-top: 1.12rem;
+      div {
+        margin: 0 auto;
+        img {
+          width: 100%;
+        }
+      }
+      div:first-child {
+        width: 6.84rem;
+      }
+      div:nth-of-type(2) {
+        width: 8.35rem;
+        margin-top: 0.5rem
+      }
+    }
+    .setting {
+      color: #FFF;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      & > div {
+        font-size: 0.26rem;
+        overflow: hidden;
+        p {
+          text-align: center;
+          height: 0.6rem;
+          line-height: 0.6rem;
+          i {
+            font-size: 0.3rem;
+          }
+        }
+        p:last-child {
+          background-color: #844551;
+        }
+        p:first-child {
+          background-color: #f06949;
+        }
+
+      }
+      & > div:nth-of-type(1) {
+        width: 1.45rem;
+        border-radius: 0 5px 5px 0;
+      }
+      & > div:nth-of-type(2) {
+        display: flex;
+        width: 3rem;
+        border-radius: 5px;
+        border: 1px solid #fa9077;
+        margin-left: 0.3rem;
+        div {
+          width: 50%;
+          box-sizing: border-box;
+        }
+        div:first-child {
+          border-right: 2px solid #fa9077;
+        }
+      }
+      & > div:nth-of-type(3) {
+        width: 1.75rem;
+        border-radius: 5px 0 0 5px;
+        p {
+          text-align: center;
+          height: 0.8rem;
+          line-height: 0.8rem;
+          font-size: 0.3rem;
+        }
+      }
+    }
+    .circle {
+      background-image: url("../../images/prizedraw/circle.png");
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      width: 9.65rem;
+      height: 8.58rem;
+      margin: 0.4rem auto 0;
+      padding-top: 0.57rem;
+      box-sizing: border-box;
+      position: relative;
+      .panel {
+        background-image: url("../../images/prizedraw/150.png");
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        width: 6.96rem;
+        height: 6.96rem;
+        margin: 0 auto;
+        overflow: hidden;
+      }
+      .pointer {
+        position: absolute;
+        top: 0;
+        left: 0;
+        background-image: url("../../images/prizedraw/101.png");
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        width: 3.32rem;
+        height: 3.81rem;
+        margin: 1.9rem 0 0 3.1rem;
+        overflow: hidden;
+        p {
+          color: #FFF;
+          font-size: 0.24rem;
+          width: 1.2rem;
+          height: 0.4rem;
+          background-color: rgba(255, 255, 255, 0.3);
+          border-radius: 2px;
+          line-height: 0.4rem;
+          text-align: center;
+          margin: 2.68rem auto 0;
+        }
+      }
+    }
+    .message-swiper {
+      width: 9.3rem;
+      height: 0.7rem;
+      line-height: 0.7rem;
+      overflow: hidden;
+      color: #FFF;
+      margin: 0 auto 0.2rem;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 3px;
+      p {
+        width: 9.3rem;
+        display: flex;
+        a {
+          width: 50%;
+          span {
+            display: inline-block;
+            width: 50%;
+            text-align: center;
+            font-size: 0.36rem;
+            overflow: hidden; /*超出部分隐藏*/
+            white-space: nowrap; /*不换行*/
+            text-overflow: ellipsis; /*超出部分文字以...显示*/
+          }
+          span:first-child {
+            color: #e4b167;
+          }
+        }
+      }
+    }
+    .remark {
+      display: flex;
+      margin-top: 0.1rem;
+      a {
+        width: 4.29rem;
+        margin-left: 0.75rem;
+        img {
+          width: 100%;
+        }
+      }
+    }
+  }
+
+  .prizeSelect {
+    position: fixed;
+    width: 100%;
+    height: 100%;
+    top: 0;
+    left: 0;
+    z-index: 100;
+    background-color: #ffffff;
+  }
+</style>
+

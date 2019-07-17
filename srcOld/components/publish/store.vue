@@ -1,0 +1,347 @@
+<template>
+  <div class="main">
+    <Loading v-if="isloading"></Loading>
+    <div class="header">
+      <div class="top">
+        <a class="left" @click="hidden"><i class="iconfont">&#xe613;</i></a>
+        <a class="right">广州</a>指定餐厅
+      </div>
+    </div>
+    <search class="fixed" :auto-fixed="true"  @on-submit="search" v-model="searchKey" ref="search" style="margin-top: 1.32rem;"></search>
+    <div class="fixed search-header">
+      <p class="tjsj-title"><span>推荐商家</span></p>
+      <div class="filter-menu">
+        <a class="active">综合排序 <i class="iconfont">&#xe607;</i></a>
+        <a>好评优先</a>
+        <a>距离最近</a>
+        <a>筛选 <i class="iconfont">&#xe64d;</i></a>
+      </div>
+    </div>
+    <myScroller :style="$store.state.isBrowser?'padding:4.8rem 0 0;':'padding:5.35rem 0 0;'" :infinite="infinite" :refresh="refresh" :loadRefresh="loadRefresh" :loadInfinite="loadInfinite" ref="myScroller">
+      <div class="myscoll">
+        <ul class="store-items">
+          <template v-if="listArr && listArr.length>0">
+            <li class="store-li" v-for="item in listArr">
+              <div class="store-image" >
+                <div :style="'background-image:url('+getFullPath(item.shopFrontImgAttachmentId)+');'"></div>
+              </div>
+              <div class="store_desc" >
+                <p class="store_title">{{item.name}}&nbsp;&nbsp;({{item.city.name}}店)<span><i class="iconfont" style="font-size: 0.4rem;">&#xe62c;</i>{{item.distance?item.distance:0}}米</span></p>
+                <div class="store_info">
+                  <p>{{item.position}}</p>
+                  <p>粤菜</p>
+                </div>
+                <div class="store-last">{{item.datingCount}}个约会<em class="store-action" @click="selStore(item.id,item.name,item.city.name)">选择这里</em></div>
+              </div>
+            </li>
+          </template>
+        </ul>
+      </div>
+    </myScroller>
+  </div>
+</template>
+<script>
+  import Loading from '../loading.vue';
+  import myScroller from '@other/myScroller.vue';
+  import {Search} from 'vux'
+
+  let fontsize = parseInt(document.documentElement.style.fontSize);
+  export default {
+    name: 'myFocus',
+    props: ['datingThemes'],
+    components: {
+      Loading,
+      myScroller,
+      Search
+    },
+    data() {
+      return {
+        isloading: false,
+        typeList:{1:'旅行',2:'美食',3:'电影',4:'K歌',5:'运动',99:'其他'},// 1、旅行 2、吃饭 3、电影 4、唱歌 5、运动 99、其他
+        listArr: [],
+        searchKey: null,
+        //分页参数
+        pageNo: 1,
+        isRead: false,
+        isEnd: false,
+        loadRefresh:true,//下拉刷新
+        loadInfinite:true, //上拉加载
+      }
+    },
+    computed: {
+    },
+    watch:{
+      isEnd(val) {
+        const t=this;
+        if(val){
+          t.$refs.myScroller.finishInfinite(true);
+        }else{
+          t.$refs.myScroller.finishInfinite(false);
+        }
+      }
+    },
+    mounted() {
+
+    },
+    methods: {
+      hidden(){
+        this.$emit('hidden');
+      },
+      goback() {
+        this.$router.go(-1);
+      },
+      getFullPath(path) {
+        return this.$utils.getFullPath(path)
+      },
+      async getList(searchKey,flag) {
+        const _this = this;
+        if (_this.isRead) {
+          return false;
+        }
+        _this.isRead = true;
+        if (_this.isRefresh || flag  || _this.searchKey!=searchKey) {
+          _this.pageNo = 1;
+          if (flag) {
+            _this.isloading = true;
+          }
+        }
+        try {
+          let shopType = await _this.$server.shopType();
+          let typeParentId = 0;
+          for (let i=0; i<shopType.data.list.length; i++) {
+              if(shopType.data.list[i].name==_this.typeList[_this.datingThemes]){
+                typeParentId =shopType.data.list[i].id;
+                break;
+              }
+          }
+          if (!_this.listArr || _this.isRefresh || flag || _this.searchKey!=searchKey) {
+            _this.$refs.myScroller.scrollTo(1);
+            _this.listArr = [];
+          }
+          let location = await _this.$store.dispatch("getMylocation");
+          let data = {
+            searchKey: _this.searchKey,
+            typeId: typeParentId,
+            'city.id': '',
+            longitude: location.lon==0?null:location.lon,
+            latitude: location.lat==0?null:location.lat,
+            page: _this.pageNo,
+            rows: _this.$store.state.pageSize
+          };
+          let result = await _this.$server.shopInfoList(data);
+          if(result.data.list){
+            _this.listArr.push(...result.data.list);
+          }
+          if (result.data.count <= _this.$store.state.pageSize * _this.pageNo || result.data.list.length < _this.$store.state.pageSize) {//判断是否最后一页
+            _this.isEnd = true;
+          } else {
+            _this.isEnd = false;
+            _this.$refs.myScroller.finishInfinite(false);
+          }
+        } catch (e) {
+          console.log("报错"+e)
+        _this.isEnd = true;
+        }
+        _this.isRead = false;
+        _this.isloading = false;
+        _this.isRefresh = false;
+        _this.pageNo++;
+      },
+      infinite(done) {//上拉加载(防止初始内容不满一屏会无限加载)
+        const t=this;
+        if(t.isEnd){
+          done(true);
+          return false;
+        }
+        console.log("加载");
+        t.getList(this.searchKey).then(()=>{
+          if(t.isEnd){
+            done(true);
+          }else{
+            done();
+          }
+        });
+      },
+      refresh(done) {//下拉刷新
+        const t=this;
+        console.log("刷新");
+        t.isRefresh=true;
+        t.getList(this.searchKey).then((res)=>{
+          done();
+        });
+      },
+      search() {
+        this.getList(this.searchKey, true);
+      },
+      selStore(id,name,city){
+        this.$emit('selStore', id, name, city);
+      },
+    }
+  }
+</script>
+<style scoped lang="scss">
+  .main {
+    padding-bottom: 0;
+    &:before {
+      background-color: #3a3845;
+    }
+    .header {
+      position: fixed;
+      width: 100%;
+      z-index: 10;
+      .top {
+        background-color: #3a3845;
+        color: #FFF;
+        font-size: 0.52rem;
+        position: relative;
+        i {
+          font-size: 0.52rem;
+        }
+        a {
+          position: absolute;
+          padding: 3px;
+        }
+        .left {
+          left: 0.325rem;
+        }
+        .right {
+          right: 0.325rem;
+        }
+      }
+    }
+    .search-header{
+      width: 92%;
+      background-color: #ffffff;
+      padding: 0.2rem 0.4rem;
+      border: 1px solid #F2F2F2;
+      .tjsj-title{
+        text-align: center;
+        span{
+          font-size: 0.44rem;
+          color: #333333;
+          position: relative;
+          &:before{
+            content: '';
+            width: 40px;
+            height: 2px;
+            background: url("../../images/store_left_line.png") no-repeat;
+            background-size: 100% 100%;
+            position: absolute;
+            top: 7px;
+            left: -54px;
+          }
+          &:after{
+            content: '';
+            width: 40px;
+            height: 2px;
+            background: url("../../images/store_right_line.png") no-repeat;
+            background-size: 100% 100%;
+            position: absolute;
+            top: 7px;
+            right: -54px;
+          }
+        }
+      }
+      .filter-menu{
+        display: flex;
+        justify-content: space-between;
+        padding: 0.2rem 0 0.1rem;
+        a{
+          display: inline-block;
+          font-size: 0.4rem;
+          color: #8f8f8f;
+          text-align: center;
+          &.active{
+            color: #333333;
+          }
+          i{
+            font-size: 0.4rem;
+            vertical-align: middle;
+          }
+        }
+      }
+    }
+    .myscoll {
+      background-color: #ffffff;
+      .store-items{
+        display: block;
+        padding: 0.4rem;
+        .store-li{
+          padding: 0.2rem 0 0;
+          background-color: #fff;
+          position: relative;
+          display: flex;
+
+          .store-image{
+            display: inline-block;
+            vertical-align: top;
+            width: 3rem;
+            height: 3rem;
+            div{
+              width: 100%;
+              height: 100%;
+              background-size: cover;
+              background-repeat: no-repeat;
+              border-radius: 3px;
+              background-position: center top;
+            }
+          }
+          .store_desc{
+            display: inline-block;
+            padding: 0 0 0 0.27rem;
+            width: 7rem;
+            height: auto;
+            .store_title{
+              font-size: 0.4rem;
+              color: #313140;
+              font-weight: bold;
+              span{
+                font-size: 0.36rem;
+                float: right;
+                color: #939393;
+                font-weight: normal;
+              }
+            }
+            .store_info{
+              height: 1.6rem;
+              p{
+                margin: 0;
+                font-size: 0.32rem;
+                color: #abaaaf;
+                line-height: 0.8rem;
+              }
+              p:not(.store_title) {
+                &:before {
+                  content: "●";
+                  color: #E0E0E0;
+                  font-size: 0.24rem;
+                  line-height: 2;
+                  vertical-align: middle;
+                  display: inline-block;
+                  margin-right: 0.2rem;
+                }
+              }
+            }
+            .store-last{
+              font-size: 0.32rem;
+              color: #abaaaf;
+              line-height: 0.9rem;
+              .store-action{
+                float: right;
+                width: 2.6rem;
+                height: 0.8rem;
+                line-height: 0.8rem;
+                border: 1px solid #ff4200;
+                font-size: 0.4rem;
+                color: #ff4200;
+                border-radius: 0.2rem;
+                text-align: center;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+</style>
+

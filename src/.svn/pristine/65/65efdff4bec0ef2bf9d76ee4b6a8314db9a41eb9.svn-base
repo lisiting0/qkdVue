@@ -1,0 +1,178 @@
+<template>
+  <div class="main jy_all_top">
+    <Loading v-if="isloading"></Loading>
+    <div class="header">
+      <div class="top">
+        <Back class="left"><i class="iconfont">&#xe613;</i></Back>
+        <p>活动详情</p>
+      </div>
+    </div>
+    <div class="at_img">
+      <img src="../../images/hd2.png" alt="">
+      <div class="at_zc">公务员专场</div>
+    </div>
+    <div class="at_desc">
+      <div class="at_title">花都首场高精尖人才相亲会：幸福花都， 悦你共分享</div>
+      <div class="at_count"><i class="iconfont">&#xe642;</i><span class="active">210</span>人关注<i class="iconfont" style="margin-left: 1rem">&#xe612;</i><span
+        class="active">96</span>人报名
+      </div>
+    </div>
+    <div class="at_con"><i class="iconfont">&#xe6b6;</i>11月24日 周六 14:00-18:00</div>
+    <div class="at_con at_address"><i class="iconfont">&#xe62c;</i><span>广东省广州市天河区广州琶洲中国进出口商品 交易会展馆</span><i class="iconfont">&#xe702;</i></div>
+    <div class="at_con"><i class="iconfont">&#xe6e1;</i><em>100.00</em> 元</div>
+    <div class="at_con"><i class="iconfont">&#xe668;</i>公务员专场</div>
+    <div class="ct_intro_title">活动</div>
+    <div class="ct_intro">
+      <div class="ct_into_con">
+        <p>主题</p>
+        <p>幸福花都，悦你共分享</p>
+      </div>
+      <div class="ct_into_con">
+        <p>报名时间</p>
+        <p>2018.11.16-2018.11.20</p>
+      </div>
+      <div class="ct_into_con">
+        <p>活动时间</p>
+        <p>2018.11.24 14:00-18:00</p>
+      </div>
+      <div class="ct_into_con">
+        <p>活动地点</p>
+        <p>广东省广州市天河区广州琶洲中国进出口商品交易 会展馆</p>
+        <p><img src="../../images/map.png" alt="" class="map"></p>
+        <p>地址导航：</p>
+        <p>方案一：驾车定位导航“琶洲会展中心”。 </p>
+        <p>方案二：地铁几号线“琶洲会展中心站”B出口，直走50米，2号门</p>
+        <p>方案三：公交车15、562、86到“琶洲会展中心站”</p>
+      </div>
+      <div class="ct_into_con">
+        <p>活动流程</p>
+        <p>14:00-14:30 来宾签到入场</p>
+        <p>14:30-15:00 第一轮活动</p>
+        <p>15:00-15:30 第二轮活动</p>
+        <p> ...</p>
+      </div>
+      <div class="ct_into_con">
+        <p>活动主办方</p>
+        <p class="logo_list"><img src="../../images/gzszgh_logo.png" alt="" class="logo"><img
+          src="../../images/blxx_logo.png" alt="" class="logo"></p>
+      </div>
+      <div class="ct_into_con">
+        <p>温馨提示</p>
+        <p>幸福花都，悦你共分享</p>
+      </div>
+    </div>
+    <div class="ybm_list">
+      <router-link tag="div" :to="{name:'registrationStaff'}">已报名</router-link>
+      <ul class="ybm_user_list">
+        <router-link :to="{name:'userInfo',query:{id:'000000000000000001'}}" tag="li"><img src="../../images/p1.jpg" alt=""></router-link>
+        <router-link :to="{name:'userInfo',query:{id:'000000000000000001'}}" tag="li"><img src="../../images/p1.jpg" alt=""></router-link>
+        <router-link :to="{name:'userInfo',query:{id:'000000000000000001'}}" tag="li"><img src="../../images/p1.jpg" alt=""></router-link>
+        <router-link :to="{name:'userInfo',query:{id:'000000000000000001'}}" tag="li"><img src="../../images/p1.jpg" alt=""></router-link>
+        <router-link :to="{name:'userInfo',query:{id:'000000000000000001'}}" tag="li"><img src="../../images/p1.jpg" alt=""></router-link>
+        <router-link :to="{name:'userInfo',query:{id:'000000000000000001'}}" tag="li"><img src="../../images/p1.jpg" alt=""></router-link>
+        <router-link :to="{name:'userInfo',query:{id:'000000000000000001'}}" tag="li"><img src="../../images/p1.jpg" alt=""></router-link>
+        <router-link :to="{name:'userInfo',query:{id:'000000000000000001'}}" tag="li"><img src="../../images/p1.jpg" alt=""></router-link>
+      </ul>
+    </div>
+    <div class="action_footer" v-if="owner">
+      <div class="gzfx">
+        <p><i class="iconfont">&#xe61e;</i><i>关注</i></p>
+        <p><i class="iconfont">&#xe604;</i><i>分享</i></p>
+      </div>
+	  <template v-if="owner&&owner.jiaoyouUser.id!=$store.state.userInfo.id">
+      <div class="ljbm" v-if="owner.isCandidate==0" @click.stop="blindDatingCandidate">立即报名</div>
+      <div class="ljbm" v-else-if="owner.isCandidate==1" @click.stop="blindDatingUnCandidate">取消报名</div>
+	  </template>
+    </div>
+  </div>
+</template>
+
+<script>
+  import Loading from '@other/loading.vue';
+  import Back from '@other/back.vue';
+
+  export default {
+    name: "activityDetail",//详情
+    components: {
+      Loading,
+      Back,
+    },
+    data() {
+      return {
+        isloading: false,
+        datingId: null,
+		owner:null,
+      }
+    },
+    watch: {},
+    mounted() {
+      const t = this;
+      t.datingId = t.$route.query.id;
+      $("body").addClass("gray");
+		t.getSingle();
+    },
+    destroyed() {
+      $("body").removeClass("gray");
+    },
+    methods: {
+		async getSingle(){//获取活动详情
+			const t=this;
+			try{
+				const result =await t.$server.blindDatingSingle({
+					datingDetailsId:t.datingId
+				});
+				t.owner=result.data.data;				
+			}catch(e){
+				console.log(e);
+			}
+		},
+		async blindDatingCandidate(){//报名
+			const t=this;
+			try{
+				const result =await t.$server.blindDatingCandidate({
+					id:t.datingId
+				});
+				t.$vux.toast.show({
+					type:"success",
+					text: result.data.message,
+					position:"middle",
+					width:"auto",
+				});
+			}catch(e){
+				t.$vux.toast.show({
+					type:"cancel",
+					text: e.message,
+					position:"middle",
+					width:"auto",
+				});
+			}
+		},
+		async blindDatingUnCandidate(){//退出
+			const t=this;
+			try{
+				const result =await t.$server.blindDatingCandidate({
+					id:t.datingId,
+					forcedQuit:0,
+				});
+				t.$vux.toast.show({
+					type:"success",
+					text: result.data.message,
+					position:"middle",
+					width:"auto",
+				});
+			}catch(e){
+				t.$vux.toast.show({
+					type:"cancel",
+					text: e.message,
+					position:"middle",
+					width:"auto",
+				});
+			}
+		},
+		
+    }
+  }
+</script>
+
+<style scoped lang="scss">
+</style>

@@ -1,0 +1,1149 @@
+<template>
+  <div class="main">
+    <Loading v-if="isloading"></Loading>
+    <Popover :showPopover="showPopover" @close="closePopover">
+      <li @click.stop="topRightItem(1)"><i class="iconfont">&#xe627;</i><i>发布</i></li>
+      <li @click.stop="clickShare"><i class="iconfont">&#xe606;</i><span><i>分享</i><i>赚乾坤币</i></span></li>
+      <li @click.stop="topLink('addFriend')"><i class="iconfont">&#xe625;</i><i>添加好友</i></li>
+      <shop @changeLoading="changeLoading" :tag="'li'"><i class="iconfont">&#xe623;</i><i>娇友商城</i></shop>
+    </Popover>
+    <div class="header">
+      <div class="top">
+        <selectPhoto :amount="1" class="selectPhoto" :cutting="false" @fileBack="fileBack">
+          <a class="left" ><i class="iconfont">&#xe6d8;</i></a>
+        </selectPhoto><a class="right" @click="clickTopRight"><i class="iconfont">&#xe679;</i></a>娇友
+      </div>
+      <div class="menu-scroll">
+        <ul class="menu-ul">
+          <router-link :to="{name:'registrationActivity'}" tag="li">
+            <i class="jytd"></i>
+            <p>相亲<!--娇缘天地--></p>
+          </router-link>
+          <router-link :to="{name:'safeHouse'}" tag="li">
+            <i class="jyjw"></i>
+            <p>娇友金屋</p>
+          </router-link>
+          <router-link :to="{name:'prizeDraw',params:{ pagerouter:'main'}}" tag="li">
+            <i class="ssjq"></i>
+            <p>试试娇气</p>
+          </router-link>
+          <router-link :to="{name:'earnCoin'}" tag="li">
+            <i class="zjb"></i>
+            <p>赚乾坤币</p>
+          </router-link>
+          <shop @changeLoading="changeLoading" :tag="'li'"> <i class="jysc"></i>
+            <p>娇友商城</p></shop>
+        </ul>
+      </div>
+    </div>
+
+    <div class="myscroll">
+      <scroll ref="scroll" :pullDownRefresh="pullDownRefreshObj" :pullUpLoad="pullUpLoadObj" @pullingDown="onPullingDown" @pullingUp="onPullingUp" :ifinit="ifinit" :style="{height:myScrollerHeight+'px'}" :probeType="3" :listenScroll="true" @scroll="myscroll" :click="true">
+        <div class="m_banner">
+          <swiper :aspect-ratio="205/640" :loop="true" auto>
+            <swiper-item  v-for="(item, index) in slider"  :key="index">
+              <a v-if="item.id" @click.stop="gotoAd(item.adLink)"><img :src="$utils.getFullPath(item.adImg)" :alt="item.adName"><!--<span>{{item.adName}}</span>--></a>
+            </swiper-item>
+          </swiper>
+        </div>
+        <div class="block">
+          <div class="tit">
+            <router-link :to="{name:'rankingList'}" class="more">更多</router-link>
+            最美娇友
+          </div>
+          <scroller lock-y :scrollbar-x=false ref="zmjyScroller">
+            <ul class="zmjy-ul">
+              <template v-if="listArr">
+                <template v-if="listArr.length>0">
+                  <li v-for="item in listArr" :key="item.id">
+                    <a @click="topLink('userInfo',item.candidateId)" :style="'background-image:url('+getFullPath(item.coverimgAttachmentId)+');'">
+                      <i class="count">{{item.voteCount}}</i>
+                      <i class="name">{{item.aliasName}}</i>
+                    </a>
+                    <p data-tip="2.5km">
+                      <span @click="clickShowGift(item.aliasName,item.voteActivityId,item.candidateId)"><i class="iconfont">&#xe6e1;</i>打赏</span>
+                      <span @click="vote(item.voteActivityId,item.candidateId)"><i class="iconfont">&#xe603;</i>投票</span>
+                    </p>
+                  </li>
+                </template>
+                <template v-else>
+                  <div class="no-data">暂无数据</div>
+                </template>
+              </template>
+              <!--<li>-->
+              <!--<a :style="'background-image:url('+imgs.zmjy2+');'">-->
+              <!--<i class="count">12034</i>-->
+              <!--<i class="name">苼消墨</i>-->
+              <!--</a>-->
+              <!--<p data-tip="1.7km">-->
+              <!--<span><i class="iconfont">&#xe6e1;</i>打赏</span>-->
+              <!--<span><i class="iconfont">&#xe603;</i>投票</span>-->
+              <!--</p>-->
+              <!--</li>-->
+              <!--<li>-->
+              <!--<a :style="'background-image:url('+imgs.zmjy3+');'">-->
+              <!--<i class="count">12034</i>-->
+              <!--<i class="name">听说</i>-->
+              <!--</a>-->
+              <!--<p data-tip="1.7km">-->
+              <!--<span><i class="iconfont">&#xe6e1;</i>打赏</span>-->
+              <!--<span><i class="iconfont">&#xe603;</i>投票</span>-->
+              <!--</p>-->
+              <!--</li>-->
+              <!--<li>-->
+              <!--<a :style="'background-image:url('+imgs.zmjy4+');'">-->
+              <!--<i class="count">12034</i>-->
+              <!--<i class="name">背心萝莉</i>-->
+              <!--</a>-->
+              <!--<p data-tip="1.7km">-->
+              <!--<span><i class="iconfont">&#xe6e1;</i>打赏</span>-->
+              <!--<span><i class="iconfont">&#xe603;</i>投票</span>-->
+              <!--</p>-->
+              <!--</li>-->
+            </ul>
+          </scroller>
+        </div>
+        <dl class="tabs">
+          <dt class="indexListFixedHeight">
+            <i class="tab" :class="module==1?'cur':''" @click="getList(1)">附近邀约</i><i class="tab" :class="module==2?'cur':''" @click="getList(2)">附近的人</i>
+            <a class="filter menu-filter" @click="clickShowFilter"><i class="iconfont"></i></a>
+          </dt>
+          <dd>
+            <ul class="tabs_list cur">
+              <template v-if="nearArr">
+                <template v-if="nearArr.length>0">
+                  <template v-if="module==1">
+                    <li v-for="item in nearArr" :key="item.id" @click="toListItem(item.id)">
+                      <div class="tabs_image">
+                        <div :style="'background-image:url('+getFullPath(item.coverimgImages?item.coverimgImages:item.jiaoyouUser.headimgAttachmentId)+');'"><p class="red" v-if="item.toTop==1">顶</p></div>
+                      </div>
+                      <div class="tabs_desc">
+                        <p class="tabs_p">
+                          <span class="jy-type xy" v-if="item.activityMethod==1">选缘</span>
+                          <span class="jy-type qy" v-if="item.activityMethod==2">抢缘</span>
+                          <span class="jy-type jy" v-if="item.activityMethod==3">竞缘</span>
+                          <span class="jy-type zy" v-if="item.activityMethod==4">中缘</span>
+                          <span class="jy-type py" v-if="item.activityMethod==5">配缘</span>
+                          {{item.datingDesc.length>10?item.datingDesc.substr(0,10)+'...':item.datingDesc}}</p>
+                        <div>
+                          <p>{{activity[item.datingThemes]}}{{item.onlyTheme==0?'(不仅限)':'(仅限)'}}</p>
+                          <p>{{item.datingStarttime}}</p>
+                          <p>{{item.datingLocation}}</p>
+                        </div>
+                      </div>
+                      <a class="share_a" @click.stop="clickShare"><i class="iconfont">&#xe67a;</i></a>
+                    </li>
+                  </template>
+                  <template v-else>
+                    <div class="nearUser-content">
+                      <div v-for="item in nearArr" :key="item.id" >
+                        <router-link :to="{name:'userInfo',query:{id:item.id}}" :style="{'background-image':'url('+getFullPath(item.headimgAttachmentId)+')'}" tag="p"></router-link>
+                        <img @touchend="openVideo(getFullPath(item.videoUrl))" v-if="item.videoStatus==1" src="../../images/video.png"/>
+                        <p><span>{{item.aliasName}}</span><span><i>{{item.distance<1000?Fn.toFixed(item.distance)+'m':Fn.toFixed(item.distance/1000)+'km'}}</i></span></p>
+                      </div>
+                    </div>
+                  </template>
+                </template>
+              </template>
+            </ul>
+          </dd>
+        </dl>
+        <div slot="topdiv">
+        </div>
+      </scroll>
+      <div class="index-list-fixed" v-show="indexListFixed">
+        <dl class="tabs">
+          <dt>
+            <i class="tab" :class="module==1?'cur':''" @click="getList(1)">附近邀约</i><i class="tab" :class="module==2?'cur':''" @click="getList(2)">附近的人</i>
+            <a class="filter menu-filter" @click="clickShowFilter"><i class="iconfont"></i></a>
+          </dt>
+        </dl>
+      </div>
+    </div>
+    <Routerlink></Routerlink>
+    <div v-transfer-dom>
+      <popup class="dialog-gift" v-model="showGift" height="50%" :hide-on-blur="true" style="background-color: #FFFFFF;border-top-left-radius: 0.4rem;border-top-right-radius: 0.4rem;">
+        <div class="gift_con">
+          <div class="reward_title">打赏：<span>（ID：{{aliasName}}）</span><i @click="showGift=false"></i></div>
+          <div class="gift_list">
+
+            <div class="gift">
+              <template v-if="giftList">
+                <template v-if="giftList.length>0">
+                  <!--<div class="gift_li" :class="{active:giftId==item.id}" v-for="(item,index) in giftList" :key="item.id" @click="clickSelGift(item.id,item.giftName)">-->
+                  <!--<img :src="getFullPath(item.giftImage)" />-->
+                  <!--<p class="name">{{item.giftName}}</p>-->
+                  <!--<p class="jiaobi">乾坤币{{item.jiaobi}}</p>-->
+                  <!--</div>-->
+                  <swiper height="6.2rem" :show-dots="false" @on-index-change="onIndexChange">
+                    <swiper-item class="black" v-for="(item,index) in giftList" :key="index+1000">
+                      <div class="gift_li" v-for="(v,num) in item" :class="{active:giftId==v.id}" @click="clickSelGift(v.id,v.giftName,v.jiaobi)">
+                        <img :src="getFullPath(v.giftImage)" />
+                        <p class="name">{{v.giftName}}</p>
+                        <p class="jiaobi">乾坤币{{v.jiaobi}}</p>
+                      </div>
+                    </swiper-item>
+                  </swiper>
+                </template>
+              </template>
+            </div>
+            <div class="diot" @click.stop="">
+              <span v-for="item,index in giftList" :key="index" :class="{active:activeIndex==index}"></span>
+            </div>
+          </div>
+          <div class="footer"><img src="../../images/coin.png"/><span>{{userMoney}}</span><div class="gift_button" @click="reward">确定打赏<br><span>{{giftName?'（'+giftName+'）':''}}</span> </div><span class="cz" @click="topLink('recharge')">充值</span> </div>
+        </div>
+      </popup>
+    </div>
+    <share :show="showShare" @changeShow="changeShow"></share>
+    <div v-transfer-dom>
+      <x-dialog v-model="showChooseThemes" hide-on-blur class="dialog-chooseThemes" :dialog-style="{'max-width': '100%', width: '100%','padding': '20px 0', 'background-color': 'transparent'}">
+        <div class="chooseThemes">
+          <p>发起邀约<i class="iconfont" @click="showChooseThemes=false">&#xe67c;</i></p>
+          <div>
+            <div><p @click="chooseThemes(1)"><img src="../../images/travel.png"/></p><i>旅行</i></div>
+            <div><p @click="chooseThemes(2)"><img src="../../images/eat.png"/></p><i>吃饭</i></div>
+            <div><p @click="chooseThemes(3)"><img src="../../images/movie.png"/></p><i>电影</i></div>
+            <div><p @click="chooseThemes(4)"><img src="../../images/sing.png"/></p><i>唱歌</i></div>
+            <div><p></p></div>
+            <div><p @click="chooseThemes(5)"><img src="../../images/sport.png"/></p><i>运动</i></div>
+            <div> <p @click="chooseThemes(99)"><img src="../../images/other.png"/></p><i>其他</i></div>
+            <div><p></p></div>
+          </div>
+        </div>
+      </x-dialog>
+    </div>
+    <div v-transfer-dom>
+      <popup v-model="showFilter" :height="module==1?'73%':'45%'" :show-mask="shPlacePicker?false:true">
+        <div class="shade" :hide-on-blur="true">
+          <div>
+            <div class="filterPopover">
+              <template v-if="module==1">
+                <div>
+                  <p><i class="location_icon"></i>地区</p>
+                  <div>
+                    <span @click="location=0" :class="{active:location==0}">不限</span>
+                    <span @click="showPlacePicker" :class="{active:location==1}" style="width: 50%;">{{place===''?'选择地点':place}}</span>
+                  </div>
+                  <group style="display: none">
+                    <popup-picker :data="areaData" :columns="3" v-model="selectArea" show-name :popup-style="{zIndex:502,backgroundColor:'#fff'}" ref="placePicker" :show.sync="shPlacePicker"></popup-picker>
+                  </group>
+                  <div class="dp-mask" style="opacity: 0.5;z-index: 502;" v-if="shPlacePicker" @click="shPlacePicker=false"></div>
+                </div>
+                <div>
+                  <p><i class="time_icon"></i>约会时间</p>
+                  <div>
+                    <span @click="datingTime=''" :class="{active:datingTime==''}">不限</span>
+                    <div @click="datingTime=1" :class="{active:datingTime==1}" class="date_range">
+                      <span class="startDate" @click="shStartDate=true">{{startDate}}</span><span class="jgf">~</span><span class="endDate" @click="shEndDate=true">{{endDate}}</span>
+                    </div>
+                    <group style="display: none">
+                      <datetime v-model="startDate" :class="{active:datingTime==1}" @on-confirm="onConfirm" :show.sync="shStartDate"></datetime>
+                    </group>
+                    <group style="display: none">
+                      <datetime v-model="endDate" :class="{active:datingTime==1}" @on-confirm="onConfirm" :show.sync="shEndDate"></datetime>
+                    </group>
+                  </div>
+                </div>
+              </template>
+              <div>
+                <p><i class="sex_icon"></i>性别</p>
+                <div>
+                  <span @click="sex=''" :class="{active:sex==''}">不限</span>
+                  <span @click="sex=2" :class="{active:sex==2}">男</span>
+                  <span @click="sex=1" :class="{active:sex==1}">女</span>
+                </div>
+              </div>
+              <div>
+                <p><i class="verification_icon"></i>认证</p>
+                <div>
+                  <span @click="auth" :class="{active:withoutAuth}">不限</span>
+                  <span @click="authentication.idcard==1?authentication.idcard='':authentication.idcard=1" :class="{active:authentication.idcard}">身份认证</span>
+                  <span @click="authentication.car==1?authentication.car='':authentication.car=1" :class="{active:authentication.car}">车辆认证</span>
+                  <span @click="authentication.video==1?authentication.video='':authentication.video=1" :class="{active:authentication.video}">视频认证</span>
+                  <span @click="authentication.house==1?authentication.house='':authentication.house=1" :class="{active:authentication.house}">房产认证</span>
+                  <span @click="authentication.health==1?authentication.health='':authentication.health=1" :class="{active:authentication.health}">健康认证</span>
+                </div>
+              </div>
+              <button @click="filterMakesure">确定</button>
+            </div>
+          </div>
+        </div>
+      </popup>
+    </div>
+  </div>
+</template>
+<script>
+  import Routerlink from '../routerlink.vue';
+  import Loading from '@other/loading.vue';
+  import Share from '@/components/home/share.vue'
+  import shop from '@other/shop.vue';
+  import myScroller from '../scroller/myScroller.vue';
+  import Slider from '@/components/scroller/slider.vue'
+  import Scroll from '@/components/betterscroll/scroll/scroll.vue'
+  import Popover from '@/components/plugs/popover.vue'
+  import { TransferDom,Group,Popup,Swiper, SwiperItem,Scroller ,XDialog,PopupPicker,Datetime} from 'vux';
+  import selectPhoto from '../plugs/selectPhoto'
+  export default {
+    name: 'home',
+    directives: {
+      TransferDom
+    },
+    components: {
+      Routerlink,
+      Loading,
+      myScroller,
+      Slider,
+      Swiper,
+      SwiperItem,
+      Scroll,
+      Popover,
+      Scroller,
+      Group,
+      Popup,
+      XDialog,
+      PopupPicker,
+      Datetime,
+      selectPhoto,
+      shop,
+      Share,
+    },
+    data() {
+      return {
+        isloading: false,
+        loadRefresh: true,//下拉刷新
+        loadInfinite: false, //上拉加载
+        indexListFixed: false,
+        indexListFixedHeight: 0,
+        myScrollerHeight: 0,
+        scroll: null,
+        ifinit: false,
+        pullDownRefresh: true,
+        pullDownRefreshThreshold: 60,
+        pullDownRefreshStop: 40,
+        pullUpLoad: true,
+        pullUpLoadThreshold: 0,
+        slider: null,
+        activity:{1:'旅行',2:'吃饭',3:'电影',4:'唱歌',5:'运动',99:'其他' },
+        module: 1,
+        listArr:[],
+        nearArr:[],
+        showGift:false,//打赏礼品弹出层
+        userMoney:0,
+        amount: 0,
+        activeIndex:0,
+        giftList:[],
+        activeId:null,//活动编号
+        candidateId:null,//活动用户id
+        aliasName:null,//活动用户名称
+        giftId:null,//礼物Id
+        giftName:null,//礼物名称
+        showPopover: false,//右上角弹出层
+        showShare:false,//分享弹出层
+        showFilter:false,//筛选弹出层
+        showChooseThemes:false,
+        sex: "",//0男1女""不限
+        location: "",//1选择""不限
+        shPlacePicker:false,
+        areaData: [],//省市区列表
+        selectArea: [],//选择的失去列表
+        place:"",//显示的值
+        datingTime: "",//1选择""不限
+        shStartDate:false,
+        shEndDate:false,
+        startDate: this.getToday(),
+        endDate: this.getToday(),
+        feedMaxImg: 6,//发布最大图片数量
+        authentication:{//认证信息0不需要1需要
+          idcard:"",
+          car:"",
+          house:"",
+          health:"",
+          video:"",
+        },
+        //分页参数
+        page:1,
+        rows:20,
+      }
+    },
+    computed: {
+      handleRoute(){
+        return this.$store.state.handleRoute;
+      },
+      pullDownRefreshObj: function () {
+        return this.pullDownRefresh ? {
+          threshold: parseInt(this.pullDownRefreshThreshold),
+          stop: parseInt(this.pullDownRefreshStop)
+        } : false
+      },
+      pullUpLoadObj: function () {
+        return this.pullUpLoad ? {
+          threshold: parseInt(this.pullUpLoadThreshold)
+        } : false
+      },
+      withoutAuth(){
+        return this.authentication.idcard==""&&this.authentication.car==""&&this.authentication.house==""&&this.authentication.health==""&&this.authentication.video==""
+      },
+    },
+    watch:{
+      handleRoute(newV){
+        if(!newV){
+          this.showPopover=false;
+          this.showShare=false;
+          this.showFilter=false;
+          this.showChooseThemes=false;
+          this.showGift=false;
+        }
+      },
+      showGift(newV){
+        let status = this.showPopover||this.showShare||this.showFilter||this.showChooseThemes||this.showGift
+        this.$store.commit("CHANGEHANDLEROUTE",status)
+      },
+      showPopover(newV){
+        let status = this.showPopover||this.showShare||this.showFilter||this.showChooseThemes||this.showGift
+        this.$store.commit("CHANGEHANDLEROUTE",status)
+      },
+      showShare(newV){
+        let status = this.showPopover||this.showShare||this.showFilter||this.showChooseThemes||this.showGift
+        this.$store.commit("CHANGEHANDLEROUTE",status)
+      },
+      showFilter(newV){
+        let status = this.showPopover||this.showShare||this.showFilter||this.showChooseThemes||this.showGift
+        this.$store.commit("CHANGEHANDLEROUTE",status)
+      },
+      showChooseThemes(newV){
+        let status = this.showPopover||this.showShare||this.showFilter||this.showChooseThemes||this.showGift
+        this.$store.commit("CHANGEHANDLEROUTE",status)
+      },
+      selectArea(){
+        if(this.$refs.placePicker){
+          this.place = this.$refs.placePicker.getNameValues();
+        }
+      },
+    },
+    beforeRouteEnter(to, from, next) {
+      setTimeout(() => {
+        next();
+      }, 300);
+    },
+    created (){
+
+    },
+    destroyed () {
+    },
+    mounted() {
+      //$(".dialog-chooseThemes").find(".weui-mask").css({'background-color':'rgba(0,0,0,0)'})
+      if(window.api){
+        this.initRongYun();
+      }
+      this.getIndexAdList();
+      this.getZMJYList();
+      this.getGiftList();
+      this.getList(this.module);
+      this.getDistrict();
+      this.myScrollerHeight = document.body.clientHeight - $(".header").height() - $(".menu").height() - $(".tabs.tabs_love dt").height() - (0.75 + 0.34) * parseInt(document.documentElement.style.fontSize) - 3;
+      this.indexListFixedHeight = $(".indexListFixedHeight").height()
+      this.userMoney = this.$store.state.userInfo.userMoney;
+      this.$nextTick(function () {
+        this.ifinit = true;
+      })
+      this.$nextTick(() => {
+        this.$refs.zmjyScroller.reset({top: 0})
+      })
+    },
+    methods: {
+      changeLoading(val){
+        this.isloading=val;
+      },
+      gotoAd(link){
+        const t=this;
+        let params=t.Fn.toUrl(link);
+        if(params.name){
+          t.$router.push({name:params.name,query:params.query});
+        }
+      },
+      openVideo(path){
+        if(path){
+          this.$utils.moviePlay(path)
+        }
+      },
+      async fileBack(obj) {
+        const t = this
+        t.file = obj.file//提交的图片
+        if (t.file) {
+          t.$store.commit("FILEIMAGE",t.file);
+          t.$router.push({name:"addMoment",query:{to:"photo"}});
+
+        } else {
+          t.$vux.toast.show({
+            type: "text",
+            text: "图片出错",
+            position: "bottom",
+            width: "2rem",
+          });
+        }
+      },
+      getFullPath (path) {
+        return this.$utils.getFullPath(path)
+      },
+      toListItem(id){
+        this.$router.push({
+          path: "/act",
+          query: {
+            id: id
+          }
+        })
+      },
+      topLink(link,id) {
+        let query = null
+        if (id) {
+          query = {
+            id: id
+          }
+        }
+        this.$router.push({
+          path: link,
+          query: query
+        })
+      },
+      auth(){
+        this.authentication.idcard="";
+        this.authentication.car="";
+        this.authentication.house="";
+        this.authentication.health="";
+        this.authentication.video="";
+      },
+      async getGiftList() {
+        let listData = await this.$server.getGiftList();
+        if(listData.data.data){
+          this.giftList=[];
+          let data = listData.data.data;
+          let page = Math.ceil(data.length/8)
+          for(let i=0;i<page;i++){
+            let arr=[];
+            for(let j=0;j<8;j++){
+              if(8*i+j==data.length){
+                break;
+              }
+              arr.push(data[8*i+j])
+            }
+            this.giftList.push(arr);
+          }
+        }
+      },
+      clickShowGift(aliasName,activeId,candidateId){
+        if(this.$store.state.userInfo.id==candidateId){
+          this.$vux.toast.show({
+            type: 'text',
+            text: '不能给自已打赏',
+            position: 'middle',
+            width: 'auto',
+          })
+          return false;
+        }
+        this.showGift = !this.showGift;
+        this.aliasName = aliasName;
+        this.activeId = activeId;
+        this.candidateId = candidateId;
+      },
+      onIndexChange(index){
+        this.activeIndex = index
+      },
+      clickSelGift(id,name,jiaobi){
+        this.giftId=id;
+        this.giftName = name;
+        this.amount = jiaobi;
+      },
+      clickTopRight() {
+        this.showPopover = !this.showPopover;
+      },
+      topRightItem(num) {
+        if(num==1){
+          this.showChooseThemes=true;
+        }else if(num==2){
+          this.showShare=!this.showShare
+        }
+        this.showPopover = false;
+      },
+      closePopover(val) {
+        this.showPopover = val;
+      },
+      chooseThemes(index){
+        let path = '/publish/main'
+        if(index==1){//旅行
+          path = '/travel/main'
+        }else if(index==2||index==4){
+
+        }else if(index==5||index==99){
+          path = '/other/main'
+        }else if(index==3){
+          path = '/movie/main'
+        }
+        this.showChooseThemes=false;
+        this.$router.push({
+          path: path,
+          query:{
+            datingThemes:index
+          }
+        })
+      },
+      async getDistrict() {
+        let listData = await this.$server.getDistrict();
+        this.areaData = listData.data.data;
+      },
+      getToday() {//获取当前月第一天
+        let myDate = new Date();
+        let year = myDate.getFullYear();//获取当前年
+        let yue = myDate.getMonth() + 1;//获取当前月
+        let ri = myDate.getDate();//获取当前日
+        return year + '-' + yue + '-' + ri;
+      },
+      onConfirm() {
+        let start = new Date(this.startDate.replace("-", "/").replace("-", "/"));
+        let end = new Date(this.endDate.replace("-", "/").replace("-", "/"));
+        if (end < start) {
+          this.$vux.toast.show({
+            type: "cancel",
+            text: "开始日期不能大于结束日期",
+            position: "bottom",
+            width: "2rem",
+          })
+          return false;
+        }
+      },
+      clickShowFilter(){
+        this.showFilter = !this.showFilter;
+      },
+      filterMakesure(){
+        console.log(JSON.stringify("性别："+this.sex+"；约会开始时间："+this.startDate+"；结束时间："+this.endDate))
+        console.log(JSON.stringify(this.authentication))
+        this.getList(this.module,null,true,this.sex,this.authentication,this.selectArea,this.datingTime,this.startDate,this.endDate);
+        this.showFilter = false;
+      },
+      clickShare() {
+        this.showShare = !this.showShare;
+        this.showPopover=false;
+      },
+      changeShow(val){
+        this.showShare=val;
+      },
+      myscroll(pos) {
+        const newVal = pos.y;
+        if (!this.beforeIndexListFixedHeight) {
+          this.beforeIndexListFixedHeight = $(".m_banner").height() + $(".block").height()+$(".tabs").height() + (0.54) * parseInt(document.documentElement.style.fontSize)
+        }
+        if (newVal > -this.beforeIndexListFixedHeight) {
+          this.indexListFixed = false
+          return
+        }
+        this.indexListFixed = true
+      },
+      async initRongYun(){
+        try{
+          this.isloading=true;
+          this.$db.insertOrUpdateUser([{userId:this.$store.state.userId,userName:this.$store.state.userInfo.aliasName,userIcon:this.$store.state.userInfo.headimgAttachmentId}],this.$store.state.userId)
+          if(this.$store.state.rongYunToken==''){
+            let result= await this.$server.getRongYunToken();
+            this.$store.commit('CHANGERONGYUNTOKEN',result.data.data.token)
+            //初始化融云
+            const rong = window.api.require('rongCloud2');
+            this.$store.commit('CHANGERONGCLOUD',rong)
+            let result1 = await this.$store.dispatch("initRongyun");
+          }
+          this.isloading=false;
+          if(window.api.systemType == "ios"){
+
+          }else{
+          }
+        }catch (e) {
+          console.log("错误码："+JSON.stringify(e))
+          this.$store.dispatch("getConversationList")
+          this.isloading=false;
+          this.$vux.toast.show({
+            type:"cancel",
+            text: "即时通讯组件初始化失败，请退出后重试",
+            position:"middle",
+            width:"auto",
+          });
+        }
+        let messageresult = await this.$store.dispatch("insertMessage");
+        if(this.$store.state.registrationId==null){
+          let result2 = await this.$store.dispatch("initJpush");
+        }
+      },
+      async getIndexAdList() {//获取首页广告列表
+        const _this = this
+        let result = await _this.$server.indexAdList();
+        if (result.data.status==1) {
+          _this.slider = result.data.data;
+        }
+      },
+      async getZMJYList(search) {
+        const _this = this;
+        let data = Object.assign({
+          page:1,
+          rows:10
+        },search)
+        this.$vux.loading.show();
+        let result = await _this.$server.candidateVoteStatTotal(data);
+        if(result.data.list){
+          this.listArr=[];
+          _this.listArr.push(...result.data.list);
+        }
+        this.$vux.loading.hide()
+      },
+      async reward() {
+        this.$vux.loading.show();
+        const _this = this;
+        let data ={
+          "receiverUser.id":_this.candidateId,
+          "objectId":_this.activeId,
+          "giftId":_this.giftId,
+          "amount": _this.amount
+        }
+        let result = await _this.$server.giveGift(data);
+        _this.showGift=false;
+        _this.userMoney = parseInt(_this.$store.state.userInfo.userMoney - _this.amount)
+        _this.$store.commit('EDITUSERINFO',{key:"userMoney" ,value:_this.userMoney});
+        this.$vux.toast.show({
+          type:"text",
+          text: "打赏成功",
+          position:"middle",
+          width:"auto",
+        });
+        this.$vux.loading.hide();
+      },
+      async vote(activityId,candidateId) {
+        this.$vux.loading.show();
+        const _this = this;
+        let result = await _this.$server.activityVote(activityId,candidateId);
+        if(result.data.status==1){
+          this.$vux.toast.show({
+            type:"text",
+            text: "投票成功",
+            position:"middle",
+            width:"auto",
+          });
+        }
+        this.$vux.loading.hide();
+      },
+      async onPullingDown() {
+        // 模拟更新数据
+        console.log('下拉刷新')
+        this.$refs.scroll.openPullUp()
+        await this.getZMJYList();
+        await this.getGiftList();
+        let totalPage = await this.getList(this.module,null,true);
+      },
+      async onPullingUp() {
+        // 更新数据
+        console.log('上拉加载')
+        await this.getZMJYList();
+        await this.getGiftList();
+        let totalPage = await this.getList(this.module)
+      },
+      refresh(done) {//下拉刷新
+        console.log("刷新 ");
+        setTimeout(()=>{
+          console.log("刷新完成");
+          done();
+        },1000);
+      },
+      infinite(done){
+        console.log("加载 ");
+        setTimeout(()=>{
+          console.log("加载完成");
+          done(true);
+        },1000);
+      },
+      async getList(module,search,PullingDown,sex,authentication,areaId,datingTime,startDate,endDate){
+        try{
+          const _this = this;
+          if(_this.module!=module){
+            this.page = 1;
+            _this.nearArr=[];
+            this.$refs.scroll.openPullUp()
+            console.log("打开上拉加载")
+          }
+          if(PullingDown){
+            this.page = 1;
+          }
+          _this.module = module;
+          this.$vux.loading.show();
+          let location = await this.$store.dispatch("getMylocation");
+          let data = Object.assign({
+            latitude:location.lat,
+            longitude: location.lon,
+            sex:sex,
+            idStatus:authentication&&authentication.idcard,
+            houseStatus:authentication&&authentication.house,
+            carStatus:authentication&&authentication.car,
+            healthyStatus:authentication&&authentication.health,
+            videoStatus:authentication&&authentication.video,
+            areaId:areaId&&areaId[areaId.length - 1],
+            beginDatingStarttime:datingTime==1?startDate+" 00:00:00":"",
+            endDatingStarttime:datingTime==1?endDate+" 00:00:00":"",
+            page:this.page,
+            rows:this.rows
+          },search)
+          let result = null;
+          if (_this.module == 1) {
+            result = await _this.$server.searchDatingList(data);
+          } else {
+            result = await _this.$server.nearUser(data);
+          }
+          this.page++
+          if(PullingDown){
+            _this.nearArr=[];
+          }
+          if(result.data.list){
+            _this.nearArr.push(...result.data.list);
+          }
+          this.$vux.loading.hide()
+          this.$refs.scroll.forceUpdate()
+          if(this.page>result.data.totalPage){
+            console.log("关闭上拉加载")
+            this.$refs.scroll.closePullUp()
+          }
+          return Promise.resolve(result.data.totalPage)
+        }catch (e) {
+          console.log(e)
+          return Promise.reject("error")
+        }
+      },
+      showPlacePicker(){
+        this.location=1;
+        this.shPlacePicker=!this.shPlacePicker;
+      },
+    }
+  }
+</script>
+<style scoped lang="scss">
+  .main {
+    padding-top: 0 !important;
+    &:before {
+      display: none !important;
+    }
+    .popover {
+      li {
+        height: 1.52rem;
+        line-height: 1.52rem;
+        width: 4.3rem;
+        border-bottom: 1px solid #f9f9f9;
+        & > i {
+          margin-left: 0.46rem;
+          font-size: 0.44rem;
+        }
+        span {
+          margin-left: 0.46rem;
+          display: inline-block;
+          height: 1.52rem;
+          line-height: 1.52rem;
+          vertical-align: top;
+          i {
+            display: block;
+            font-size: 0.44rem;
+            height: 0.76rem;
+            line-height: 1.08rem;
+          }
+          i:last-child {
+            font-size: 0.3rem;
+            line-height: 0.44rem;
+            color: #b0b0b0;
+          }
+        }
+        &:nth-of-type(1) .iconfont, &:nth-of-type(4) .iconfont {
+          color: #f6840f;
+        }
+        &:nth-of-type(2) .iconfont, &:nth-of-type(3) .iconfont {
+          color: #1296db;
+        }
+      }
+    }
+    .header {
+      .top {
+        background-color: transparent!important;
+        color: #000;
+        font-size: 0.52rem;
+        position: relative;
+        i {
+          font-size: 0.52rem;
+        }
+        a {
+          position: absolute;
+          padding: 3px;
+        }
+        .left {
+          left: 0.325rem;
+        }
+        .right {
+          right: 0.325rem;
+        }
+      }
+    }
+    .m_banner {
+      position: relative;
+      overflow: hidden;
+      height: 3.8rem;
+      margin-bottom: -1px;
+      a {
+        img{
+          display: block;
+          width: 100%;
+        }
+        span {
+          position: absolute;
+          top: 0.28rem;
+          right: -0.18rem;
+          width: 2.2rem;
+          height: 0.5rem;
+          line-height: 0.55rem;
+          background-color: #FFFFFF;
+          text-align: center;
+          border: 1px solid #FFFFFF;
+          border-radius: 10px;
+          font-size: 0.32rem;
+          color: #000000;
+        }
+      }
+    }
+    .myscroll {
+      position: relative;
+      .index-list-fixed {
+        position: absolute;
+        z-index: 1;
+        top: 0;
+        left: 0;
+        width: 100%;
+      }
+    }
+    .list-wrapper {
+      overflow: hidden;
+      margin: 0.34rem 0 0;
+      background-color: initial;
+      dd {
+        li {
+          & > div {
+            display: inline-block;
+          }
+          .tabs_image {
+            vertical-align: top;
+            width: 2.39rem;
+            height: 2.39rem;
+            & > div {
+              width: 100%;
+              height: 100%;
+              background-size: 100%;
+              border-radius: 3px;
+              p {
+                background-color: #ff5a00;
+                border-radius: 3px 0;
+                color: #FFF;
+                width: 0.4rem;
+                height: 0.4rem;
+                line-height: 0.4rem;
+                text-align: center;
+                font-size: 0.2rem;
+              }
+            }
+          }
+          .tabs_desc {
+            padding: 0 0 0 0.27rem;
+            width: 70%;
+            height: 2.39rem;
+          }
+        }
+      }
+    }
+  }
+  .dialog-chooseThemes{
+    .chooseThemes{
+      background-color: #FFF;
+      width: 9.96rem;
+      margin: auto;
+      /*box-shadow: 0 0 10px 5px #e1e1e1;*/
+      line-height: 1;
+      overflow: hidden;
+      border-radius: 10px;
+      &>p{
+        position: relative;
+        padding:0.62rem 0 0.4rem;
+        font-size: 0.5rem;
+        .iconfont{
+          position:absolute;
+          right: 5px;
+          top:5px;
+          font-size: 0.6rem;
+        }
+      }
+      &>div{
+        margin: 0.9rem auto;
+        color:#8e8e8e;
+        width: 8.8rem;
+        font-size: 0.36rem;
+        line-height: 1.2;
+        display: flex;
+        flex-wrap:wrap;
+        justify-content:space-between;
+        div{
+          margin-bottom: 0.33rem;
+          p{
+            width: 1.9rem;
+            height: 1.9rem;
+            img{
+              width: 100%;
+            }
+          }
+          i{
+            display: inline-block;
+            margin: 0.24rem 0;
+            font-size: 0.38rem;
+          }
+        }
+      }
+    }
+  }
+
+  .shade{
+    width: 100%;
+    height: 100%;
+    position:absolute;
+    top:0;
+    left: 0;
+    z-index: 100;
+    overflow: hidden;
+    &>div{
+      position:relative;
+      top:0;
+      height: 100%;
+      background-color: #efefef;
+      overflow: hidden;
+    }
+  }
+  .selectPhoto{
+    width:1.5rem;
+    .left{
+      top:0.35rem;
+    }
+  }
+  .filterPopover{
+    padding:0 0.5rem;
+    &>div{
+      color:#908f92;
+      padding: 0.1rem 0;
+      border-bottom: 1px solid #b9b9b9;
+      &:last-of-type{
+        border-bottom: none;
+      }
+      p{
+        height:1.4rem;
+        line-height: 1.4rem;
+        font-size: 0.36rem;
+        font-weight: 500;
+        i{
+          display: inline-block;
+          width: 0.26rem;
+          height: 0.36rem;
+          background-repeat: no-repeat;
+          background-size: 100% 100%;
+          margin-right: 0.2rem;
+          &.location_icon{
+            background-image: url("../../images/position_icon.png");
+          }
+          &.time_icon{
+            background-image: url("../../images/position_icon.png");
+          }
+          &.sex_icon{
+            width: 0.33rem;
+            height: 0.31rem;
+            background-image: url("../../images/sex_icon.png");
+          }
+          &.verification_icon{
+            width: 0.31rem;
+            height: 0.35rem;
+            background-image: url("../../images/renzheng_icon.png");
+          }
+        }
+      }
+      div{
+        display: flex;
+        justify-content: space-between;
+        flex-wrap:wrap;
+        &:after {
+          content: "";
+          width: 46%;
+        }
+        span{
+          font-size: 0.34rem;
+          width: 23%;
+          height: 0.76rem;
+          line-height: 0.76rem;
+          text-align: center;
+          margin-bottom: 0.34rem;
+          box-sizing: border-box;
+          &.active{
+            background-color:#fff;
+            border-radius: 5px;
+            border: 1px solid #70c466;
+            color:#70c466;
+          }
+        }
+      }
+    }
+    .date_range{
+      width: 70%;
+      height: 0.76rem;
+      line-height: 0.76rem;
+      text-align: center;
+      &.active{
+        background-color:#fff;
+        border-radius: 5px;
+        border: 1px solid #70c466;
+        color: #70c466 !important;
+      }
+      span{
+        &.jgf{
+          width: 5%;
+        }
+        &.startDate{
+          position: relative;
+          width: 40%;
+          &:after{
+            content: "";
+            width: 0.34rem;
+            height: 0.34rem;
+            background: url("../../images/calendar_icon.png") no-repeat;
+            background-size: 100% 100%;
+            position: absolute;
+            top: 0.18rem;
+            right: -0.1rem;
+          }
+        }
+        &.endDate{
+          position: relative;
+          width: 40%;
+          text-align: left;
+          &:after{
+            content: "";
+            width: 0.34rem;
+            height: 0.34rem;
+            background: url("../../images/calendar_icon.png") no-repeat;
+            background-size: 100% 100%;
+            position: absolute;
+            top: 0.18rem;
+            right: 0.3rem;
+          }
+        }
+      }
+    }
+    button{
+      height: 1.13rem;
+      line-height: 1.13rem;
+      width: 100%;
+      margin-bottom: 0.54rem;
+      border: 1px solid #d4d4d4;
+      color:#70c466;
+      background-color:#fff;
+    }
+  }
+</style>

@@ -1,0 +1,391 @@
+<template>
+  <div class="main jy_all_top jy_bill">
+    <Loading v-if="isloading"></Loading>
+    <div class="header">
+      <div class="top">
+        <Back class="left"><i class="iconfont">&#xe613;</i></Back>
+        <a class="right" @click="showModal=true">大奖说明</a>
+        <p>人脉能量排行</p>
+      </div>
+    </div>
+
+    <myScroller :style="$store.state.isBrowser?'padding:1.65rem 0 0;':'padding:2.4rem 0 0;'" :noDataText="noDataText" :infinite="infinite" :refresh="refresh" :loadRefresh="loadRefresh" :loadInfinite="loadInfinite" ref="myScroller">
+      <ul class="energy_ul" v-if="rankingList">
+        <li v-for="item,index in rankingList">
+          <div class="ranking_index" :class="index==0?'first':index==1 ? 'second':index==2 ? 'third':''">{{index+1}}
+          </div>
+          <div class="headImg" :style="'background-image:url('+getFullPath(item.headimgAttachmentId)+')'"></div>
+          <div class="ranking_info">
+            <p>{{item.aliasName}}</p>
+            <p><em class="jy_auth_age" :style="{'background-color':(item.sex==1?'':'rgb(0, 180, 255)')}">{{item.sex==1?'&#xe64a;':'&#xe605;'}}{{item.age}}</em>
+            </p>
+          </div>
+          <div class="ranking_num"><i class="iconfont">&#xe664;</i>{{item.sumMoney}}</div>
+        </li>
+      </ul>
+    </myScroller>
+
+    <!--<div v-transfer-dom>
+      <x-dialog v-model="showModal" hide-on-blur :dialog-style="{'max-width': '90%', width: '90%','padding': '0.4rem 0',borderRadius: '0.4rem'}">-->
+    <div class="energy_wrap" v-if="showModal">
+      <div class="energy_container">
+        <div class="energy_title"><i class="iconfont" @click="showModal=false">&#xe7de;</i>大奖说明</div>
+        <div class="energy_con">
+
+          <div class="energy_content">
+            <!--<p class="desc">分享文章获得的点击量与分享注册获得的注册量，两方面合起来作为能量奖。2月28日上午10点截止，对能量排名前10位（能量乾坤值不低于1000）嘉宾给予奖励。</p>-->
+            <p class="desc">能量大奖是乾坤岛举行的个人脉能量比赛，每个月平台将会进行人脉能量排名，排名前10位即获得能量大奖。(能量值不低于1000)</p>
+            <p class="desc">用户可以通过分享平台指定的文章或邀请朋友注册来获得乾坤币（
+              <router-link :to="{name:'earnCoin'}" style="color: #e95548">立刻分享赚取乾坤币</router-link>
+              ），能量大奖活动以用户获得的乾坤币的数量为能量值，每增加一个查看您分享文章或注册的朋友，您的乾坤币就会增加，相应的您的能量值也会增加。
+            </p>
+            <p class="desc">能量值统计截止时间是每个月最后一天的23点59分，您可以通过微信的能量大奖排行实时看到自己的名次。</p>
+            <p class="desc">禁止采用非正常手段积累人脉能量值,一经发现取消参赛资格</p>
+            <p class="jxsz_title">奖项设置</p>
+            <table>
+              <tr>
+                <th>特等奖：1名</th>
+                <th>一等奖：2名</th>
+              </tr>
+              <tr>
+                <td>1.一年VIP会费</td>
+                <td>1.一年VIP会费</td>
+              </tr>
+              <tr>
+                <td>2.代理权</td>
+                <td>2.代理权</td>
+              </tr>
+              <tr>
+                <td>3.1000RMB</td>
+                <td>3.500RMB</td>
+              </tr>
+              <tr>
+                <td>4.5000个乾坤币</td>
+                <td>4.3000个乾坤币</td>
+              </tr>
+            </table>
+            <table>
+              <tr>
+                <th>二等奖：3名</th>
+                <th>三等奖：4名</th>
+              </tr>
+              <tr>
+                <td>1.一年VIP会费</td>
+                <td>1.一年VIP会费</td>
+              </tr>
+              <tr>
+                <td>2.代理权</td>
+                <td>2.代理权</td>
+              </tr>
+              <tr>
+                <td>3.200RMB</td>
+                <td>3.100RMB</td>
+              </tr>
+              <tr>
+                <td>4.2000个乾坤币</td>
+                <td>4.1000个乾坤币</td>
+              </tr>
+            </table>
+          </div>
+          <div class="red_btn" @click="showModal=false">确定</div>
+        </div>
+      </div>
+    </div>
+    <!-- </x-dialog>
+   </div>-->
+  </div>
+</template>
+
+<script>
+  import Loading from '@other/loading.vue';
+  import Back from '@other/back.vue';
+  import myScroller from '@other/myScroller.vue';
+  import {TransferDom, XDialog} from 'vux';
+
+  export default {
+    name: 'energyRanking',
+    data() {
+      return {
+        isloading: false,
+        showModal: false,
+        year: null,
+        month: null,
+        rankingList: null,
+        pageNo: 1,
+        isRead: false,
+        isEnd: false,
+        loadRefresh: true,//下拉刷新
+        loadInfinite: true, //上拉加载
+        noDataText: "",
+      }
+    },
+    directives: {
+      TransferDom,
+    },
+    components: {
+      Loading,
+      Back,
+      myScroller,
+      XDialog,
+    },
+    destroyed() {
+      $("body").removeClass(" fullscreen");
+    },
+    computed: {},
+    watch: {
+      isEnd(val) {
+        const t = this;
+        if (val) {
+          t.$refs.myScroller.finishInfinite(true);
+        } else {
+          t.$refs.myScroller.finishInfinite(false);
+        }
+      },
+    },
+    mounted() {
+      const t = this;
+      t.year = t.$route.query.year;
+      t.month = t.$route.query.month;
+      $("body").addClass(" fullscreen");
+    },
+    methods: {
+      getFullPath(path) {
+        return this.$utils.getFullPath(path)
+      },
+      async getRankingList(flag) {
+        const t = this;
+        if (t.isRead) {
+          return false;
+        }
+        t.isRead = true;
+        t.noDataText = '正在加载...';
+        if (t.isRefresh || flag) {
+          t.pageNo = 1;
+          if (flag) {
+            t.isloading = true;
+          }
+        }
+        if (!t.year && !t.month) {
+          let myDate = new Date();
+          t.year = myDate.getFullYear();//获取当前年
+          t.month = myDate.getMonth() + 1;//获取当前月
+        }
+        try {
+          const result = await t.$server.monthlyTaskRewardRanking({
+            year: t.year,
+            month: t.month,
+            page: t.pageNo,
+            rows: t.$store.state.pageSize
+          });
+          if (!t.rankingList || t.isRefresh || flag) {
+            t.$refs.myScroller.scrollTo(1);
+            t.rankingList = [];
+          }
+          if (result.data.data) {
+            t.rankingList.push(...result.data.data);
+          }
+          if ((result.data.data.length+1) <= t.$store.state.pageSize * t.pageNo || result.data.data.length < t.$store.state.pageSize) {//判断是否最后一页
+            t.noDataText = '已加载全部数据';
+            t.isEnd = true;
+          } else {
+            t.isEnd = false;
+            t.$refs.myScroller.finishInfinite(false);
+          }
+        } catch (e) {
+          t.noDataText = "加载异常,请重试";
+          t.isEnd = true;
+          console.log(e)
+        }
+		t.noDataText = '已加载全部数据';
+        t.isEnd = true;
+        t.isRead = false;
+        t.isloading = false;
+        t.isRefresh = false;
+        t.pageNo++;
+      },
+      infinite(done) {//上拉加载(防止初始内容不满一屏会无限加载)
+        const t = this;
+        if (t.isEnd) {
+          done(true);
+          return false;
+        }
+        if (t.isRead) {
+          return false;
+        }
+        console.log("加载");
+        t.getRankingList().then(() => {
+          if (t.isEnd) {
+            done(true);
+          } else {
+            done();
+          }
+        });
+      },
+      refresh(done) {//下拉刷新
+        const t = this;
+        console.log("刷新");
+        t.isRefresh = true;
+        t.getRankingList().then((res) => {
+          done();
+        });
+      },
+    }
+  }
+</script>
+
+<style lang="scss" scoped>
+
+  .energy_ul {
+    li {
+      position: relative;
+      overflow: hidden;
+      line-height: 1.4;
+      padding: 0.48rem;
+      background-color: #fff;
+      display: flex;
+      align-items: center;
+      &:before {
+        content: "";
+        position: absolute;
+        left: 0.48rem;
+        bottom: 0;
+        width: 100%;
+        border-bottom: 1px solid #E9E9E9;
+      }
+      div {
+        display: inline-block;
+        &.ranking_index {
+          width: 0.8rem;
+          height: 0.8rem;
+          line-height: 0.9rem;
+          background-color: #e0e0e0;
+          border-radius: 0.2rem;
+          vertical-align: middle;
+          text-align: center;
+          color: #ffffff;
+          margin: 0 0.3rem 0 0.2rem;
+          &.first {
+            background-color: #f31d00;
+          }
+          &.second {
+            background-color: #e18948;
+          }
+          &.third {
+            background-color: #f3c23f;
+          }
+        }
+        &.headImg {
+          width: 1.4rem;
+          height: 1.4rem;
+          background-repeat: no-repeat;
+          background-size: cover;
+          background-position: center;
+          border-radius: 50%;
+        }
+        &.ranking_info {
+          width: 6rem;
+          margin-left: 0.2rem;
+          p {
+            font-size: 0.4rem;
+            color: #282828;
+          }
+        }
+        &.ranking_num {
+          font-size: 0.4rem;
+          color: #666666;
+          i {
+            color: #fa160a;
+            margin-right: 0.1rem;
+          }
+        }
+      }
+    }
+  }
+
+  .energy_container {
+    position: absolute;
+    max-height: 70%;
+    width: 80%;
+    left: 10%;
+    top: 50%;
+    margin-top: -5rem;
+    padding: 1rem 0.4rem 0.2rem 0.4rem;
+    -webkit-box-sizing: border-box;
+    box-sizing: border-box;
+    background: #fff;
+    border-radius: 0.2rem;
+    .energy_con {
+      z-index: 0;
+      overflow-y: auto;
+      overflow-x: hidden;
+      position: relative;
+      height: 10rem;
+      background: #fff;
+      border-radius: 0.2rem;
+      -webkit-box-sizing: border-box;
+      box-sizing: border-box;
+    }
+    .energy_title {
+      position: absolute;
+      left: 0;
+      top: 0;
+      padding: 0.2rem 0 0.1rem;
+      background-color: #fff;
+      width: 100%;
+      font-size: 0.48rem;
+      z-index: 1;
+      border-radius: 0.2rem;
+      color: #000000;
+      border-bottom: 1px solid #F2F2F2;
+      i {
+        position: absolute;
+        right: 0;
+        top: 0;
+        padding: 0 0.3rem;
+      }
+    }
+    .energy_content {
+      .desc {
+        text-indent: 2em;
+        font-size: 0.4rem;
+        color: #666666;
+        text-align: left;
+        padding: 0.1rem 0;
+      }
+      .jxsz_title {
+        font-size: 0.44rem;
+        color: #000000;
+        font-weight: 500;
+        text-align: left;
+        padding: 0 0 0.1rem 0;
+      }
+      table {
+        width: 100%;
+        margin-bottom: 0.2rem;
+        th {
+          color: #ff0000;
+          font-weight: 500;
+          font-size: 0.44rem;
+        }
+        td {
+          color: #666666;
+          font-size: 0.44rem;
+          text-align: left;
+          padding-left: 0.6rem;
+          font-weight: 300;
+        }
+      }
+    }
+    .red_btn {
+      width: 7rem;
+      margin: 0.3rem auto 0;
+      color: #ffffff;
+      padding: 0.2rem 0;
+      border-radius: 0.8rem;
+      background: -webkit-linear-gradient(left, #ea6b61, #e95e52, #e85143); /* Safari 5.1 - 6.0 */
+      background: -o-linear-gradient(left, #ea6b61, #e95e52, #e85143); /* Opera 11.6 - 12.0 */
+      background: -moz-linear-gradient(left, #ea6b61, #e95e52, #e85143); /* Firefox 3.6 - 15 */
+      background: linear-gradient(to right, #ea6b61, #e95e52, #e85143); /* 标准的语法（必须放在最后） */
+    }
+  }
+</style>

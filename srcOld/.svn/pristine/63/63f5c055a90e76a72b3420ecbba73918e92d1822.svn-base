@@ -1,0 +1,505 @@
+<template>
+  <div class="prize">
+    <div class="circle">
+      <!--<div class="panel"></div>-->
+      <div class="lottery">
+        <div class="piece">
+          <div class="content">
+            <div class="text">美丽约会</div>
+            <div class="text2"><img :src="getFullPath(imgPath)" alt="" v-if="imgPath"><img src="../../images/e2.jpg" alt="" v-else></div>
+          </div>
+        </div>
+        <div class="piece">
+          <div class="content">
+            <div class="text">乾坤币</div>
+            <div class="text2">50</div>
+          </div>
+        </div>
+        <div class="piece">
+          <div class="content">
+            <div class="text">谢谢</div>
+            <div class="text2"><img src="../../images/sad_icon.png" alt="" style="transform: rotate(60deg); width: 0.69rem;height: 0.69rem;"></div>
+          </div>
+        </div>
+        <div class="piece">
+          <div class="content">
+            <div class="text">乾坤币</div>
+            <div class="text2">100</div>
+          </div>
+        </div>
+        <div class="piece">
+          <div class="content">
+            <template v-if="payBion==50">
+              <div class="text">乾坤币</div>
+              <div class="text2">10</div>
+            </template>
+            <template v-if="payBion==100 || payBion==200">
+              <div class="text">美丽约会</div>
+              <div class="text2"><img :src="getFullPath(imgPath)" alt="" v-if="imgPath"><img src="../../images/e2.jpg" alt="" v-else></div>
+            </template>
+          </div>
+        </div>
+        <div class="piece">
+          <div class="content">
+            <div class="text">谢谢</div>
+            <div class="text2"><img src="../../images/sad_icon.png" alt="" style="transform: rotate(60deg); width: 0.69rem;height: 0.69rem;"></div>
+          </div>
+        </div>
+        <div class="piece">
+          <div class="content">
+            <div class="text">乾坤币</div>
+            <div class="text2">150</div>
+          </div>
+        </div>
+        <div class="piece">
+          <div class="content">
+            <template v-if="payBion==50 || payBion==100">
+              <div class="text">乾坤币</div>
+              <div class="text2">50</div>
+            </template>
+            <template v-if="payBion==200">
+              <div class="text">美丽约会</div>
+              <div class="text2"><img :src="getFullPath(imgPath)" alt="" v-if="imgPath"><img src="../../images/e2.jpg" alt="" v-else></div>
+            </template>
+          </div>
+        </div>
+        <div class="piece">
+          <div class="content">
+            <div class="text">谢谢</div>
+            <div class="text2"><img src="../../images/sad_icon.png" alt="" style="transform: rotate(60deg); width: 0.69rem;height: 0.69rem;"></div>
+          </div>
+        </div>
+        <div class="piece">
+          <div class="content">
+            <div class="text">乾坤币</div>
+            <div class="text2">20</div>
+          </div>
+        </div>
+      </div>
+      <div class="pointer" @click.shop="startPrize">
+        <p>{{payBion}}乾坤币</p>
+      </div>
+    </div>
+  </div>
+</template>
+<script>
+  export default {
+    name: 'jqPrize',
+    props: ["datingId", "payBion", "rate", "imgPath"],//活动Id，乾坤币，中奖率
+    data() {
+      return {
+        /** 中缘抽奖设置**/
+        rotate: 0,//转盘角度
+        evalNum: 360 / 10,//每份奖品对应的度数
+        prize: -1,//抽中的奖品下标
+        round: 10,//转盘转动的圈数
+        duration: 6000,//转盘转动时间ms
+        running: false,//转盘是否正在转
+        tranEnd: this.transitionEnd("transition"),
+      }
+    },
+    computed: {},
+    components: {},
+    watch: {
+      running(val) {
+        const t = this;
+        t.$emit("prizeRunning", val);
+      }
+    },
+    mounted() {
+      const t = this;
+      t.$nextTick(() => {
+        t.obj = $(".lottery");
+        t.obj.css({
+          transform: 'rotate(0deg)',
+          WebkitTransform: 'rotate(0deg)',
+          transitionDuration: '0ms',
+          WebkitTransitionDuration: '0ms'
+        });
+        t.obj.bind(t.tranEnd, function () {
+          if (t.running) {
+            t.obj.css({
+              transform: 'rotate(' + (t.rotate) + 'deg)',
+              WebkitTransform: 'rotate(' + (t.rotate) + 'deg)',
+              transitionDuration: '0ms',
+              WebkitTransitionDuration: '0ms'
+            });
+            t.running = false;//转盘是否正在转
+            t.$emit("endPrize", t.prize,t.payBion);
+          }
+        });
+      });
+    },
+    destroyed() {
+      const t = this;
+      t.$emit("endPrize", t.prize,t.payBion);
+      t.$vux.toast.hide()
+    },
+    methods: {
+      getFullPath (path) {
+        return this.$utils.getFullPath(path)
+      },
+      async startPrize() {
+        const t = this;
+        if (!t.datingId) {
+          t.$vux.toast.show({
+            type: "text",
+            text: "请选择中奖目标",
+            position: "bottom",
+            width: "2rem",
+          });
+          this.$router.push({
+            path: '/prizeDraw/prizeSelect',
+          })
+          return false;
+        }
+        if (t.running) {
+          /*t.$vux.toast.show({
+                      type:"text",
+                      text: "正在抽奖,请稍等",
+                      position:"bottom",
+                      width:"2rem",
+                  });*/
+          return false;
+        }
+        t.running = true;
+        console.log("抽奖");
+        t.prize = 4;//Math.round(Math.random()*5);//0-5 模拟抽奖
+        t.rotate = t.evalNum * t.prize;
+        t.obj.css({
+          transform: 'rotate(' + (t.round * 10 * 360 + t.rotate) + 'deg)',
+          WebkitTransform: 'rotate(' + (t.round * 10 * 360 + t.rotate) + 'deg)',
+          transitionDuration: t.duration * 10 + 'ms',
+          WebkitTransitionDuration: t.duration * 10 + 'ms',
+          transitionTimingFunction: 'ease-in',
+          WebkitTransitionTimingFunction: 'ease-in'
+        });
+        //return false;
+        try {
+          const result = await t.$server.jqPrize({
+            objId: t.datingId,
+            rate: t.rate,
+            cost: t.payBion,
+          })
+          console.log("中奖数据:" + JSON.stringify(result.data));
+          t.prize = result.data.data.prizeId;
+          t.rotate = t.evalNum * t.prize;
+          t.obj.css({
+            transform: 'rotate(' + (t.round * 360 + t.rotate) + 'deg)',
+            WebkitTransform: 'rotate(' + (t.round * 360 + t.rotate) + 'deg)',
+            transitionDuration: t.duration + 'ms',
+            WebkitTransitionDuration: t.duration + 'ms',
+            transitionTimingFunction: 'ease-out',
+            WebkitTransitionTimingFunction: 'ease-out'
+          });
+
+        } catch (e) {
+          t.obj.css({
+            transform: 'rotate(60deg)',
+            WebkitTransform: 'rotate(60deg)',
+            transitionDuration: '0ms',
+            WebkitTtransitionDuration: '0ms'
+          });//转到不中奖
+          console.log(e);
+          t.running = false;
+        }
+      },
+      transitionEnd: function (type) {
+        var style = document.createElement("DIV").style,
+          transitionEnd = (function () {
+            var transEndEventNames
+            if (type == "transition") {
+              transEndEventNames = {
+                WebkitTransition: 'webkitTransitionEnd',
+                MozTransition: 'transitionend',
+                OTransition: 'oTransitionEnd oTransitionend',
+                transition: 'transitionend'
+              }
+            } else if (type == "animation") {
+              transEndEventNames = {
+                WebkitTransition: 'webkitAnimationEnd',
+                MozTransition: 'animationend',
+                OTransition: 'oAnimationEnd oAnimationend',
+                transition: 'animationend'
+              }
+            }
+            for (var name in transEndEventNames) {
+              if (typeof style[name] === "string") {
+                return transEndEventNames[name]
+              }
+            }
+          })();
+        return transitionEnd;
+      },
+    }
+  }
+</script>
+<style scoped lang="scss">
+  .prizeDraw {
+    font-weight: normal;
+    background-image: url("../../images/prizedraw/bg.jpg");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    overflow: auto;
+    .prizeDraw-header {
+      padding-top: 0.75rem;
+      width: 100%;
+      position: fixed;
+      .top {
+        color: #FFF;
+        font-size: 0.52rem;
+        position: relative;
+        i {
+          font-size: 0.52rem;
+        }
+        a {
+          position: absolute;
+          padding: 3px;
+        }
+        .left {
+          left: 0.325rem;
+        }
+        .right {
+          right: 0.325rem;
+        }
+      }
+    }
+    .title {
+      width: 100%;
+      margin-top: 1.12rem;
+      div {
+        margin: 0 auto;
+        img {
+          width: 100%;
+        }
+      }
+      div:first-child {
+        width: 6.84rem;
+      }
+      div:nth-of-type(2) {
+        width: 8.35rem;
+        margin-top: 0.5rem
+      }
+    }
+    .setting {
+      color: #FFF;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      & > div {
+        font-size: 0.26rem;
+        overflow: hidden;
+        p {
+          text-align: center;
+          height: 0.6rem;
+          line-height: 0.6rem;
+          i {
+            font-size: 0.3rem;
+          }
+        }
+        p:last-child {
+          background-color: #844551;
+        }
+        p:first-child {
+          background-color: #f06949;
+        }
+
+      }
+      & > div:nth-of-type(1) {
+        width: 1.45rem;
+        border-radius: 0 5px 5px 0;
+      }
+      & > div:nth-of-type(2) {
+        display: flex;
+        width: 3rem;
+        border-radius: 5px;
+        border: 1px solid #fa9077;
+        margin-left: 0.3rem;
+        div {
+          width: 50%;
+          box-sizing: border-box;
+        }
+        div:first-child {
+          border-right: 2px solid #fa9077;
+        }
+      }
+      & > div:nth-of-type(3) {
+        width: 1.75rem;
+        border-radius: 5px 0 0 5px;
+        p {
+          text-align: center;
+          height: 0.8rem;
+          line-height: 0.8rem;
+          font-size: 0.3rem;
+        }
+      }
+    }
+    .circle {
+      background-image: url("../../images/prizedraw/circle.png");
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      width: 9.65rem;
+      height: 8.58rem;
+      margin: 0.4rem auto 0;
+      padding-top: 0.57rem;
+      box-sizing: border-box;
+      position: relative;
+      .panel {
+        background-image: url("../../images/prizedraw/150.png");
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        width: 6.96rem;
+        height: 6.96rem;
+        margin: 0 auto;
+        overflow: hidden;
+      }
+      .pointer {
+        position: absolute;
+        top: 0;
+        left: 0;
+        background-image: url("../../images/prizedraw/101.png");
+        background-size: cover;
+        background-position: center;
+        background-repeat: no-repeat;
+        width: 3.32rem;
+        height: 3.81rem;
+        margin: 1.9rem 0 0 3.1rem;
+        overflow: hidden;
+        p {
+          color: #FFF;
+          font-size: 0.24rem;
+          width: 1.2rem;
+          height: 0.4rem;
+          background-color: rgba(255, 255, 255, 0.3);
+          border-radius: 2px;
+          line-height: 0.4rem;
+          text-align: center;
+          margin: 2.68rem auto 0;
+        }
+      }
+    }
+    .message-swiper {
+      width: 9.3rem;
+      height: 0.7rem;
+      line-height: 0.7rem;
+      overflow: hidden;
+      color: #FFF;
+      margin: 0 auto 0.2rem;
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 3px;
+      p {
+        width: 9.3rem;
+        display: flex;
+        a {
+          width: 50%;
+          span {
+            display: inline-block;
+            width: 50%;
+            text-align: center;
+            font-size: 0.36rem;
+            overflow: hidden; /*超出部分隐藏*/
+            white-space: nowrap; /*不换行*/
+            text-overflow: ellipsis; /*超出部分文字以...显示*/
+          }
+          span:first-child {
+            color: #e4b167;
+          }
+        }
+      }
+    }
+    .remark {
+      display: flex;
+      margin-top: 0.1rem;
+      a {
+        width: 4.29rem;
+        margin-left: 0.75rem;
+        img {
+          width: 100%;
+        }
+      }
+    }
+  }
+  .lottery {
+    width: 6.8rem;
+    height: 6.78rem;
+    margin: 0 auto;
+    border-radius: 50%;
+    overflow: hidden;
+    position: relative;
+    background-color: #ffb54c;
+    border: 4px solid #ffb54c;
+  }
+  .piece {
+    width: 2.26rem;
+    height: 51.5%;
+    position: absolute;
+    left: 50%;
+    margin-left: -1.13rem;
+    transform-origin: center bottom;//中心点
+    -webkit-transform-origin: center bottom;//中心点
+    clip-path:polygon(0% 0, 100% 0, 50% 100%);
+    -webkit-clip-path:polygon(0% 0, 100% 0, 50% 100%);
+  }
+  .piece:nth-child(odd) {
+    background-color: #ffb54c;
+  }
+  .piece:nth-child(even) {
+    background-color: #ff8758;
+  }
+  .piece:nth-child(1) {
+    transform: rotate(0deg);
+  }
+  .piece:nth-child(2) {
+    transform: rotate(36deg);
+  }
+  .piece:nth-child(3) {
+    transform: rotate(72deg);
+  }
+  .piece:nth-child(4) {
+    transform: rotate(108deg);
+  }
+  .piece:nth-child(5) {
+      transform: rotate(144deg);
+    }
+  .piece:nth-child(6) {
+    transform: rotate(180deg);
+  }
+  .piece:nth-child(7) {
+    transform: rotate(216deg);
+  }
+  .piece:nth-child(8) {
+    transform: rotate(252deg);
+  }
+  .piece:nth-child(9) {
+    transform: rotate(288deg);
+  }
+  .piece:nth-child(10) {
+    transform: rotate(324deg);
+  }
+  .content {
+    width: 100%;
+    height: 100%;
+    text-align: center;
+    color: #ffffff;
+    .text {
+      margin: 0.2rem auto 0;
+      text-align: center;
+      font-size: 0.32rem;
+      font-weight: bold;
+    }
+    .text2 {
+      text-align: center;
+      font-size: 0.6rem;
+      font-weight: bold;
+      margin: 0.06rem auto 0;
+      img{
+        width: 0.96rem;
+        height: 0.96rem;
+        border-radius: 50%;
+      }
+    }
+  }
+</style>

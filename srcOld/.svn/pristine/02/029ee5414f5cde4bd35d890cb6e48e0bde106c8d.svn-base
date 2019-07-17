@@ -1,0 +1,252 @@
+<template>
+  <div class="shade" v-show="showFilter" @click="$emit('close')">
+    <div>
+      <transition enter-active-class="slideInDown" leave-active-class="slideOutDown">
+        <div class="filterPopover" v-show="showFilter" @click.stop>
+          <div>
+            <p><i class="sex_icon"></i>年龄</p>
+            <div>
+              <span @click="ageVal=''" :class="{active:ageVal==''}">不限</span>
+              <span @click="expandAge" :class="{active:ageVal==1}" class="age">{{ageText==""?"请选择年龄段":ageText}}</span>
+              <group style="display: none">
+                <popup-picker title="年龄" :data="ageList" :columns="2" v-model="ageArr" ref="agePicker" :show.sync="shAge"></popup-picker>
+              </group>
+            </div>
+          </div>
+          <div>
+            <p><i class="verification_icon"></i>学历</p>
+            <div>
+              <span @click="educationVal=''" :class="{active:educationVal==''}">不限</span>
+              <span @click="educationVal=10" :class="{active:educationVal==10}">大专及以上</span>
+              <span @click="educationVal=11" :class="{active:educationVal==11}">本科及以上</span>
+              <span @click="educationVal=12" :class="{active:educationVal==12}">硕士及以上</span>
+              <span @click="educationVal=13" :class="{active:educationVal==13}">博士及以上</span>
+            </div>
+          </div>
+          <button @click="filterMakesure">确定</button>
+        </div>
+      </transition>
+    </div>
+  </div>
+</template>
+
+<script>
+  import {PopupPicker, Group, Datetime} from 'vux'
+  export default {
+    name: "staffFilter",
+    props: {
+      showFilter: {
+        type: Boolean,
+        default: false,
+      }
+    },
+    components: {
+      PopupPicker,
+      Group,
+    },
+    data() {
+      return {
+        ageVal:"",
+        ageList: [],//列表
+        ageArr: [],//选中的数组
+        ageLVal: null,//联动显示的值
+        ageRVal: null,//联动显示的值
+        ageText: '',//获取值相应的文字
+        shAge: false,
+        educationVal:"",
+        educationText:"",
+        educationTextArr:{10:'大专及以上',11:'本科及以上',12:'硕士及以上',13:'博士及以上'},
+      }
+    },
+    watch: {
+      ageArr() {
+        if (this.$refs.agePicker) {
+          this.ageText = this.$refs.agePicker.getNameValues();
+          this.ageLVal = this.ageArr[0];
+          this.ageRVal = this.ageArr[1];
+          if(this.ageLVal==-1 &&  this.ageRVal==-1){
+            this.ageText = "不限";
+            this.ageLVal = "";
+            this.ageRVal = "";
+          }else if(this.ageLVal==-1 && this.ageRVal>=19){
+            this.ageText = this.ageRVal + '岁以下';
+            this.ageLVal = "";
+            this.ageRVal = this.ageArr[1];
+          }else if(this.ageLVal>=19 && this.ageRVal==-1) {
+            this.ageText = this.ageLVal + '岁以上';
+            this.ageLVal = this.ageArr[0];
+            this.ageRVal = "";
+          }else if(this.ageLVal>=19 && this.ageRVal >=19) {
+            this.ageText = this.ageLVal+'-'+ this.ageRVal +"岁";
+            this.ageLVal = this.ageArr[0];
+            this.ageRVal = this.ageArr[1];
+          }
+        }
+      },
+    },
+    mounted() {
+      let ageArr = [];
+      for (let i = 18; i <= 60; i++) {
+        if(i==18){
+          ageArr.push({
+            name: '不限',
+            value: '-1',
+            parent: '0'
+          })
+          for (let k=i+1;k<=60;k++) {
+            ageArr.push({
+              name: k + '岁',
+              value:  k+"",
+              parent: "-1"
+            })
+          }
+        }else{
+          ageArr.push({
+            name: i + '岁',
+            value: i+"",
+            parent: '0'
+          })
+          ageArr.push({
+            name: '不限',
+            value: "-1",
+            parent: i+""
+          })
+          for (let k=i+1;k<=60;k++) {
+            ageArr.push({
+              name: k + '岁',
+              value:  k+"",
+              parent: i+""
+            })
+          }
+        }
+      }
+      this.ageList = ageArr;
+    },
+    methods: {
+      expandAge(){
+        this.ageVal = 1;
+        this.shAge = true;
+      },
+      close(){
+        this.$emit('close',false)
+      },
+      filterMakesure() {
+          this.$emit('filterMakesure', this.ageVal,this.ageLVal,this.ageRVal,this.ageText,this.educationVal,this.educationTextArr[this.educationVal])
+        },
+    }
+  }
+</script>
+
+<style scoped lang="scss">
+  @keyframes slideInDown {
+    from {
+      transform: translate3d(0, -100%, 0);
+    }
+    to {
+      transform: translate3d(0, 0, 0);
+    }
+  }
+  @keyframes slideOutDown {
+    from {
+      transform: translate3d(0, 0, 0);
+    }
+    to {
+      transform: translate3d(0, -100%, 0);
+    }
+  }
+  .slideInDown {
+    animation-name: slideInDown;
+  }
+  .slideOutDown {
+    animation-name: slideOutDown;
+  }
+  .slideOutDown, .slideInDown {
+    animation-duration: 0.3s;
+  }
+
+  //浏览器预览的css
+  .jy_isBrowser{
+    .shade {
+      & > div {
+        top: 3.13rem;
+      }
+    }
+  }
+
+  .shade {
+    top: 0;
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    z-index: 100;
+    overflow: hidden;
+    & > div {
+      overflow: hidden;
+      top: 3.88rem;
+      height: 100%;
+      position: relative;
+      background-color: rgba(0, 0, 0, 0.5);
+    }
+  }
+
+  .filterPopover {
+    background-color: #efefef;
+    padding: 0 0.5rem;
+    & > div {
+      color: #908f92;
+      padding: 0.1rem 0;
+      border-bottom: 1px solid #b9b9b9;
+      &:last-of-type {
+        border-bottom: none;
+      }
+      p {
+        height: 1.4rem;
+        line-height: 1.4rem;
+        font-size: 0.36rem;
+        font-weight: 500;
+      }
+      div {
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        span {
+          font-size: 0.34rem;
+          width: 23%;
+          height: 0.76rem;
+          line-height: 0.76rem;
+          text-align: center;
+          margin-bottom: 0.34rem;
+          box-sizing: border-box;
+          &.active {
+            background-color: #fff;
+            border-radius: 5px;
+            border: 1px solid #70c466;
+            color: #70c466;
+          }
+        }
+      }
+    }
+    .age{
+      width: 70%;
+      height: 0.76rem;
+      line-height: 0.76rem;
+      text-align: center;
+      &.active{
+        background-color:#fff;
+        border-radius: 5px;
+        border: 1px solid #70c466;
+        color: #70c466 !important;
+      }
+    }
+    button {
+      height: 1.13rem;
+      line-height: 1.13rem;
+      width: 100%;
+      margin-bottom: 0.54rem;
+      border: 1px solid #d4d4d4;
+      color: #70c466;
+      background-color: #fff;
+    }
+  }
+
+</style>

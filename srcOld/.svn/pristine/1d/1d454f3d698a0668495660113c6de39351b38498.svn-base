@@ -1,0 +1,215 @@
+<template>
+<div class="main jy_all_top jy_new_love jy_state_top">
+	<Loading v-if="isloading"></Loading>
+	<div class="header">
+		<div class="top">
+			<Back class="left"><i class="iconfont">&#xe613;</i></Back><a class="right"><i class="iconfont">&#xe64d;</i></a><p>约会</p>
+		</div>
+	</div>
+	<div class="jy_new_love_t">
+		<ul class="jy_new_love_nav">
+			<li class="jy_new_love_n1"><p>全部</p></li>
+			<li class="jy_new_love_n2"><p>选缘</p></li>
+			<li class="jy_new_love_n3"><p>抢缘</p></li>
+			<li class="jy_new_love_n4"><p>竞缘</p></li>
+			<li class="jy_new_love_n5"><p>中缘</p></li>
+			<li class="jy_new_love_n6"><p>配缘</p></li>
+		</ul>
+		<ul class="jy_new_love_menu">
+			<li><a>全部</a></li>
+			<li><a>吃饭</a></li>
+			<li><a>K歌</a></li>
+			<li><a>旅行</a></li>
+			<li><a>运动</a></li>
+			<li><a>其他</a></li>
+		</ul>
+	</div>
+	<div class="jy_new_love_con">
+		<ul class="jy_new_love_list">
+			<li class="jy_new_love_list_oneImg">
+				<div class="jy_new_love_list_t">
+					<i class="jy_new_love_list_timg"></i>
+					<h4><i>17.56km</i>会计师峰会上方会计师</h4>
+					<p><em>我买单</em><i class="jy_auth_age" :class="{jy_auth_age_man:$store.state.userInfo.sex==2}">{{$store.state.userInfo.sex==1?'&#xe64a;':'&#xe605;'}}26</i></p>
+				</div>
+				<div class="jy_new_love_list_b">
+					
+					<div class="jy_new_love_list_bimg">
+						<p><i></i></p>
+					</div>
+					<h3><em class="jy_new_love_tit_1">抢</em>会计师峰会上方会计师</h3>
+					<p class="jy_new_love_list_pos">美食街</p>
+					<p class="jy_new_love_list_date">2019-12-05</p>
+					<p class="jy_new_love_list_tip">吃饭吃饭</p>
+				</div>
+			</li>
+			<li>
+				<div class="jy_new_love_list_t">
+					<i class="jy_new_love_list_timg"></i>
+					<h4><i>17.56km</i>会计师峰会上方会计师</h4>
+					<p><em>我买单</em><i class="jy_auth_age" :class="{jy_auth_age_man:$store.state.userInfo.sex==2}">{{$store.state.userInfo.sex==1?'&#xe64a;':'&#xe605;'}}26</i></p>
+				</div>
+				<div class="jy_new_love_list_b">
+					<h3><em class="jy_new_love_tit_1">抢</em>会计师峰会上方会计师</h3>
+					<div class="jy_new_love_list_bimg">
+						<p><i></i></p><p><i></i></p><p><i></i></p>
+					</div>
+					<p class="jy_new_love_list_pos">美食街</p>
+					<p class="jy_new_love_list_date">2019-12-05</p>
+					<p class="jy_new_love_list_tip">吃饭吃饭</p>
+				</div>
+			</li>
+		</ul>
+	</div>
+</div>
+</template>
+<script>
+import Loading from '@other/loading.vue';
+import Back from '@other/back.vue';
+import myScroller from '@other/myScroller.vue';
+export default {
+	name: 'love',
+	data () {
+		return {
+			isloading:false,
+			menu:["余额","现金"],
+			pageNo:1,
+			transList:null,
+			transObj:null,
+			isRead:false,
+			isEnd:false,
+			loadRefresh:false,//下拉刷新
+			loadInfinite:false, //上拉加载
+			isRefresh:false,
+			tabIndex:0,
+			noDataText:"",
+		}
+	},
+	components: {
+		Loading,
+		Back,
+		myScroller,
+	},
+	watch:{	
+		isEnd(val){
+			const t=this;
+			if(val){
+				t.$refs.myScroller.finishInfinite(true);
+			}else{
+				//t.$refs.myScroller.scrollTo(1);
+				t.$refs.myScroller.finishInfinite(false);
+			}
+		},
+	},
+	mounted () {
+		const t=this;
+		$("body").addClass("gray");
+		
+	},
+	destroyed () {
+		$("body").removeClass("gray");
+	},
+	methods:{
+		tabMenu(e,index){
+			const t=this;
+			if(t.isRead){
+				return false;
+			}
+			let target=e.target||e;
+			let menu_bar=document.getElementById("menu_bar");
+			menu_bar.style.cssText="transform:translateX("+(target.offsetLeft+target.offsetWidth/2)+"px);"+(e.target?"transition-duration:500ms":"transition-duration:0ms");
+			if(e.target&&t.tabIndex!=index){
+				t.getMyRechargeList(index);
+			}
+		},
+		async getMyRechargeList(index){
+			const t=this;
+			if(t.isRead){
+				return false;
+			}
+			t.isRead=true;
+			t.noDataText='正在加载...';
+			if(t.isRefresh||t.tabIndex!=index){
+				if(t.tabIndex!=index){//切换
+					t.transList=null;
+					t.transObj=null;
+					t.isEnd=false;//必需,要不然在切换时不显示加载效果
+					t.$refs.myScroller.scrollTo(1);
+				}
+				t.pageNo=1;
+				t.tabIndex=index;		
+			}
+			try{
+				let result;
+				let isRefresh={};
+				if(t.isRefresh){
+					isRefresh={isRefresh:true};
+				}
+				if(t.tabIndex==1){
+					result=await t.$server.myRechargeList({
+						page:t.pageNo,
+						...isRefresh,
+						rows:t.$store.state.pageSize,
+					//	payType:0,
+					});
+				}else{
+					result=await t.$server.cashRecordList({
+						...isRefresh,
+						page:t.pageNo,
+						rows:t.$store.state.pageSize,
+					});
+				}
+				if(!t.transList||t.pageNo==1){
+					t.transList=[];
+					t.transObj={};
+				}
+				if(result.data.list){
+					t.transList.push(...result.data.list);
+				}
+				if(result.data.count<=t.$store.state.pageSize*t.pageNo||result.data.list.length<t.$store.state.pageSize){//判断是否最后一页
+					t.noDataText='已加载全部数据';
+					t.isEnd=true;
+				}else{
+					
+					t.isEnd=false;
+					//t.$refs.myScroller.finishInfinite(false);
+				}
+				t.pageNo++;
+			}catch(e){
+				t.noDataText='加载异常,请重试';
+				t.isEnd=true;
+			}
+			t.isRead=false;
+			//t.isloading=false;
+			t.isRefresh=false;
+		},
+		infinite(done) {//上拉加载(防止初始内容不满一屏会无限加载)
+			const t=this;
+			if(t.isEnd){
+				done(true);
+				return false;
+			}
+			if(t.isRead){//必需,要不然在切换时不显示加载效果
+				return false;
+			}
+			console.log("加载");
+			t.getMyRechargeList(t.tabIndex).then(()=>{
+				if(t.isEnd){
+					done(true);
+				}else{
+					done();
+				}
+			});
+		},
+		refresh(done) {//下拉刷新
+			const t=this;
+			console.log("刷新");
+			t.isRefresh=true;
+			t.getMyRechargeList(t.tabIndex).then((res)=>{
+				done();
+			});
+		},
+		
+	}
+}
+</script>

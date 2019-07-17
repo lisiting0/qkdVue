@@ -1,0 +1,306 @@
+<template>
+  <div class="main">
+    <Loading v-if="isloading"></Loading>
+    <div class="header">
+      <div class="top">
+        <Back class="left"><i class="iconfont">&#xe613;</i></Back>
+        <a class="right"></a>{{title}}
+      </div>
+    </div>
+    <div class="title">
+      <div @click="getList(1)" :class="{active:active==1}">已报名活动</div>
+      <div @click="getList(2)" :class="{active:active==2}">关注的活动</div>
+    </div>
+    <myScroller :style="$store.state.isBrowser?'padding:3.19rem 0 0;':'padding:3.94rem 0 0;'" :infinite="infinite"
+                :refresh="refresh" :loadRefresh="loadRefresh" :loadInfinite="loadInfinite" ref="myScroller">
+      <div class="myscoll">
+        <div class="content">
+          <template v-if="listArr">
+            <template v-if="listArr.length>0">
+              <div v-for="item in listArr" :key="item.id" @click="toActiveDetail(item.id)">
+                <div :style="{'background-image':'url('+getFullPath(item.picture)+')'}"></div>
+                <div>
+                  <p>{{item.datingTitle}}</p>
+                  <p>{{item.activityDesc}}</p>
+                </div>
+                <div>
+                  <span class="orange_text" v-if="item.state==5">已结束</span>
+                </div>
+              </div>
+            </template>
+          </template>
+        </div>
+      </div>
+    </myScroller>
+  </div>
+</template>
+<script>
+  import Loading from '@other/loading.vue';
+  import Back from '@other/back.vue';
+  import recentVisit from './recentVisit.data';
+  import myScroller from '@other/myScroller.vue';
+
+  let fontsize = parseInt(document.documentElement.style.fontSize);
+  export default {
+    name: 'recentVisit',
+    data() {
+      return {
+        isloading: false,
+        title: '人气活动',
+        people: recentVisit.recentVisit,
+        active: 1,
+        listArr: [],
+        //分页参数
+        pageNo: 1,
+        isRead: false,
+        isEnd: false,
+        loadRefresh: true,//下拉刷新
+        loadInfinite: true, //上拉加载
+      }
+    },
+    computed: {},
+    components: {
+      Loading,
+      myScroller,
+      Back,
+    },
+    created() {
+    },
+    destroyed() {
+    },
+    watch: {
+      isEnd(val) {
+        const t = this;
+        if (val) {
+          t.$refs.myScroller.finishInfinite(true);
+        } else {
+          t.$refs.myScroller.finishInfinite(false);
+        }
+      },
+    },
+    mounted() {
+      // this.getList(1);
+      this.$nextTick(function () {
+        this.ifinit = true;
+      })
+    },
+    methods: {
+      getFullPath(path) {
+        return this.$utils.getFullPath(path)
+      },
+      toActiveDetail(id) {
+        this.$router.push({
+          path: "rankingSignUp",
+          query: {
+            id: id
+          }
+        })
+      },
+      async getList(active, flag) {
+        const _this = this;
+        if (_this.isRead) {
+          return false;
+        }
+        _this.isRead = true;
+        if (_this.isRefresh || flag || active) {
+          _this.pageNo = 1;
+          if (flag) {
+            _this.isloading = true;
+          }
+        }
+        _this.active = active;
+        try {
+          let data = {
+            page: _this.pageNo,
+            rows: _this.$store.state.pageSize
+          };
+          let result = null;
+          if (_this.active == 1) {
+            result = await _this.$server.myActivityInfoList(data);
+          } else {
+            result = await _this.$server.myFollowActivityInfoList(data);
+          }
+          if (!_this.listArr || _this.isRefresh || flag || active) {
+            _this.$refs.myScroller.scrollTo(1);
+            _this.listArr = [];
+          }
+          if (_this.active == 1 && result.data.data.list) {
+            _this.listArr.push(...result.data.data.list);
+          }
+          if (_this.active == 2 && result.data.list) {
+            _this.listArr.push(...result.data.list);
+          }
+          if (result.data.data.count <= _this.$store.state.pageSize * _this.pageNo || result.data.data.list.length < _this.$store.state.pageSize || result.data.list.length < _this.$store.state.pageSize) {//判断是否最后一页
+            _this.isEnd = true;
+          } else {
+            _this.isEnd = false;
+            _this.$refs.myScroller.finishInfinite(false);
+          }
+          _this.pageNo++;
+        } catch (e) {
+          _this.isEnd = true;
+          console.log(e)
+        }
+        _this.isRead = false;
+        _this.isloading = false;
+        _this.isRefresh = false;
+
+      },
+      infinite(done) {//上拉加载(防止初始内容不满一屏会无限加载)
+        const t = this;
+        if (t.isEnd) {
+          done(true);
+          return false;
+        }
+        console.log("加载");
+        t.getList(this.active).then(() => {
+          if (t.isEnd) {
+            done(true);
+          } else {
+            done();
+          }
+        });
+      },
+      refresh(done) {//下拉刷新
+        const t = this;
+        console.log("刷新");
+        t.isRefresh = true;
+        t.getList(this.active).then((res) => {
+          done();
+        });
+      },
+    }
+  }
+</script>
+<style scoped lang="scss">
+  .main {
+    padding-bottom: 0;
+    &:before {
+      background-color: #3a3845;
+    }
+    .header {
+      position: fixed;
+      width: 100%;
+      z-index: 10;
+      .top {
+        background-color: #3a3845;
+        color: #FFF;
+        font-size: 0.52rem;
+        position: relative;
+        i {
+          font-size: 0.52rem;
+        }
+        a {
+          position: absolute;
+          padding: 3px;
+        }
+        .left {
+          left: 0.325rem;
+        }
+        .right {
+          right: 0.325rem;
+        }
+      }
+    }
+    .title {
+      width: 100%;
+      font-size: 0;
+      margin-top: 1.39rem;
+      padding: 0.28rem 0 0;
+      height: 1.32rem;
+      line-height: 1.32rem;
+      background-color: #f2f2f2;
+      z-index: 11;
+      position: fixed;
+      div {
+        position: relative;
+        font-size: 0.44rem;
+        display: inline-block;
+        color: #9a9a9d;
+        box-sizing: border-box;
+        width: 50%;
+        text-align: center;
+        background-color: #fff;
+        &::before {
+          content: "";
+          position: absolute;
+          bottom: 6px;
+          left: 100%;
+          width: 0;
+          height: 0;
+          border-bottom: 2px solid #ff4300;
+          transition: 0.2s all linear;
+        }
+      }
+      div.active {
+        &::before {
+          width: 15%;
+          left: 43%;
+          transition-delay: 0.1s;
+        }
+        color: #000;
+      }
+      div.active ~ div {
+        &::before {
+          left: 0;
+        }
+      }
+    }
+    .myscoll {
+      background-color: #f8f8fc;
+      .content {
+        padding: 0 0.3rem;
+        & > div {
+          position: relative;
+          display: flex;
+          align-items: center;
+          height: 2rem;
+          line-height: 2rem;
+          border-bottom: 1px solid #f2f2f2;
+          & > div:first-child {
+            width: 1.4rem;
+            height: 1.4rem;
+            background-size: cover;
+            background-position: center;
+            border-radius: 0.1rem;
+          }
+          & > div:nth-of-type(2) {
+            width: 6rem;
+            p {
+              line-height: 2;
+              padding: 0 0 0 0.2rem;
+              font-size: 0.48rem;
+              img {
+                margin-left: 0.1rem;
+                width: 0.35rem;
+                height: 0.35rem;
+              }
+            }
+            p:last-child {
+              font-size: 0.36rem;
+              color: #9a9a9d;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
+            }
+          }
+          & > div:last-child {
+            position: absolute;
+            right: 0;
+            width: 1.8rem;
+            text-align: center;
+            font-size: 0.36rem;
+            span {
+              display: inline-block;
+              width: 100%;
+              height: 0.7rem;
+              line-height: 0.7rem;
+              border-radius: 5px;
+            }
+          }
+        }
+      }
+    }
+  }
+</style>
+

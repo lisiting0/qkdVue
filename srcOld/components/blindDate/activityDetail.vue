@@ -1,0 +1,699 @@
+<template>
+  <div :class="'main jy_all_top '+((blindDateSingle.state==3&&blindDateSingle.isCandidate==0)?'active':((blindDateSingle.state==3&&blindDateSingle.isCandidate==1)||blindDateSingle.state==6)?'live':'end')">
+    <Loading v-if="isloading"></Loading>
+    <div class="header">
+      <div class="top">
+        <Back class="left"><i class="iconfont">&#xe613;</i></Back>
+        <p>活动详情</p>
+      </div>
+    </div>
+    <template v-if="blindDateSingle">
+      <div class="at_img at_img_auto" v-if="blindDateSingle.datingDetailsExt">
+        <img class="at_i_img" :src="getFullPath(blindDateSingle.datingDetailsExt.extString)"/>
+        <div class="at_zc">{{specialType[blindDateSingle.datingDetailsExt.extInt5]}}专场</div>
+      </div>
+      <div class="at_desc">
+        <div class="at_title"><span v-if="blindDateSingle.datingDetailsExt">[{{lineType[blindDateSingle.datingDetailsExt.extInt]}}·{{specialType[blindDateSingle.datingDetailsExt.extInt5]}}专场]</span>{{blindDateSingle.datingTitle}}
+        </div>
+        <div class="at_count"><i class="iconfont">&#xe642;</i><span :class="{active:blindDateSingle.state==3&&blindDateSingle.isCandidate==0}">{{blindDateSingle.followCount}}</span>人关注<i class="iconfont" style="margin-left: 1rem">&#xe612;</i><span :class="{active:blindDateSingle.state==3&&blindDateSingle.isCandidate==0}">{{blindDateSingle.enrollCount}}</span>人报名
+        </div>
+      </div>
+      <div class="at_con"><i class="iconfont">&#xe6b6;</i>{{blindDateSingle.activityStarttime}}</div>
+      <!--<router-link tag="div" :to="{name:'addressMap',query:{city:blindDateSingle.cityName,address:blindDateSingle.datingLocation}}" class="at_con at_address"><i class="iconfont">&#xe62c;</i><span>{{blindDateSingle.datingLocation}}</span><i class="iconfont">&#xe702;</i></router-link>-->
+      <div class="at_con at_address"><i class="iconfont">&#xe62c;</i><span>{{blindDateSingle.datingLocation}}</span>
+      </div> 
+	  
+	   <div class="at_con" v-if="blindDateSingle.enrollFee!=undefined"><i class="iconfont">&#xe6e1;</i>
+		<template v-if="channel.money!=blindDateSingle.enrollFee">
+		<del >{{Fn.toFixed(blindDateSingle.enrollFee||0)}}元</del>，</template>
+		<em>{{Fn.toFixed(channel.money||0)}}</em> 元<template v-if="channel.money!=blindDateSingle.enrollFee">{{channel.name?channel.money==0?'('+channel.name+"免费 )":'('+channel.name+"优惠 "+Fn.toFixed(blindDateSingle.enrollFee-channel.money)+"元)":''}}</template>
+	  </div>
+	  
+      <div class="at_con" v-if="blindDateSingle.datingDetailsExt"><i class="iconfont">&#xe651;</i>{{specialType[blindDateSingle.datingDetailsExt.extInt5]}}专场
+      </div>
+      <div class="ybm_list" v-if="blindDateSingle.state!=5&&blindDateSingle.candidateList">
+        <div v-if="((isLogin&&blindDateSingle.isCandidate !=1) || !isLogin)&&!isManage&&!isAdmin" class="ac_list_fix">
+          <div class="at_con at_con_bm">
+            <i class="iconfont">&#xe668;</i>已报名人员{{enrollPepple.maxBoy!=undefined?'(男: '+enrollPepple.boy+'/'+enrollPepple.maxBoy+' 女: '+enrollPepple.girl+'/'+enrollPepple.maxGirl+')':blindDateSingle.enrollCount+'(男:'+enrollPepple.boy+',女:'+enrollPepple.girl+')/'+blindDateSingle.datingDetailsExt.extInt4}}
+          </div>
+          <ul class="ybm_user_list tips">
+            <li v-for="(item,index) in blindDateSingle.candidateList" :key="item.id" v-if="index<7">
+              <a :style="'background-image:url('+getFullPath(item.jiaoyouUser.headimgAttachmentId)+');'">
+                <i class="iconfont heart"
+                   v-if="item.jiaoyouUser.isGood==0&&$store.state.userInfo.sex!=item.candidateSex">&#xe79d;</i>
+                <i class="iconfont heart" style="color: #ff0000;font-size: 0.8rem;top: -0.1rem;"
+                   v-if="item.jiaoyouUser.isGood==1&&$store.state.userInfo.sex!=item.candidateSex">&#xe612;</i>
+                <div class="bottom_info"><span>{{item.jiaoyouUser.aliasName}}</span><em
+                  :style="item.candidateSex==2?'background-color: #00b4ff;':'background-color: #ff3883'"><i
+                  class="iconfont" v-if="item.candidateSex==2">&#xe605;</i><i class="iconfont" v-if="item.candidateSex==1">&#xe64a;</i>{{item.jiaoyouUser.age}}</em></div>
+              </a>
+            </li>
+            <li
+              style="width:2.28rem;height:2.28rem;background-color: #fd5359;border-radius: 0.2rem;color: #ffffff;line-height: 2.28rem;"
+              v-if="blindDateSingle.candidateList.length>=7">更多
+            </li>
+          </ul>
+        </div>
+        <div v-else-if="blindDateSingle.isCandidate ==1 || showMb">
+          <router-link tag="div" class="at_con at_con_bm" :to="{name:'registrationStaff',query:{id:id}}" v-if="blindDateSingle.candidateList">
+            <i class="iconfont">&#xe668;</i>已报名人员{{enrollPepple.maxBoy!=undefined?'(男: '+enrollPepple.boy+'/'+enrollPepple.maxBoy+' 女: '+enrollPepple.girl+'/'+enrollPepple.maxGirl+')':blindDateSingle.enrollCount+'(男:'+enrollPepple.boy+',女:'+enrollPepple.girl+')/'+blindDateSingle.datingDetailsExt.extInt4}}
+            <i class="iconfont right">&#xe702;</i>
+          </router-link>
+          <ul class="ybm_user_list">
+            <li @click="toLink('userInfo',item.jiaoyouUser.id,item.id,item.jiaoyouUser.silentState)"
+                v-for="(item,index) in blindDateSingle.candidateList" :key="item.id" v-if="index<7">
+              <a :style="'background-image:url('+getFullPath(item.jiaoyouUser.headimgAttachmentId)+');'">
+                <i class="iconfont heart"
+                   v-if="item.jiaoyouUser.isGood==0&&$store.state.userInfo.sex!=item.candidateSex"
+                   @click.stop="addGood(item.jiaoyouUser.id,index)">&#xe79d;</i>
+                <i class="iconfont heart" style="color: #ff0000;font-size: 0.68rem;top: -0.1rem;"
+                   v-if="item.jiaoyouUser.isGood==1&&$store.state.userInfo.sex!=item.candidateSex"
+                   @click.stop="delGood(item.jiaoyouUser.id,index)">&#xe612;</i>
+                <div class="bottom_info"><span>{{item.jiaoyouUser.aliasName}}</span><em
+                  :style="item.candidateSex==2?'background-color: #00b4ff;':'background-color: #ff3883'"><i
+                  class="iconfont" v-if="item.candidateSex==2">&#xe605;</i><i class="iconfont" v-if="item.candidateSex==1">&#xe64a;</i>{{item.jiaoyouUser.age
+                  }}</em></div>
+              </a>
+            </li>
+            <li style="width:2.28rem;height:2.28rem;background-color: #fd5359;border-radius: 0.2rem;color: #ffffff;line-height: 2.28rem;" @click="toLink('registrationStaff',id)" v-if="blindDateSingle.candidateList.length>=7">更多
+            </li>
+          </ul>
+        </div>
+      </div>
+      <div class="ct_intro_title">活动</div>
+      <div class="ct_intro">
+        <div class="ct_into_con">
+          <p class="title">主题</p>
+          <p class="desc">{{blindDateSingle.datingDesc}}</p>
+        </div>
+        <div class="ct_into_con">
+          <p class="title">报名时间</p>
+          <p v-if="blindDateSingle.datingDetailsExt" class="desc">
+            {{blindDateSingle.datingDetailsExt.extDatetime.substring(0,10)}} 至
+            {{blindDateSingle.datingDetailsExt.extDatetime2.substring(0,10)}}</p>
+        </div>
+        <div class="ct_into_con">
+          <p class="title">活动时间</p>
+          <p class="desc">{{blindDateSingle.activityStarttime}}</p>
+        </div>
+        <div class="ct_into_con">
+          <p class="title">活动地点</p>
+          <p class="desc">{{blindDateSingle.cityName}}{{blindDateSingle.areaName}}{{blindDateSingle.datingLocation}}</p>
+          <p style="padding-left: 0.4rem">地址导航：</p>
+          <div @click="showBigImg($event)" class="contentDetail" v-html="contentCpt"></div>
+        </div>
+        <div class="ct_into_con">
+          <p class="title">活动流程</p>
+          <div class="contentDetail" v-html="activityProcessHtml"></div>
+        </div>
+        <div class="ct_into_con" v-if="blindDateSingle.hostPartyList&&blindDateSingle.hostPartyList.length>0">
+          <p class="title">主办单位</p>
+          <div class="logo_list">
+            <div v-for="item in blindDateSingle.hostPartyList" :key="item.id">
+              <img :src="getFullPath(item.company.logoUrl)" alt="" class="logo">
+              <p style="text-align: center;font-size: 0.36rem;color: #666666">{{item.company.unitName}}</p>
+            </div>
+          </div>
+        </div>
+        <div class="ct_into_con" v-if="blindDateSingle.assistingPartyList&&blindDateSingle.assistingPartyList.length>0">
+          <p class="title">协办单位</p>
+          <div class="logo_list">
+            <div v-for="item in blindDateSingle.assistingPartyList" :key="item.id">
+              <img :src="getFullPath(item.company.logoUrl)" alt="" class="logo">
+              <p style="text-align: center;font-size: 0.36rem;color: #666666">{{item.company.unitName}}</p>
+            </div>
+          </div>
+        </div>
+        <div class="ct_into_con">
+          <p class="title">温馨提示</p>
+          <div class="contentDetail" v-html="tipsHtml"></div>
+        </div>
+      </div>
+      <div class="action_footer">
+        <div class="gzfx">
+          <p v-if="blindDateSingle.isFollow==1" @click="unfollowBlindDating"><i class="iconfont">&#xe67b;</i><i>取消关注</i>
+          </p>
+          <p v-else @click="followBlindDating"><i class="iconfont">&#xe61e;</i><i>关注</i></p>
+          <p v-if="!$store.state.isWeixin" @click.stop="showShare=true"><i class="iconfont">&#xe604;</i><i>分享</i></p>
+        </div>
+		<!-- 主持人 什么时候都能进-->
+		<router-link v-if="isManage||isAdmin" tag="div" :to="{name:'blindDateNew',query:{id:id}}" class="jrxc">进入现场</router-link>
+		<!-- 报名没开始 -->
+		<div  v-else-if="blindDateSingle.isStartEnroll==0" class="ljbm">即将开始</div>
+		<!-- 没登录 -->
+		<template v-else-if="!isLogin">
+			<!-- 能报名 -->
+			<div  v-if="canEnroll" @click="bmBlindDating" class="ljbm">立即报名</div>
+			<!-- 不能报名 -->
+			<div v-else  class="ljbm">报名截止</div>
+		</template>
+		<!-- 登录 -->
+		<template v-else-if="isLogin">
+			<!-- 没报名 -->
+			<template v-if="blindDateSingle.isCandidate !=1">
+				<!-- 能报名 -->
+				<div  v-if="blindDateSingle.isAbsent==1" class="grey">已登记缺席</div>
+				<div  v-else-if="canEnroll" @click="bmBlindDating" class="ljbm">立即报名</div>
+				<!-- 不能报名 -->
+				<div v-else  class="ljbm">报名截止</div>
+			</template>
+			<!-- 已报名 -->
+			<template  v-else>
+				<!-- 可以报名 -->
+				<div v-if="canEnroll"  @click="unbmBlindDating" class="ljbm">缺席登记</div>
+				<!-- 活动已结束 -->
+				<router-link v-if="blindDateSingle.state==5" tag="div" :to="{name:'blindDateNew',query:{id:id}}" class="jrxc">活动结束</router-link>
+				<!-- 活动没结束 -->
+				<router-link v-else tag="div" :to="{name:'blindDateNew',query:{id:id}}" class="jrxc">进入现场</router-link>
+			</template>
+		</template>
+      </div>
+    </template>
+	<share :show="showShare" :shareTitle="shareTitle" :shareDesc="shareDesc" :shareImg="shareImg" :shareUrl="shareUrl" @changeShow="changeShow"></share>
+    <div v-transfer-dom>
+      <popup v-model="showPay" height="100%" :hide-on-blur=false position="bottom" :popup-style="{zIndex:600}" :should-scroll-top-on-show="true">
+        <div class="top_userInfo" v-if="showPayWin">
+          <blindDatePay :actDatingId="id" :enrollFee="channel.money||0" @openPayWin="openPayWin" @hiddenPayWin="hiddenPayWin"></blindDatePay>
+        </div>
+      </popup>
+    </div>
+  </div>
+</template>
+
+<script>
+  import Loading from '@other/loading.vue';
+  import Back from '@other/back.vue';
+  import blindDatePay from './blindDatePay.vue';
+  import {Popup, TransferDom} from 'vux'
+  import Share from '@/components/home/share.vue'
+import { wxShare } from '@js/wxjssdk';
+import {actContent} from './actStatic.data.js'
+  export default {
+    name: "activityDetail",//详情
+    components: {
+      Loading,
+      Back,
+      blindDatePay,
+      Popup,
+	  Share,
+    },
+    directives: {
+      TransferDom
+    },
+    data() {
+      return {
+        isloading: false,
+        id: null,
+        specialType: null,//专场类型
+        arrImg: [],
+        blindDateSingle: {},
+        showPayWin: false,
+        showPay: false,
+        lineType: {"1": "线上", "2": "线下"},
+        showMb: false,
+		isManage:false,
+		isAdmin:false,
+		isLogin:false,//是否已经登录
+        canEnroll:false,//是否能报名
+		showShare:false,//分享弹出层
+		shareTitle:'',
+		shareDesc:'',
+		shareImg:'',
+		shareUrl:'',
+		manCount:-1,//男性人数
+		channel:{//报名费
+			money:0,
+		},
+		enrollPepple:{},//报名人数
+      }
+    },
+    beforeRouteEnter(to, from, next) {
+		console.log("路由守卫:"+to.name)
+	   if (to.query && actContent[to.query.id]) {
+        next({
+          path: '/activityDetailStatic',
+          query: {
+            id: to.query.id
+          }
+        })
+      } else {
+        next()
+      }
+    },
+    watch: {
+		handleRoute(newV) {//返回键触发
+			const t=this;
+			if (!newV) {
+				if(t.showShare){
+					t.showShare=false;
+				}
+			}
+		},
+		showShare(val){
+			const t=this;
+			let status = val;
+			t.$store.commit("CHANGEHANDLEROUTE", status);
+		},
+	},
+    computed: {
+      contentCpt() {
+        const t = this;
+        if (this.blindDateSingle.datingDetailsExt) {
+          let content = t.blindDateSingle.datingDetailsExt.extString2;
+          const imgReg = /<img.*?(?:>|\/>)/gi;
+          const srcReg = /src=[\'\"]?([^\'\"]*)[\'\"]?/i;
+          const arr = t.blindDateSingle.datingDetailsExt.extString2.match(imgReg);
+          if (arr) {
+            let arrImg = [];
+            arr.forEach((v, i) => {
+				let match=v.match(srcReg);
+              const src = match&&match[1];
+              arrImg.push({
+                id: i,
+                src
+              });
+              let reg = new RegExp('<img src=\"' + src + '\"', 'g');
+              content = content.replace(reg, '<img data-id="' + i + '" src="' + t.$utils.getFullPath(src) + '"');
+            });
+            t.arrImg = arrImg;
+          }
+          return content;
+        }
+      },
+      activityProcessHtml() {
+        const t = this;
+        if (this.blindDateSingle.datingDetailsExt) {
+          let content = t.blindDateSingle.datingDetailsExt.extString3;
+          const imgReg = /<img.*?(?:>|\/>)/gi;
+          const srcReg = /src=[\'\"]?([^\'\"]*)[\'\"]?/i;
+          const arr = t.blindDateSingle.datingDetailsExt.extString3.match(imgReg);
+          if (arr) {
+            let arrImg = [];
+            arr.forEach((v, i) => {
+				let match=v.match(srcReg);
+              const src = match&&match[1];
+              arrImg.push({
+                id: i,
+                src
+              });
+              let reg = new RegExp('<img src=\"' + src + '\"', 'g');
+              content = content.replace(reg, '<img data-id="' + i + '" src="' + t.$utils.getFullPath(src) + '"');
+            });
+            t.arrImg = arrImg;
+          }
+          return content;
+        }
+      },
+      tipsHtml() {
+        const t = this;
+        if (this.blindDateSingle.datingDetailsExt) {
+          let content = t.blindDateSingle.datingDetailsExt.extString5;
+          const imgReg = /<img.*?(?:>|\/>)/gi;
+          const srcReg = /src=[\'\"]?([^\'\"]*)[\'\"]?/i;
+          const arr = t.blindDateSingle.datingDetailsExt.extString5.match(imgReg);
+          if (arr) {
+            let arrImg = [];
+            arr.forEach((v, i) => {
+				let match=v.match(srcReg);
+              const src = match&&match[1];
+              arrImg.push({
+                id: i,
+                src
+              });
+              let reg = new RegExp('<img src=\"' + src + '\"', 'g');
+              content = content.replace(reg, '<img data-id="' + i + '" src="' + t.$utils.getFullPath(src) + '"');
+            });
+            t.arrImg = arrImg;
+          }
+          return content;
+        }
+      },
+		handleRoute() {//返回键
+			return this.$store.state.handleRoute;
+		},
+    },
+   async mounted() {
+      const t = this;
+      t.id = t.$route.query.id;
+	  t.isLogin=t.$store.state.userInfo.id?true:false;
+	  t.getManCount();
+      t.getSpecialType();
+      await t.getBlindDateSingle();
+      $("body").addClass("gray");
+	  let shareTitle=t.blindDateSingle.datingDetailsExt.extString7||t.blindDateSingle.datingTitle||'';
+	  let shareDesc=t.blindDateSingle.datingDetailsExt.extString8||t.blindDateSingle.datingDesc||'';
+	  let shareLink =t.$store.state.baseURL+"/api/account/publicAddressLoginUrl?state=activityDetail__id_"+t.id;
+		if(t.blindDateSingle.isUnion){
+			shareLink+="_isUnion_"+t.blindDateSingle.isUnion;
+		}
+		/*if(t.blindDateSingle.jyNumber){
+			shareLink+="_jyNumber_"+t.blindDateSingle.jyNumber;
+		}*/
+		let otherLink=t.$route.query.otherLink||'';
+		if(otherLink){
+			shareLink+="_"+otherLink.split(".").join("_");
+		}
+		t.shareTitle=shareTitle;
+		t.shareDesc=shareDesc;
+		t.shareUrl=shareLink;
+		//console.log(shareTitle,shareDesc,shareLink)
+		  wxShare&&wxShare({
+			  title: shareTitle, // 分享标题
+			  desc: shareDesc, // 分享描述
+			  link: shareLink, // 分享链接
+			  imgUrl: t.$store.state.baseFrontEndURL+'static/logo.png', // 分享图标
+			  debug:false
+		  },{
+			success(){
+			//	alert("分享成功");
+			},
+			cancel(){
+				//alert("分享失败");
+			}
+		  });
+    },
+    destroyed() {
+      $("body").removeClass("gray");
+    },
+    methods: {
+		async getManCount(){//活动男的数量
+			const t=this;
+			try{
+				const result = await t.$server.blindDatingBaoming({
+					datingId: t.id,
+					candidateSex:2,
+					page: 1,
+					rows: 1,
+				});
+				t.manCount=result.data.count;
+			}catch(e){
+				console.log(JSON.stringify(e));
+			}
+		},
+		toLink(link,id,activeId,silentState){
+			this.$router.push({
+			  path: link,
+			  query:{
+				  id: id,
+		          activityId: activeId,
+		          silentState: silentState
+			  }
+			})
+		  },
+		changeShow(val){
+		  this.showShare=val;
+		},
+      openPayWin() {
+        const t = this;
+        t.showPay = true;
+      },
+      hiddenPayWin(flag) {
+        this.showPay = false;
+        if (flag) {
+          this.$set(this.blindDateSingle, "isCandidate", 1)
+        }
+        setTimeout(() => {
+          this.showPayWin = false;
+        }, 800)
+      },
+      async getSpecialType() {
+        const t = this;
+        try {
+          const apiDict = await this.$server.apiDict({type: "blind_dating_special_type"});
+          let item = apiDict.data.data;
+          for (let i = 0; i < item.length; i++) {
+            if (!t.specialType) {
+              t.specialType = {};
+            }
+            t.specialType[item[i].value] = item[i].label;
+          }
+        } catch (e) {
+          console.log(JSON.stringify(e));
+        }
+      },
+      getFullPath(path) {
+        return this.$utils.getFullPath(path)
+      },
+      async getBlindDateSingle() {
+        const _this = this;
+        const result = await _this.$server.blindDatingSingle({
+          datingDetailsId: _this.id,
+		  isUnion:_this.$store.state.channel.isUnion,
+		 // jyNumber:_this.$store.state.channel.jyNumber
+        });
+        if(_this.$store.state.userInfo.dataPerfect!=1&&_this.$store.state.userInfo.identity!=1){
+          _this.showMb=true;
+        }
+
+        _this.blindDateSingle = result.data.data;
+
+		//报名费用统计
+		let channelInfo={};
+		if(_this.$store.state.channel.isUnion&&_this.blindDateSingle.datingDetailsExt){//有渠道
+			 let channel=null;
+			 if(_this.blindDateSingle.isUnionCorrect&&_this.blindDateSingle.datingDetailsExt.extString6){
+				 try{
+					let channelObj=_this.blindDateSingle.datingDetailsExt.extString6.replace(/(?:\s*['"]*)?([a-zA-Z0-9]+)(?:['"]*\s*)?:/g, '"$1":');
+					let d=JSON.parse(channelObj);
+					channel=d[_this.blindDateSingle.isUnionCorrect];
+				 }catch(e){
+					console.log("渠道格式错误:"+JSON.stringify(e));
+				 }
+			 }
+			if(channel){//渠道信息附加表
+				if(_this.$store.state.userInfo.sex==1&&channel.girlFee!=undefined){
+					channelInfo.money=channel.girlFee;
+				}else if(_this.$store.state.userInfo.sex==2&&channel.boyFee!=undefined){
+					channelInfo.money=channel.boyFee;
+				}else if(channel.fee!=undefined){
+					channelInfo.money=channel.fee;
+				}else if(_this.$store.state.userInfo.sex==1&&_this.blindDateSingle.datingDetailsExt.extDouble2!=undefined){//女
+					channelInfo.money=_this.blindDateSingle.datingDetailsExt.extDouble2
+				}else if(_this.$store.state.userInfo.sex==2&&_this.blindDateSingle.datingDetailsExt.extDouble!=undefined){//男
+					channelInfo.money=_this.blindDateSingle.datingDetailsExt.extDouble
+				}else{
+					channelInfo.money=_this.blindDateSingle.enrollFee;
+				}
+				channelInfo.name=channel.name;
+			}else{//没渠道(限男女)
+				//console.log(_this.$store.state.userInfo.sex,_this.blindDateSingle.datingDetailsExt.extDouble2)
+				if(_this.$store.state.userInfo.sex==1&&_this.blindDateSingle.datingDetailsExt.extDouble2!=undefined){//女
+					channelInfo.money=_this.blindDateSingle.datingDetailsExt.extDouble2;
+					channelInfo.name="女生";
+				}else if(_this.$store.state.userInfo.sex==2&&_this.blindDateSingle.datingDetailsExt.extDouble!=undefined){//男
+					channelInfo.money=_this.blindDateSingle.datingDetailsExt.extDouble;
+					channelInfo.name="男生";
+				}else{
+					channelInfo.money=_this.blindDateSingle.enrollFee;
+				}
+			}
+		}else{//没渠道的
+			if(_this.$store.state.userInfo.sex==1&&_this.blindDateSingle.datingDetailsExt.extDouble2!=undefined){//女
+				channelInfo.money=_this.blindDateSingle.datingDetailsExt.extDouble2;
+				channelInfo.name="女生";
+			}else if(_this.$store.state.userInfo.sex==2&&_this.blindDateSingle.datingDetailsExt.extDouble!=undefined){//男
+				channelInfo.money=_this.blindDateSingle.datingDetailsExt.extDouble
+				channelInfo.name="男生";
+			}else{
+				channelInfo.money=_this.blindDateSingle.enrollFee;
+			}
+		}
+		//console.log("3333333333"+JSON.stringify(channelInfo));
+		_this.channel=channelInfo;
+		if(_this.$store.state.channel.isUnion&&channelInfo.name){
+			_this.$store.commit("CHANGESTORE",{name:"channel",value:{
+				isUnion:_this.$store.state.channel.isUnion,
+				//jyNumber:_this.$store.state.channel.jyNumber,
+				name:channelInfo.name
+			}});
+		}
+		//报名人数统计
+		let enrollPepple={};
+		if(_this.blindDateSingle.datingDetailsExt){
+			if(_this.blindDateSingle.datingDetailsExt.extInt8!=undefined&&_this.blindDateSingle.datingDetailsExt.extInt9!=	undefined){//限制男/女
+				enrollPepple={
+					maxBoy:_this.blindDateSingle.datingDetailsExt.extInt8,
+					maxGirl:_this.blindDateSingle.datingDetailsExt.extInt9,
+				}
+				if(_this.manCount!=-1){
+					enrollPepple={
+						maxBoy:_this.blindDateSingle.datingDetailsExt.extInt8,
+						maxGirl:_this.blindDateSingle.datingDetailsExt.extInt9,
+						boy:_this.manCount,
+						girl:_this.blindDateSingle.enrollCount-_this.manCount,
+					}
+				}
+			}else if(_this.blindDateSingle.datingDetailsExt.extInt8!=undefined){//限制男
+				enrollPepple={
+					maxBoy:_this.blindDateSingle.datingDetailsExt.extInt8,
+					maxGirl:_this.blindDateSingle.datingDetailsExt.extInt4,
+				}
+				if(_this.manCount!=-1){
+					let girlNum=_this.blindDateSingle.enrollCount-_this.manCount;//女生已报名人数
+					let canBoyNum=_this.blindDateSingle.datingDetailsExt.extInt4-girlNum;//男生最大可报名人数
+					let maxBoy=Math.min(_this.blindDateSingle.datingDetailsExt.extInt8,canBoyNum);//男生实际可报名人数
+					let maxGirl=_this.blindDateSingle.datingDetailsExt.extInt4-_this.manCount;//女生实际可报名人数
+					enrollPepple={
+						maxBoy:maxBoy,
+						maxGirl:maxGirl,
+						boy:_this.manCount,
+						girl:_this.blindDateSingle.enrollCount-_this.manCount,
+					}
+				}
+			}else if(_this.blindDateSingle.datingDetailsExt.extInt9!=undefined){//限制女
+				enrollPepple={
+					maxBoy:_this.blindDateSingle.datingDetailsExt.extInt4,
+					maxGirl:_this.blindDateSingle.datingDetailsExt.extInt9,
+				}
+				if(_this.manCount!=-1){
+					let girlNum=_this.blindDateSingle.enrollCount-_this.manCount;//女生已报名人数
+					let canGirlNum=_this.blindDateSingle.datingDetailsExt.extInt4-_this.manCount;//女生最大可报名人数
+					let maxGirl=Math.min(_this.blindDateSingle.datingDetailsExt.extInt9,canGirlNum);//女生实际可报名人数
+					let maxBoy=_this.blindDateSingle.datingDetailsExt.extInt4-_this.girlNum;//男生实际可报名人数
+					enrollPepple={
+						maxBoy:maxBoy,
+						maxGirl:maxGirl,
+						boy:_this.manCount,
+						girl:_this.blindDateSingle.enrollCount-_this.manCount,
+					}
+				}
+			}else{//都不限
+				enrollPepple={
+					boy:_this.manCount,
+					girl:_this.blindDateSingle.enrollCount-_this.manCount,
+				}
+			}
+		}
+		_this.enrollPepple=enrollPepple;
+
+		if(_this.blindDateSingle.isStartEnroll==1&&_this.blindDateSingle.isStopEnroll==0){
+			_this.canEnroll=true;//是否能报名
+		}
+		if(_this.isLogin){//是否主持人登录
+			_this.isManage=_this.blindDateSingle.jiaoyouUser.id==_this.$store.state.userInfo.id?true:false;
+			if(_this.blindDateSingle.adminList&&_this.blindDateSingle.adminList.length>0){
+				let isAdmin=_this.blindDateSingle.adminList.filter((val)=>{
+					return val.userId==_this.$store.state.userInfo.id;
+				});
+				if(isAdmin.length>0){
+					_this.isAdmin=true;
+				}
+			}
+		}
+      },
+      showBigImg(e) {
+        if (e.target.nodeName == 'IMG') {
+		return false;
+          this.showPhoto(e.target.src)
+        }
+      },
+      async followBlindDating() { //关注活动接口
+        this.$vux.loading.show()
+        await this.$server.followBlindDating(this.id);
+        this.$vux.loading.hide()
+        this.$vux.toast.show({
+          type: 'text',
+          text: '关注成功',
+          position: 'middle',
+          width: 'auto',
+        })
+        this.$set(this.blindDateSingle, "isFollow", 1)
+      },
+      async unfollowBlindDating() { //取消关注活动接口
+        this.$vux.loading.show()
+        await this.$server.unfollowBlindDating(this.id);
+        this.$vux.loading.hide()
+        this.$vux.toast.show({
+          type: 'text',
+          text: '取消关注成功',
+          position: 'middle',
+          width: 'auto',
+        })
+        this.$set(this.blindDateSingle, "isFollow", 0)
+      },
+      bmBlindDating() { //参加活动接口
+        const t = this;
+        // t.$router.push({name:'blindDatePay',query:{id:t.id}});
+        t.showPayWin = true;
+      },
+      async unbmBlindDating() { //取消参加活动接口
+		  const t=this;
+		  t.$vux.confirm.show({
+			content: "登记缺席报名费无法退回,并且不能再参与本活动!",
+			confirmText:"确认",
+			cancelText:"取消",
+			onCancel () {
+			},
+			async onConfirm () {
+				try{
+					t.isloading=true;
+					await t.$server.unCandidateBlindDating({id:t.id});
+					t.isloading=false;
+					let candidateList=t.blindDateSingle.candidateList.filter(v=>{
+						return v.jiaoyouUser.id!=t.$store.state.userInfo.id;
+					})
+					t.$set(t.blindDateSingle, "candidateList",candidateList);
+          //t.blindDateSingle.enrollCount = parseInt(t.blindDateSingle.enrollCount - 1);
+					t.$set(t.blindDateSingle, "isCandidate", 0)
+					t.$set(t.blindDateSingle, "isAbsent", 1);
+					let enrollCount=parseInt(t.blindDateSingle.enrollCount)-1;//实时更新报名人数
+					t.$set(t.blindDateSingle, "enrollCount", enrollCount<0?0:enrollCount);
+				}catch(e){
+					t.$vux.toast.show({
+						type: 'cancel',
+						text: e.message,
+						position: 'middle',
+						width: 'auto',
+					});
+					t.isloading=false;
+				}
+			}
+		});
+      },
+	  async addGood(userId,index) { //添加好感好友接口
+        this.$vux.loading.show()
+        await this.$server.addGood({
+          likingUserId: userId,
+        });
+        /*this.$vux.toast.show({
+          type: 'text',
+          text: '已好感',
+          position: 'middle',
+          width: 'auto',
+        })*/
+        this.$vux.loading.hide();
+        this.$set(this.blindDateSingle.candidateList[index].jiaoyouUser,"isGood",1)
+      },
+      async delGood(userId,index) { //取消好感好友接口
+        this.$vux.loading.show()
+        await this.$server.deleteGood({
+          likingUserId: userId,
+        });
+       /* this.$vux.toast.show({
+          type: 'text',
+          text: '取消好感',
+          position: 'middle',
+          width: 'auto',
+        })*/
+        this.$vux.loading.hide();
+        this.$set(this.blindDateSingle.candidateList[index].jiaoyouUser,"isGood",0)
+      },
+    }
+  }
+</script>
+
+<style scoped lang="scss">
+  .jy_isBrowser {
+    .main {
+      padding-top: 1.39rem !important;
+    }
+  }
+
+  .at_con {
+    i.right {
+      color: #b2b2b2;
+      position: absolute;
+      right: 0;
+    }
+  }
+</style>

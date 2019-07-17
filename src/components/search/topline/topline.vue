@@ -1,0 +1,359 @@
+<template>
+  <div class="main">
+    <Loading v-if="isloading"></Loading>
+    <div class="header">
+      <div class="top">
+        <Back class="left"><i class="iconfont">&#xe613;</i></Back><a class="right" @click="showPopover=!showPopover"><i class="iconfont">&#xe679;</i></a>{{type=='my'?'我的文章':'娇友头条'}}
+      </div>
+    </div>
+	<Popover :showPopover="showPopover" @close="closePopover">
+      <router-link :to="{name:'articlePost'}" tag="li" ><i class="iconfont">&#xe64d;</i><i>发布</i></router-link>
+	  <li v-if="type!='my'" @click.stop="type='my'"><i class="iconfont">&#xe618;</i><i>我的文章</i></li>
+    </Popover>
+   
+		<myScroller :style="$store.state.isBrowser?'padding:1.39rem 0 0;':'padding:2.29rem 0 0;'" :infinite="infinite" :refresh="refresh" :loadRefresh="loadRefresh" :loadInfinite="loadInfinite" ref="myScroller" :showbg="showbg">
+		 <div class="myscoll">
+        <div class="content" v-if="artList">
+          <div v-for="item,index in artList" :key="item.id">
+            <router-link :to="{path:'/toplineDetail/detail',query:{id:item.id}}" tag="div" class="great" v-if="index===0&&type!='my'">
+              <p class="title">{{item.title}}</p>
+              <p v-if="item.cover" :style="{'background-image':'url('+$store.state.imageUrl+item.cover+')'}"></p>
+              <div><p><i class="iconfont">&#xe639;</i><span>优质</span><span>娇友头条</span> </p><p><span><i class="iconfont">&#xe63b;</i> {{item.visit}}</span><span><i class="iconfont">&#xe8c5;</i> {{item.commentCount}}</span></p></div>
+            </router-link>
+             <router-link :to="{path:'/toplineDetail/detail',query:{id:item.id}}" tag="div" class="normal" v-else>
+              <div>
+                <p class="title">{{item.title}}</p>
+                <p><span><i class="iconfont">&#xe63b;</i> {{item.visit}}</span><span><i class="iconfont">&#xe8c5;</i> {{item.commentCount}}</span></p>
+              </div>
+              <div><p v-if="item.cover" :style="{'background-image':'url('+$store.state.imageUrl+item.cover+')'}"></p></div>
+            </router-link>
+          </div>
+        </div></div>
+     </myScroller>
+    
+  </div>
+</template>
+<script>
+  import Loading from '@other/loading.vue';
+  import Back from '@other/back.vue';
+  import myScroller from '@other/myScroller.vue';
+  import Popover from '@/components/plugs/popover.vue'
+  export default {
+    name: 'topline',
+    data () {
+      return {
+        isloading:false,
+		artList:null,
+		pageNo:1,
+		isRead:false,
+		isEnd:false,
+		loadRefresh:true,//下拉刷新
+		loadInfinite:true, //上拉加载
+		isRefresh:false,
+		showPopover: false,
+		type:this.$route.query.type,
+		showbg:true,
+      }
+    },
+    components: {
+      Loading,
+      myScroller,
+	  Back,
+	  Popover,
+    },
+    computed:{
+      handleRoute(){
+        return this.$store.state.handleRoute;
+      },
+    },
+    watch:{
+      handleRoute(newV){
+        if(!newV){
+          this.showPopover=false;
+        }
+      },
+      showPopover(newV){
+        let status = this.showPopover
+        this.$store.commit("CHANGEHANDLEROUTE",status)
+      },
+		isEnd(val){
+			const t=this;
+			
+				if(val){
+				setTimeout(()=>{
+					t.$refs.myScroller.finishInfinite(true);
+					},2000)
+				}else{
+				setTimeout(()=>{
+					//t.$refs.myScroller.scrollTo(1);
+					t.$refs.myScroller.finishInfinite(false);
+					},2000)
+				}
+			
+		},
+		type(){
+			this.showPopover=false;
+			this.getArt(true);
+		}
+    },
+    mounted () {
+		const t=this;
+		//t.type=t.$route.query.type;
+		//t.getArt();
+    },
+    methods :{
+		closePopover(val) {
+			this.showPopover = val;
+		},
+		async getArt(flag){
+			const t=this;
+			if(t.isRead){
+				return false;
+			}
+			t.isRead=true;
+			if(t.isRefresh||flag){
+				t.pageNo=1;
+				if(flag){
+					t.isloading=true;
+				}
+			}
+			try{
+				let result;
+				if(t.type=="my"){//我的文章
+					result=await t.$server.getMyArtList({
+						page:t.pageNo,
+						rows:t.$store.state.pageSize
+					});
+				}else{//推荐头条
+					result=await t.$server.getArt({
+						page:t.pageNo,
+						rows:t.$store.state.pageSize
+					});
+				}
+				if(!t.artList||t.isRefresh||flag){
+					t.$refs.myScroller.scrollTo(1);
+					t.artList=[];
+				}
+				if(result.data.list){
+					t.showbg=false;
+					t.artList.push(...result.data.list);
+				}
+				if(result.data.count<=t.$store.state.pageSize*t.pageNo||result.data.list.length<t.$store.state.pageSize){//判断是否最后一页
+					t.isEnd=true;
+				}else{
+					t.isEnd=false;
+					//t.$refs.myScroller.finishInfinite(false);
+				}
+			}catch(e){
+				
+			}
+			t.isRead=false;
+			t.isloading=false;
+			t.isRefresh=false;
+			t.pageNo++;
+		},
+		infinite(done) {//上拉加载(防止初始内容不满一屏会无限加载)
+			const t=this;
+			if(t.isEnd){
+				done(true);
+				return false;
+			}
+			/*if(t.isRead){
+				return false;
+			}*/
+			console.log("加载");
+			t.getArt().then(()=>{
+				if(t.isEnd){
+					setTimeout(()=>{
+						done(true);
+					},2000)
+					
+				}else{
+					setTimeout(()=>{
+						done();
+					},2000)
+					
+				}
+			});
+		},
+		refresh(done) {//下拉刷新
+			const t=this;
+			console.log("刷新");
+			t.isRefresh=true;
+			t.getArt().then((res)=>{
+				done();
+			});
+		},
+    }
+  }
+</script>
+<style scoped lang="scss">
+  .main{
+	.popover {
+      li {
+        height: 1.52rem;
+        line-height: 1.52rem;
+        width: 4.3rem;
+        border-bottom: 1px solid #f9f9f9;
+        & > i {
+          margin-left: 0.46rem;
+          font-size: 0.44rem;
+        }
+        span {
+          margin-left: 0.46rem;
+          display: inline-block;
+          height: 1.52rem;
+          line-height: 1.52rem;
+          vertical-align: top;
+          i {
+            display: block;
+            font-size: 0.44rem;
+            height: 0.76rem;
+            line-height: 1.08rem;
+          }
+          i:last-child {
+            font-size: 0.3rem;
+            line-height: 0.44rem;
+            color: #b0b0b0;
+          }
+        }
+        &:nth-of-type(1) .iconfont, &:nth-of-type(4) .iconfont {
+          color: #f6840f;
+        }
+        &:nth-of-type(2) .iconfont, &:nth-of-type(3) .iconfont {
+          color: #1296db;
+        }
+      }
+    }
+    padding-bottom:0;
+    &:before{
+      background-color:#3a3845 ;
+    }
+    .header{
+      position: fixed;
+      width: 100%;
+      z-index: 10;
+      .top{
+        background-color:#3a3845 ;
+        color:#FFF;
+        font-size: 0.52rem;
+        position: relative;
+        i{
+          font-size: 0.52rem;
+        }
+        a{
+          position:absolute;
+          padding:3px;
+        }
+        .left{
+          left:0.325rem;
+        }
+        .right{
+          right:0.325rem;
+        }
+      }
+    }
+    .myscoll{
+       
+      .content{
+        background-color: #f2f2f2;
+        &>div{
+			
+          margin-top: 0.3rem;
+          background-color: #fff;
+          padding:0 0.2rem;
+          &:first-child{
+            margin-top: 0;
+          }
+        }
+        .great{
+          .title{
+            font-size: 0.48rem;
+            font-weight: 500;
+            margin:0 0.2rem;
+            height: 1rem;
+            line-height: 1rem;
+            padding-top:0.4rem;
+          }
+          &>p:nth-of-type(2){
+            height: 3.5rem;
+            background-size: cover;
+            background-position:center;
+            background-repeat:no-repeat;
+          }
+          &>div{
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.32rem;
+            p{
+              height: 1rem;
+              line-height: 1rem;
+              i{
+                font-size: 0.32rem;
+              }
+            }
+            p:first-child{
+              i{
+                color: #f77878;
+              }
+              span:nth-of-type(1){
+                color:#000;
+                margin: 0 0.2rem;
+              }
+              span:last-child{
+                color:#ababab;
+                margin: 0 0.2rem;
+              }
+            }
+            p:last-child{
+              color:#ababab;
+              span:nth-of-type(1){
+                margin: 0 0.2rem;
+              }
+              span:last-child{
+              }
+            }
+          }
+        }
+        .normal{
+          margin:0 0 0 0.2rem;
+          padding:0.35rem 0;
+          display: flex;
+          justify-content: space-between;
+          &>div{
+		 
+            &:first-child{
+              position: relative; width:100%;min-height:1.5rem;
+              .title{
+                font-size: 0.4rem;
+                color:#000;
+              }
+              p:last-child{
+                position: absolute;
+                bottom: 0;
+                font-size: 0.32rem;
+                color:#ababab;
+                i{
+                  font-size: 0.32rem;
+                }
+                span{
+                  margin-right: 0.2rem;
+                }
+              }
+            }
+            &:last-child{
+              p{
+                width: 3.5rem;
+                height: 2.6rem;
+                background-size: cover;
+                background-position:center;
+                background-repeat:no-repeat;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+</style>
+

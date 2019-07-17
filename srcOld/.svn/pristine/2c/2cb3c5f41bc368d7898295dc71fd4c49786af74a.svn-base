@@ -1,0 +1,259 @@
+<template>
+  <div class="main">
+    <Loading v-if="isloading"></Loading>
+    <div class="header">
+      <div class="top">
+		<Back class="left" v-if="!datingId"><i class="iconfont">&#xe613;</i></Back>
+        <a v-else class="left" @click="hiddenInfo"><i class="iconfont">&#xe613;</i></a>
+        <a class="right"></a>申请通知
+      </div>
+    </div>
+    <myScroller :style="$store.state.isBrowser?'padding:1.32rem 0 0;margin-top:0.2rem':'padding:1.95rem 0 0;margin-top:0.2rem'" :infinite="infinite" :refresh="refresh" :loadRefresh="loadRefresh" :loadInfinite="loadInfinite" ref="myScroller">
+      <div class="myscoll">
+        <div class="content">
+          <template v-if="listArr">
+            <template v-if="listArr.length>0">
+              <router-link :to="{name:'userInfo',query:{id:item.user.id}}" tag="div" v-for="(item,index) in listArr" :key="item.id">
+                <div :style="{'background-image':'url('+getFullPath(item.user.headimgAttachmentId)+')'}"></div>
+                <div class="userinfo">
+                  <p>{{item.user.aliasName}}</p>
+                  <p>{{item.content}}</p>
+                </div>
+                <div v-if="item.status==1"><span @click.stop="accept(item.user.id,index)">接受</span><span @click.stop="reject(item.user.id,index)">忽略</span></div>
+                <div class="gray_text" v-else-if="item.status==0">已忽略</div>
+                <div class="gray_text" v-else>已同意</div>
+              </router-link>
+            </template>
+          </template>
+        </div>
+      </div>
+    </myScroller>
+  </div>
+</template>
+<script>
+  import Loading from '@other/loading.vue';
+  import Back from '@other/back.vue';
+  import myScroller from '@other/myScroller.vue';
+
+  export default {
+    name: 'apply',
+    components: {
+      Loading,
+      myScroller,
+      Back,
+    },
+	props: ['datingId'],
+    data () {
+      return {
+        isloading:false,
+        listArr: [],
+        //分页参数
+        pageNo: 1,
+        isRead: false,
+        isEnd: false,
+        loadRefresh:true,//下拉刷新
+        loadInfinite:true, //上拉加载
+      }
+    },
+    computed: {
+    },
+    created (){
+
+    },
+    destroyed () {
+    },
+    mounted () {
+		console.log(this.datingId)
+		this.datingId&&this.getList();
+	},
+    methods :{
+		hiddenInfo() {
+        this.$emit('hiddenInfo');
+      },
+      getFullPath (path) {
+        return this.$utils.getFullPath(path)
+      },
+      async getList(flag){
+        const _this = this;
+        if (_this.isRead) {
+          return false;
+        }
+        _this.isRead = true;
+        if (_this.isRefresh || flag) {
+          _this.pageNo = 1;
+          if (flag) {
+            _this.isloading = true;
+          }
+        }
+        try {
+          let data = {
+            page: _this.pageNo,
+            rows: _this.$store.state.pageSize
+          };
+          if (!_this.listArr || _this.isRefresh || flag) {
+            _this.$refs.myScroller.scrollTo(1);
+            _this.listArr = [];
+          }
+          let result = await _this.$server.findApply(data);
+          if(result.data.list){
+            _this.listArr.push(...result.data.list);
+          }
+          if (result.data.count <= _this.$store.state.pageSize * _this.pageNo || result.data.list.length < _this.$store.state.pageSize|| result.data.data.length < _this.$store.state.pageSize) {//判断是否最后一页
+            _this.isEnd = true;
+          } else {
+            _this.isEnd = false;
+            _this.$refs.myScroller.finishInfinite(false);
+          }
+		  this.datingId && this.$emit('openWin');
+        }catch (e) {
+          console.log(e);
+          _this.isEnd = true;
+        }
+        _this.isRead = false;
+        _this.isloading = false;
+        _this.isRefresh = false;
+        _this.pageNo++;
+      },
+      infinite(done) {//上拉加载(防止初始内容不满一屏会无限加载)
+        const t=this;
+        if(t.isEnd){
+          done(true);
+          return false;
+        }
+        console.log("加载");
+        t.getList(this.searchKey).then(()=>{
+          if(t.isEnd){
+            done(true);
+          }else{
+            done();
+          }
+        });
+      },
+      refresh(done) {//下拉刷新
+        const t=this;
+        console.log("刷新");
+        t.isRefresh=true;
+        t.getList(this.searchKey).then((res)=>{
+          done();
+        });
+      },
+      async accept(id,index){ //接受
+        this.$vux.loading.show()
+        let result = await this.$server.acceptUserApply(id);
+        this.$vux.loading.hide()
+        this.$vux.toast.show({
+          type: 'text',
+          text: "接受成功",
+          position: 'middle',
+          width: 'auto',
+        })
+        this.$set(this.listArr[index],"status",2)
+      },
+      async reject(id,index){ //拒绝
+        this.$vux.loading.show()
+        let result = await this.$server.refuseUserApply(id);
+        this.$vux.loading.hide();
+        this.$vux.toast.show({
+          type: 'text',
+          text: "忽略成功",
+          position: 'middle',
+          width: 'auto',
+        })
+        this.$set(this.listArr[index],"status",0)
+      },
+    }
+  }
+</script>
+<style scoped lang="scss">
+  .main{
+    padding-bottom:0;
+    &:before{
+      background-color:#3a3845 ;
+    }
+    .header{
+      position: fixed;
+      width: 100%;
+      z-index: 10;
+      .top{
+        background-color:#3a3845 ;
+        color:#FFF;
+        font-size: 0.52rem;
+        position: relative;
+        i{
+          font-size: 0.52rem;
+        }
+        a{
+          position:absolute;
+          padding:3px;
+        }
+        .left{
+          left:0.325rem;
+        }
+        .right{
+          right:0.325rem;
+        }
+      }
+    }
+    .myscoll{
+      background-color: #ffffff;
+      .content{
+        padding:0 0.3rem;
+        &>div{
+          position:relative;
+          display: flex;
+          align-items: center;
+          height: 2rem;
+          line-height: 2rem;
+          border-bottom: 1px solid #f2f2f2;
+          &>div:first-child{
+            width: 1.4rem;
+            height: 1.4rem;
+            background-size: cover;
+            background-position: center;
+            border-radius: 50%;
+          }
+          &>div:nth-of-type(2){
+            width: 5rem;
+            p{
+              line-height: 2;
+              padding:0 0 0 0.2rem;
+              font-size: 0.48rem;
+              img{
+                margin-left: 0.1rem;
+                width: 0.35rem;
+                height: 0.35rem;
+              }
+            }
+            p:last-child{
+              font-size: 0.36rem;
+              color:#9a9a9d;
+              overflow: hidden;
+              text-overflow:ellipsis;
+              white-space: nowrap;
+            }
+          }
+          &>div:last-child{
+            position: absolute;
+            right: 0;
+            text-align: center;
+            color:#ffa443;
+            font-size: 0.36rem;
+            span{
+              padding: 0.1rem 0.4rem;
+              border: 1px solid #ffa443;
+              border-radius: 5px;
+              &:nth-of-type(1){
+                margin-right: 0.2rem;
+              }
+              &:nth-of-type(2){
+                border: 1px solid #d0cdd1;
+                color:#d0cdd1;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+</style>
+

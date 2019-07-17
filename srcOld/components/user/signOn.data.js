@@ -1,0 +1,22 @@
+export default {
+  user:{
+    userId:501,//用户id
+    coins:1445,//乾坤币
+    signedDate:[
+      "2018-08-01",
+      "2018-08-16",
+      "2018-08-18",
+      "2018-08-22",
+      "2018-08-23",
+      "2018-08-24",
+    ],
+    title:"8月签到日历",
+    awards:{
+      coins:10,
+      experience:20,
+    },
+    signedRank:1002,
+    addCoins:2,
+    ifSigned:false,
+  }
+}

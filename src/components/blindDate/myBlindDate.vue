@@ -1,0 +1,462 @@
+<template>
+  <div class="main jy_all_top my_blind_date jy_state_top">
+    <Loading v-if="isloading"></Loading>
+    <div class="header">
+      <div class="top">
+        <Back class="left"><i class="iconfont">&#xe613;</i></Back><p>我的相亲 </p>
+      </div>
+    </div>
+    <!--<div class="jy_block_t">-->
+      <!--<ul class="jy_aInfo_line jy_xq">-->
+        <!--<router-link tag="li" :to="{name:'myBlindDate'}"><em class="blue"></em>相亲结果</router-link>-->
+        <!--<router-link tag="li" :to="{name:'myBlindDate'}"><em class="pink"></em>我的奖品</router-link>-->
+      <!--</ul>-->
+    <!--</div>-->
+    <div class="title">
+      <div class="underline" ref="underline" :style="{left:underlineLeft}"></div>
+      <div @click="getList(1,true)" :class="{active:active==1}">{{$store.state.userInfo.identity==1?'全部':'已报名'}}</div>
+      <div @click="getList(2,true)" :class="{active:active==2}">已关注</div>
+    </div>
+    <myScroller :style="$store.state.isBrowser?'padding:3.3rem 0 0;':'padding:4.15rem 0 0;'" :infinite="infinite" :refresh="refresh" :loadRefresh="loadRefresh" :loadInfinite="loadInfinite" ref="myScroller" :showbg="showbg">
+      <template v-if="listArr">
+        <router-link tag="div" :to="{name:'activityDetail',query:{id:item.id}}" class="activity_list" v-for="item,index in listArr" :key="item.id">
+          <div class="activity_img">
+            <i class="jy_bl_img" :style="'background-image:url('+getFullPath(item.coverimgImages)+')'"></i>
+            <div class="jzsj_block" v-if="item.state==3&&item.isCandidate==0">
+              <p v-if="item.state==3&&item.isStartEnroll==0&&item.isStopEnroll==0">报名开始时间<br/>{{item.datingDetailsExt.extDatetime.substring(0,10)}}</p>
+              <p v-if="item.state==3&&item.isStartEnroll==1&&item.isStopEnroll==0">报名截止时间<br/>{{item.datingDetailsExt.extDatetime2.substring(0,10)}}</p>
+              <p style="line-height: 0.8rem" v-if="item.state==3&&item.isCandidate==0&&item.isStopEnroll==1">报名已截止</p>
+            </div>
+          </div>
+          <div :class="'activity_info '+((item.state==3&&item.isCandidate==0)?'active':((item.state==3&&item.isCandidate==1)||item.state==6)?'live':'end')">
+            <div class="activity_title"><span v-if="item.datingDetailsExt">[{{lineType[item.datingDetailsExt.extInt]}}·{{specialType[item.datingDetailsExt.extInt5]}}专场]</span><span>{{item.datingDesc}}</span> </div>
+            <div class="activity_desc">
+              <p><i class="iconfont">&#xe677;</i>{{item.datingLocation}}</p>
+              <p>
+                <i class="iconfont">&#xe642;</i>
+                <span :class="((item.state==3&&item.isCandidate==0)?'active':((item.state==3&&item.isCandidate==1)||item.state==6)?'live':'end')">{{item.followCount?parseInt(item.followCount)+parseInt(actContent[item.id]?actContent[item.id].followCount||0:0):0}}
+				</span>人关注
+                <i class="iconfont" style="margin-left: 1rem">&#xe612;</i>
+                <span :class="((item.state==3&&item.isCandidate==0)?'active':((item.state==3&&item.isCandidate==1)||item.state==6)?'live':'end')">{{item.enrollCount}}</span>人报名
+              </p>
+              <p><i class="yhsj_icon"></i>{{item.activityStarttime}}</p>
+              <router-link v-if="getClassStatus(item).type==2" tag="div" :to="{name:'publishBlindDate',query:{id:item.id}}" class="activity_act_1 activity_act"><i class="edit"><span>编辑</span></i></router-link>
+              <router-link v-if="getClassStatus(item).type==1" tag="div" :to="{name:'publishBlindDate',query:{id:item.id}}" class="activity_act"><i class="edit"><span>编辑</span></i></router-link>
+              <router-link v-else-if="getClassStatus(item).type==2||getClassStatus(item).type==3" tag="div" :to="{name:'blindDateNew',query:{id:item.id}}" class="activity_act"><i class="jrxc"><span>进入现场</span></i></router-link>
+              <router-link v-else-if="getClassStatus(item).type==6" tag="div" :to="{name:'activityDetail',query:{id:item.id}}" class="activity_act activity_actJoin">   
+				 <i class="ljbm"><span v-if="item.enrollFee>0" style="line-height: 0.4rem;text-align: center;">立即报名<br/>{{getFee(item)}}元</span><span v-else>立即报名</span></i>
+				<del class="act_del_price" v-if="item.enrollFee>0&&item.enrollFee>getFee(item)">{{item.enrollFee}}元</del>
+              </router-link>
+              <div class="activity_act" v-else-if="getClassStatus(item).type==4"><i class="yjs"><span>活动结束</span></i></div>
+              <div class="activity_act" v-else-if="getClassStatus(item).type==7"><i class="yjs"><span>即将开始</span></i></div>
+              <div class="activity_act" v-else-if="getClassStatus(item).type==5"><i class="yjs"><span>报名截止</span></i></div>
+            </div>
+          </div>
+        </router-link>
+      </template>
+    </myScroller>
+  </div>
+</template>
+<script>
+  import Loading from '@other/loading.vue';
+  import Back from '@other/back.vue';
+  import myScroller from '@other/myScroller.vue';
+ // import {actContent} from './actStatic.data.js'
+  export default {
+    name: 'myBlindDate',
+    data () {
+      return {
+        isloading:false,
+        active: 1,
+        underline: 0,
+        listArr: null,
+        lineType: {"1": "线上", "2": "线下"},
+        //分页参数
+        pageNo: 1,
+        isRead: false,
+        isEnd: false,
+        loadRefresh: true,//下拉刷新
+        loadInfinite: true, //上拉加载
+        isRefresh: false,
+		blindDateSingle:{},
+		actContent:{},
+		showbg:true,
+      }
+    },
+    components: {
+      Loading,
+      Back,
+      myScroller,
+    },
+    computed: {
+      underlineLeft:function(){
+        if(this.active==1){
+          return document.body.clientWidth*0.5/4 +'px'
+        }else{
+          return document.body.clientWidth*0.63 +'px'
+        }
+      },
+    },
+    destroyed () {
+      $("body").removeClass("gray");
+    },
+    watch:{
+      isEnd(val) {
+        const t = this;
+        if (val) {
+          t.$refs.myScroller.finishInfinite(true);
+        } else {
+          t.$refs.myScroller.finishInfinite(false);
+        }
+      }
+    },
+   async mounted () {
+      const t=this;
+      $("body").addClass("gray");
+		try{
+			let actStatic = await t.$server.getActStatic({
+				readonly:true,
+				times:new Date().getTime()
+			});
+			t.actContent=actStatic.data.data||{};
+		}catch(e){
+			console.log("读取静态内容出错:"+JSON.stringify(e));
+		}
+    },
+    methods :{
+		getFee(item){
+			const t=this;
+			let money=undefined;
+			//报名费用统计
+			
+			if(item.datingDetailsExt&&item.datingDetailsExt.extString6){//有渠道信息
+				let channel=null,channelObj={};
+				try{
+					let d=item.datingDetailsExt.extString6.replace(/(?:\s*['"]*)?([a-zA-Z0-9]+)(?:['"]*\s*)?:/g, '"$1":');
+					channelObj=JSON.parse(d||"{}");
+					channel=channelObj[t.blindDateSingle.isUnionCorrect];//用合伙人专属渠道	
+				}catch(e){
+					console.log("渠道格式错误:"+JSON.stringify(e));
+				}
+				function getChannel(ch,flag){
+					if(ch){//有合伙人专属渠道	
+						if(ch.newUserFree==1&&t.blindDateSingle.newUserFree==1){//新人免费
+							money=0;
+						}else if(t.$store.state.userInfo.sex==1&&ch.girlFee!=undefined){//女
+							money=ch.girlFee;
+						}else if(t.$store.state.userInfo.sex==2&&ch.boyFee!=undefined){//男
+							money=ch.boyFee;
+						}else if(ch.fee!=undefined){
+							money=ch.fee;
+						}else if(!t.$store.state.isLogin){
+							money=ch.girlFee!=undefined?ch.girlFee:ch.boyFee
+						}
+					}
+					if(money==undefined){
+						if(flag==0&&t.blindDateSingle.isUnionCorrect){
+							getChannel(channelObj["a9fyas8f"],1);//合伙人共享渠道
+						}else if(flag!=2){
+							getChannel(channelObj["a9fDfoS"],2);//默认渠道
+						}else{
+							money=item.enrollFee;
+						}
+					}
+				};
+				getChannel(channel,0);	
+			}else{
+				money=item.enrollFee;
+			}
+			/*if(t.$store.state.channel.isUnion&&item.datingDetailsExt){//有渠道	
+				let channel=null;
+				 if(t.blindDateSingle.isUnionCorrect&&item.datingDetailsExt.extString6){
+					try{
+						let channelObj=item.datingDetailsExt.extString6.replace(/(?:\s*['"]*)?([a-zA-Z0-9]+)(?:['"]*\s*)?:/g, '"$1":');
+						let d=JSON.parse(channelObj||"{}");
+						channel=d[t.blindDateSingle.isUnionCorrect];
+					 }catch(e){
+						console.log("渠道格式错误:"+JSON.stringify(e));
+					 }	
+				 }
+				if(channel){//渠道信息附加表
+					if(t.$store.state.userInfo.sex==1&&channel.girlFee!=undefined){
+						money=channel.girlFee;
+					}else if(t.$store.state.userInfo.sex==2&&channel.boyFee!=undefined){
+						money=channel.boyFee;
+					}else if(channel.fee!=undefined){
+						money=channel.fee;
+					}else if(t.$store.state.userInfo.sex==1&&item.datingDetailsExt.extDouble2!=undefined){//女
+						money=item.datingDetailsExt.extDouble2
+					}else if(t.$store.state.userInfo.sex==2&&item.datingDetailsExt.extDouble!=undefined){//男
+						money=item.datingDetailsExt.extDouble
+					}else{
+						money=item.enrollFee;
+					}
+				}else{//没渠道(限男女)
+					if(t.$store.state.userInfo.sex==1&&item.datingDetailsExt.extDouble2!=undefined){//女
+						money=item.datingDetailsExt.extDouble2
+					}else if(t.$store.state.userInfo.sex==2&&item.datingDetailsExt.extDouble!=undefined){//男
+						money=item.datingDetailsExt.extDouble
+					}else{
+						money=item.enrollFee;
+					}
+				}
+			}else{//没渠道的
+				if(t.$store.state.userInfo.sex==1&&item.datingDetailsExt.extDouble2!=undefined){//女
+					money=item.datingDetailsExt.extDouble2
+				}else if(t.$store.state.userInfo.sex==2&&item.datingDetailsExt.extDouble!=undefined){//男
+					money=item.datingDetailsExt.extDouble
+				}else{
+					money=item.enrollFee;
+				}
+			}*/
+			return money||0;
+		},
+		getIsAdmin(item){
+			const t=this;
+			if(item.adminList&&item.adminList.length>0){
+				let isAdmin=item.adminList.filter((val)=>{
+					return val.userId==t.$store.state.userInfo.id;
+				});
+				if(isAdmin.length>0){
+					return true;
+				}
+			}
+			return false;
+		},
+      getClassStatus(item){
+        let result={
+          text:'',
+          type:null,//1表示主持人编辑2表示主持人进入现场3表示用户进入现场4表示用户活动结束5表示未报名的报名已结束6表示未报名的立即报名7报名未开始
+        }
+        if(this.$store.state.userInfo.identity==1||this.getIsAdmin(item)){//主持人
+          if(item.state==2&&this.$store.state.userInfo.identity==1){
+            result.text='编辑'
+            result.type=1
+          }else{
+            result.text='进入现场'
+            result.type=2
+          }
+        }else{//用户
+          if(item.isCandidate==1){//已报名
+            if(item.state==5){
+              result.text='活动结束'
+              result.type=4
+            }else{
+              result.text='进入现场'
+              result.type=3
+            }
+          }else{//未报名
+            if(item.isStartEnroll==0){//未开始报名
+              result.text='即将开始'
+              result.type=7
+            }else{//开始报名
+              if(item.isStopEnroll==1){
+                result.text='报名截止'
+                result.type=5
+              }else{
+                result.text='立即报名'
+                result.type=6
+              }
+            }
+          }
+        }
+        return result;
+      },
+      getFullPath (path) {
+        return this.$utils.getFullPath(path)
+      },
+      async getSpecialType() {
+        const t = this;
+        try {
+          const apiDict = await this.$server.apiDict({type: "blind_dating_special_type"});
+          let item = apiDict.data.data;
+          for (let i = item.length; i--;) {
+            if (!t.specialType) {
+              t.specialType = {};
+            }
+            t.specialType[item[i].value] = item[i].label;
+          }
+        } catch (e) {
+          console.log(JSON.stringify(e));
+        }
+      },
+      async getList(active,flag) {
+        const t = this;
+        if (t.isRead) {
+          return false;
+        }
+        t.isRead = true;
+        if (!t.specialType) {
+          await t.getSpecialType(); //先获取专场类型
+        }
+        if (t.isRefresh || flag || t.active != active) {
+          t.pageNo = 1;
+          if (flag) {
+            t.$refs.myScroller.scrollTo(1);
+            t.isloading = true;
+          }
+        }
+        try {
+          let isRefresh = {};
+          if (t.isRefresh) {
+            isRefresh = {isRefresh: true};
+          }
+          if (!t.listArr || t.isRefresh || flag || t.active != active) {
+            t.listArr = [];
+            t.active = active;
+          }
+          let result = null;
+          if(t.active == 1){
+            result = await t.$server.blindDatingList({
+              ...isRefresh,
+              isCandidate: t.$store.state.userInfo.identity==1?'':1,
+              page: t.pageNo,
+              rows: t.$store.state.pageSize,
+			  isUnion:t.$store.state.channel.isUnion&&t.$store.state.channel.jyNumber?t.$store.state.channel.jyNumber:t.$store.state.channel.isUnion,
+			 // jyNumber:t.$store.state.channel.jyNumber
+            });
+          }else{
+            result = await t.$server.blindDatingList({
+              ...isRefresh,
+              isFollow:1,
+              page: t.pageNo,
+              rows: t.$store.state.pageSize,
+			  isUnion:t.$store.state.channel.isUnion&&t.$store.state.channel.jyNumber?t.$store.state.channel.jyNumber:t.$store.state.channel.isUnion,
+			 // jyNumber:t.$store.state.channel.jyNumber
+            });
+          }
+			//let newUserFree={}
+           if (result.data.list) {
+			t.showbg=false;
+            t.listArr.push(...result.data.list);
+			/*newUserFree={
+				newUserFree:result.data.list[0].newUserFree
+			};*/
+          }
+		  if(result.data.data){
+			//t.blindDateSingle={...result.data.data,...newUserFree};
+			t.blindDateSingle=result.data.data;
+		  }
+		  
+		
+          if (result.data.count <= t.$store.state.pageSize * t.pageNo || result.data.list.length < t.$store.state.pageSize) {//判断是否最后一页
+            t.noDataText = '已加载全部数据';
+            t.isEnd = true;
+          } else {
+            t.isEnd = false;
+          }
+        } catch (e) {
+          t.noDataText = "加载异常,请重试";
+          t.isEnd = true;
+          t.isRefresh = false;
+          console.log(e)
+        }
+        t.pageNo++;
+        t.isRead = false;
+        t.isloading = false;
+        t.isRefresh = false;
+      },
+      async infinite(done) {//上拉加载(防止初始内容不满一屏会无限加载)
+        const t = this;
+        if (t.isEnd) {
+          done(true);
+          return false;
+        }
+        //if(t.isRead){
+        //	return false;
+        //}
+        console.log("加载");
+        t.getList(t.active).then(() => {
+          if (t.isEnd) {
+            done(true);
+          } else {
+            done();
+          }
+        });
+      },
+      refresh(done) {//下拉刷新
+        const t = this;
+        console.log("刷新");
+        t.isRefresh = true;
+        t.getList(t.active).then((res) => {
+          done();
+        });
+      },
+    }
+  }
+</script>
+<style scoped lang="scss">
+  .title{
+    width: 100%;
+    font-size: 0;
+    height: 1.32rem;
+    line-height: 1.32rem;
+    background-color: #f2f2f2;
+    z-index: 11;
+    position: fixed;
+    .underline{
+      position: absolute;
+      width: 25%;
+      top: 0.38rem;
+      height: auto;
+      z-index: 1000;
+      background-color: rgba(0, 0, 0, 0);
+      -webkit-transition: 0.2s all linear;
+      transition: 0.2s all linear;
+      &:before{
+        content: "";
+        margin-top: -6px;
+        width: 25%;
+        height: auto;
+        display: inline-block;
+        border-bottom: 2px solid #ff4300;
+      }
+    }
+    div{
+      position: relative;
+      font-size: 0.44rem;
+      display: inline-block;
+      color: #9a9a9d;
+      box-sizing: border-box;
+      width: 50%;
+      text-align: center;
+      background-color: #fff;
+      overflow: hidden;
+	  &:not(.underline):active{
+		background-color:#f4f4f4;
+	  }
+      /*position: relative;*/
+      /*font-size: 0.44rem;*/
+      /*display: inline-block;*/
+      /*color:#9a9a9d;*/
+      /*box-sizing: border-box;*/
+      /*width: 50%;*/
+      /*text-align: center;*/
+      /*background-color: #fff;*/
+      /*overflow: hidden;*/
+      /*&::before {*/
+      /*content: "";*/
+      /*position: absolute;*/
+      /*bottom: 6px;*/
+      /*left: 100%;*/
+      /*width: 15%;*/
+      /*height: 0;*/
+      /*border-bottom: 2px solid #ff4300;*/
+      /*transition: 0.2s all linear;*/
+      /*}*/
+    }
+    div.active{
+      /*&::before {*/
+      /*left: 42.5%;*/
+      /*transition-delay: 0.1s;*/
+      /*}*/
+      color:#000;
+    }
+    /*div.active ~ div{
+      &::before {
+        left: -18%;
+      }
+    }*/
+  }
+</style>
+

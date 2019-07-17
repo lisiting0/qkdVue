@@ -1,0 +1,113 @@
+<template>
+  <div class="main jy_all_top">
+    <Loading v-if="isloading"></Loading>
+    <div class="header">
+      <div class="top">
+        <Back class="left"><i class="iconfont">&#xe613;</i></Back><a v-if="!$store.state.isBrowser" class="right" @click="clickShare"><i class="iconfont">&#xe679;</i></a>
+        <p>赚钱攻略</p>
+      </div>
+    </div>
+    <div class="image_div" :style="$store.state.isBrowser?'margin-top: 1.42rem;':''">
+      <img :src="fillpath('staticAct/img/zqgl/zqgl_01.jpg')" alt="">
+      <img :src="fillpath('staticAct/img/zqgl/zqgl_02.jpg')" alt="">
+      <img :src="fillpath('staticAct/img/zqgl/zqgl_03.jpg')" alt="">
+      <img :src="fillpath('staticAct/img/zqgl/zqgl_04.jpg')" alt="">
+      <img :src="fillpath('staticAct/img/zqgl/zqgl_05.jpg')" alt="">
+      <img :src="fillpath('staticAct/img/zqgl/zqgl_06.jpg')" alt="">
+      <img :src="fillpath('staticAct/img/zqgl/zqgl_07.jpg')" alt="">
+      <img :src="fillpath('staticAct/img/zqgl/zqgl_08.jpg')" alt="">
+      <img :src="fillpath('staticAct/img/zqgl/zqgl_09.jpg')" alt="">
+      <img :src="fillpath('staticAct/img/zqgl/zqgl_10.jpg')" alt="">
+    </div>
+	<share :show="showShare" :shareTitle="shareTitle" :shareDesc="shareDesc" :shareImg="shareImg" :shareUrl="shareUrl" @changeShow="changeShow"></share>
+  </div>
+</template>
+
+<script>
+  import Loading from '@other/loading.vue';
+  import Back from '@other/back.vue';
+import { wxShare } from '@js/wxjssdk';
+import Share from '@/components/home/share.vue'
+import routerBack from '@/plus/routerBack.js';
+	routerBack.init("raiders",{
+		showShare:null,
+	})
+  export default {
+    name: "raiders",//静态详情页面
+	mixins:[routerBack],
+    components: {
+      Loading,
+      Back,
+	  Share,
+    },
+    data() {
+      return {
+        isloading: false,
+		showShare: false,
+		shareTitle:'',
+		shareDesc:'',
+		shareImg:'',
+		shareUrl:'',
+      }
+    },
+    watch: {
+	
+	},
+    computed: {
+		
+	},
+    mounted() {
+		const t=this;
+		let shareTitle="乾坤岛用户赚钱攻略";
+		let shareDesc="分享乾坤岛用户如何通过乾坤岛平台赚钱方法。";	
+		let shareLink =this.$store.state.baseURL+"/api/account/publicAddressLoginUrl?&state=raiders"
+		if(this.$store.state.userInfo.id){
+		  shareLink = shareLink + "__pid_"+this.$store.state.userInfo.jyNumber+ "_mytaskId_40";
+		}
+		t.shareTitle=shareTitle;
+		t.shareDesc=shareDesc;
+		t.shareUrl=shareLink;
+		  wxShare&&wxShare({
+			  title: shareTitle, // 分享标题
+			  desc: shareDesc, // 分享描述
+			  link: shareLink, // 分享链接
+			  imgUrl: this.$store.state.baseFrontEndURL+'static/logo.png', // 分享图标
+			  debug:false
+		  },{
+			success(){
+			//	alert("分享成功");
+			},
+			cancel(){
+				//alert("分享失败");
+			}
+		  });
+    },
+    destroyed() {
+    },
+    methods: {
+		clickShare() {
+			this.showShare = !this.showShare;
+		  },
+		changeShow(val) {
+        this.showShare = val;
+      },
+	  fillpath(src){
+			const t=this;
+			return t.$store.state.baseFrontEndURL+src;
+		},
+	}
+  }
+</script>
+
+<style scoped lang="scss">
+  .image_div {
+    font-size: 0;
+    overflow: hidden;
+    background-color: #FFF;
+    img {
+      width: 100%;
+      display: block;
+    }
+  }
+
+</style>

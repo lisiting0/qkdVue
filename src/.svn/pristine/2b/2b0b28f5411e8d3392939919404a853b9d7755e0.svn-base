@@ -1,0 +1,1513 @@
+<template>
+  <div>
+    <!--<transition enter-active-class="animated fadeIn" leave-active-class="animated fadeOut" mode="out-in">-->
+    <div class="main" key="main" v-if="pagerouter==='main'">
+      <Loading v-if="isloading"></Loading>
+      <div class="header">
+        <div class="top">
+          <Back :back-one="true" class="left"><i class="iconfont">取消</i></Back><a @click="publish" class="right"><i class="iconfont">确定</i></a>{{datingTitles[datingThemes-1]==undefined?'其他':datingTitles[datingThemes-1]}}
+        </div>
+      </div>
+      <div class="wrapper" ref="wrapper" >
+        <div class="content">
+          <div class="white">
+            <div class="flex" @click="visibilityMethod = true">
+              <div>活动类型</div><div><span>{{activityMethodName===''?'选择类型':activityMethodName}}</span><i class="iconfont">&#xe702;</i></div>
+            </div>
+            <div class="flex" @click="visibilityStarttime = true">
+              <div>活动时间</div><div><span>{{activityStarttime===''?'选择时间':activityStarttime}}</span><i class="iconfont">&#xe702;</i></div>
+            </div>
+            <group style="display: none">
+              <!--<datetime v-model="activityStarttime" format="MM-DD HH:mm" month-row="{value}月" day-row="{value}日" hour-row="{value}点" minute-row="{value}分" :minute-list='minuteList' confirm-text="完成" cancel-text="取消" :show.sync="visibilityStarttime"></datetime>-->
+              <datetime v-model="activityStarttime" :start-date="startDate" :end-date="endDate" format="YYYY-MM-DD HH:mm" year-row="{value}年" month-row="{value}月" day-row="{value}日" hour-row="{value}点" minute-row="{value}分" :minute-list='minuteList' confirm-text="完成" cancel-text="取消"  :show.sync="visibilityStarttime"></datetime>
+            </group>
+          </div>
+          <group style="display: none">
+            <popup-picker title="活动类型" :data="methodList" v-model="activityMethod" ref="picker4" :show.sync="visibilityMethod"></popup-picker>
+          </group>
+
+          <div class="white" style="margin-top: 0.3rem;">
+            <!--<div class="flex" @click="selectplace()">-->
+            <!--<div>约会地点</div><div><span>{{selectplace1===''?'选择地点':selectplace1}}</span><i class="iconfont">&#xe702;</i></div>-->
+            <!--</div>-->
+            <div class="flex" @click="selectDatingTitle">
+              <div>{{datingThemes==99?'主题':'运动项目'}}</div><div><span>{{datingTitle===''?'选择主题':datingTitle}}</span><i class="iconfont">&#xe702;</i></div>
+            </div>
+            <div class="flex" @click="visibilityData = true">
+              <div>约会地点</div><div><span>{{myplace===''?'选择地点':myplace}}</span><i class="iconfont">&#xe702;</i></div>
+            </div>
+            <div class="flex" @click="visibility = true">
+              <div>约会时间</div><div><span>{{datetime===''?'选择时间':datetime}}</span><i class="iconfont">&#xe702;</i></div>
+            </div>
+            <group style="display: none">
+              <datetime v-model="datetime" :start-date="startDate" :end-date="endDate" format="YYYY-MM-DD HH:mm" year-row="{value}年" month-row="{value}月" day-row="{value}日" hour-row="{value}点" minute-row="{value}分" :minute-list='minuteList' confirm-text="完成" cancel-text="取消"  :show.sync="visibility"></datetime>
+            </group>
+          </div>
+          <group style="display: none">
+            <popup-picker title="约会地点" :data="listData" :columns="3" v-model="place" ref="picker3" :show.sync="visibilityData"></popup-picker>
+          </group>
+
+          <div class="white" style="margin-top: 0.3rem;">
+            <div class="flex content2">
+              <div>对象</div>
+              <div>
+                <span :class="{active:target===2}" @click="target=2">男</span>
+                <span :class="{active:target===1}" @click="target=1">女</span>
+                <span :class="{active:target===9}" @click="target=9">不限</span>
+              </div>
+            </div>
+            <div class="flex content2">
+              <div>买单</div>
+              <div>
+                <span :class="{active:payType===0}" @click="payType=0">AA</span>
+                <span :class="{active:payType===1}" @click="payType=1">我请客</span>
+                <span :class="{active:payType===2}" @click="payType=2">你买单</span>
+              </div>
+            </div>
+            <div class="flex content2">
+              <div>带人</div>
+              <div>
+                <span :class="{active:takepeople===0}" @click="takepeople=0">不允许</span>
+                <span :class="{active:takepeople===1}" @click="takepeople=1">允许一人</span>
+                <!--<input type="text" v-model="contentRemark" placeholder="请填写具体要求"/>-->
+              </div>
+            </div>
+          </div>
+
+          <div class="white" style="margin-top: 0.3rem;">
+            <div class="content3">
+              <div>约会后续</div>
+              <div>
+                <slot v-for="item,index in followup">
+                  <span :class="{active:followupSelect.includes(item)}" @click="followupSelect.includes(item)?followupSelect.splice(followupSelect.findIndex(item1 => item1.value === item.value), 1):followupSelect.push(item)">{{item.label}}</span>
+                </slot>
+              </div>
+            </div>
+            <div class="content3">
+              <div>行为规范</div>
+              <div>
+                <slot v-for="item,index in rule">
+                  <span :class="{active:ruleSelect.includes(item)}" @click="ruleSelect.includes(item)?ruleSelect.splice(ruleSelect.findIndex(item1 => item1.value === item.value), 1):ruleSelect.push(item)">{{item.label}}</span>
+                </slot>
+              </div>
+            </div>
+          </div>
+
+          <div class="white" style="margin-top: 0.3rem;">
+            <div class="flex content4">
+              <div>资格要求</div>
+              <div>
+                <a :class="{demanda:demand.idcard}" @click="demand.idcard===0?demand.idcard=1:demand.idcard=0"><img :src="imgs.idcard"/></a>
+                <a :class="{demanda:demand.car}" @click="demand.car===0?demand.car=1:demand.car=0"><img :src="imgs.car"/></a>
+                <a :class="{demanda:demand.house}" @click="demand.house===0?demand.house=1:demand.house=0"><img :src="imgs.house"/></a>
+                <a :class="{demanda:demand.health}" @click="demand.health===0?demand.health=1:demand.health=0"><img :src="imgs.health"/></a>
+              </div>
+            </div>
+          </div>
+
+          <div class="white" style="margin-top: 0.3rem;">
+            <div class="flex content5">
+              <div>报名费用</div>
+              <div>
+                <a @click="plusfee"><i class="iconfont">&#xe61f;</i></a>
+                <input @focus="focus" @blur="blur" @keyup="filter" type="number" v-model="fee"/>
+                <a @click="minusfee"><i class="iconfont">&#xe66e;</i></a>
+              </div>
+              <div style="flex-grow:0;">乾坤币</div>
+            </div>
+          </div>
+			<div class="jy_block_t">
+				<ul class="jy_aInfo_line">
+					<li class="jy_aInfo_member_switch">是否参与平台抽奖<inline-x-switch v-model="xswitch"></inline-x-switch></li>
+				</ul>
+			</div>
+          <div class="white" style="margin: 0.3rem 0 0">
+            <div class="content5">
+              <textarea @focus="focus" @blur="blur" rows="5" placeholder="你还想说点什么..." v-model="remark"></textarea>
+              <p>{{total-remark.length}}</p>
+            </div>
+            <div class="icon">
+              <selectPhoto @fileBack="fileBack">
+                <img v-if="coverimgImages!=null" :src="coverimgImages"/>
+                <div v-else><i class="iconfont">&#xe6d9;</i></div>
+              </selectPhoto>
+            </div>
+          </div>
+
+          <div class="foot" >
+
+          </div>
+        </div>
+      </div>
+
+      <!--<actionsheet-->
+        <!--v-model="showPlace"-->
+        <!--:menus="menus"-->
+        <!--@on-click-menu="selectplace" show-cancel></actionsheet>-->
+    </div>
+    <div class="main" key="myplace" v-if="pagerouter==='datingTitle'">
+      <div class="header">
+        <div class="top">
+          <Back class="left"><i class="iconfont">&#xe613;</i></Back><a @click="confirm" class="right"><i class="iconfont">确定</i></a>邀约主题
+        </div>
+      </div>
+      <div class="wrapper">
+        <div class="content" style="font-size: 0.4rem;">
+          <div class="white" style="margin: 0.3rem 0 0;padding: 0 0.4rem;">
+            请勿发布商品广告及色情招嫖等违法信息，否则将永久封号处理
+          </div>
+          <div class="white" style="margin: 0.3rem 0 0">
+            <div class="placediv">
+              <input class="placeinput" v-model="datingTitleCache" type="text" placeholder="请选择或填写一个主题"/>
+
+            </div>
+          </div>
+          <p class="datingTitleDetail" style="margin: 0.4rem 0 0 0.4rem;">
+              <span @click="datingTitleCache=item.value" v-for="item in datingTitleOtherType" :class="{active:item.value==datingTitleCache}">{{item.value}}</span>
+          </p>
+        </div>
+        <!--<group style="display: none">-->
+        <!--<popup-picker title="活动城市" :data="listData" :columns="3" v-model="place" ref="picker3" :show.sync="visibilityData"></popup-picker>-->
+        <!--</group>-->
+      </div>
+    </div>
+    <!--</transition>-->
+    <div class="main" v-if="pagerouter==='myRestaurant'">
+      <div class="header">
+        <div class="top">
+          <Back class="left"><i class="iconfont">&#xe613;</i></Back><a @click="search" class="right"><i class="iconfont">&#xe661;</i></a>选择地点
+        </div>
+      </div>
+      <scroll ref="scroll"
+              :pullDownRefresh="pullDownRefreshObj"
+              :pullUpLoad="pullUpLoadObj"
+              @pullingDown="onPullingDown"
+              @pullingUp="onPullingUp"
+              :ifinit="ifinit"
+              :style="{height:myScrollerHeight+'px'}"
+              :probeType="3"
+              :listenScroll="true"
+              @scroll="myscroll"
+              :click="true"
+      >
+
+        <div class="wrapper">
+          <div class="contentMyRestaurant">
+
+            <div class="white tuijian indexListFixedHeight">
+              <p><i class="iconfont">&#xe60d;</i><i class="iconfont">&#xe60f;</i>推荐商家<i class="iconfont">&#xe60f;</i><i class="iconfont">&#xe60d;</i> </p>
+              <div class="orderOption">
+                <span>综合排序<i class="iconfont">&#xe607;</i></span>
+                <span>好评优先</span>
+                <span>距离最近</span>
+                <span>筛选<i class="iconfont">&#xe627;</i></span>
+              </div>
+            </div>
+            <div class="white itemList">
+              <div class="item" @click="todetail(1)">
+                <div><img src="http://mis.iceinfo.net:8080/jiaoyou/static/w5.jpg"/></div>
+                <div>
+                  <p><span>北方家宴(萝岗店)</span><span>会员</span><span>满减</span></p>
+                  <p><span>
+                  <i class="iconfont halfred">&#xe614;</i>
+                  <i class="iconfont">&#xe614;</i>
+                  <i class="iconfont">&#xe614;</i>
+                  <i class="iconfont">&#xe614;</i>
+                  <i class="iconfont">&#xe614;</i>
+                </span><span>￥45/人</span></p>
+                  <p><span>高德汇 东北菜</span><span><i class="iconfont">&#xe620;</i> 3.6km</span></p>
+                </div>
+              </div>
+              <div class="item">
+                <div><img src="http://mis.iceinfo.net:8080/jiaoyou/static/w5.jpg"/></div>
+                <div>
+                  <p><span>北方家宴(萝岗店)</span><span>会员</span><span>满减</span></p>
+                  <p><span>
+                  <i class="iconfont halfred">&#xe614;</i>
+                  <i class="iconfont">&#xe614;</i>
+                  <i class="iconfont">&#xe614;</i>
+                  <i class="iconfont">&#xe614;</i>
+                  <i class="iconfont">&#xe614;</i>
+                </span><span>￥45/人</span></p>
+                  <p><span>高德汇 东北菜</span><span><i class="iconfont">&#xe620;</i> 3.6km</span></p>
+                </div>
+              </div>
+              <div class="item">
+                <div><img src="http://mis.iceinfo.net:8080/jiaoyou/static/w5.jpg"/></div>
+                <div>
+                  <p><span>北方家宴(萝岗店)</span><span>会员</span><span>满减</span></p>
+                  <p><span>
+                  <i class="iconfont halfred">&#xe614;</i>
+                  <i class="iconfont">&#xe614;</i>
+                  <i class="iconfont">&#xe614;</i>
+                  <i class="iconfont">&#xe614;</i>
+                  <i class="iconfont">&#xe614;</i>
+                </span><span>￥45/人</span></p>
+                  <p><span>高德汇 东北菜</span><span><i class="iconfont">&#xe620;</i> 3.6km</span></p>
+                </div>
+              </div>
+              <div class="item">
+                <div><img src="http://mis.iceinfo.net:8080/jiaoyou/static/w5.jpg"/></div>
+                <div>
+                  <p><span>北方家宴(萝岗店)</span><span>会员</span><span>满减</span></p>
+                  <p><span>
+                  <i class="iconfont halfred">&#xe614;</i>
+                  <i class="iconfont">&#xe614;</i>
+                  <i class="iconfont">&#xe614;</i>
+                  <i class="iconfont">&#xe614;</i>
+                  <i class="iconfont">&#xe614;</i>
+                </span><span>￥45/人</span></p>
+                  <p><span>高德汇 东北菜</span><span><i class="iconfont">&#xe620;</i> 3.6km</span></p>
+                </div>
+              </div>
+              <div class="item">
+                <div><img src="http://mis.iceinfo.net:8080/jiaoyou/static/w5.jpg"/></div>
+                <div>
+                  <p><span>北方家宴(萝岗店)</span><span>会员</span><span>满减</span></p>
+                  <p><span>
+                  <i class="iconfont halfred">&#xe614;</i>
+                  <i class="iconfont">&#xe614;</i>
+                  <i class="iconfont">&#xe614;</i>
+                  <i class="iconfont">&#xe614;</i>
+                  <i class="iconfont">&#xe614;</i>
+                </span><span>￥45/人</span></p>
+                  <p><span>高德汇 东北菜</span><span><i class="iconfont">&#xe620;</i> 3.6km</span></p>
+                </div>
+              </div>
+              <div class="item">
+                <div><img src="http://mis.iceinfo.net:8080/jiaoyou/static/w5.jpg"/></div>
+                <div>
+                  <p><span>北方家宴(萝岗店)</span><span>会员</span><span>满减</span></p>
+                  <p><span>
+                  <i class="iconfont halfred">&#xe614;</i>
+                  <i class="iconfont">&#xe614;</i>
+                  <i class="iconfont">&#xe614;</i>
+                  <i class="iconfont">&#xe614;</i>
+                  <i class="iconfont">&#xe614;</i>
+                </span><span>￥45/人</span></p>
+                  <p><span>高德汇 东北菜</span><span><i class="iconfont">&#xe620;</i> 3.6km</span></p>
+                </div>
+              </div>
+              <div class="item">
+                <div><img src="http://mis.iceinfo.net:8080/jiaoyou/static/w5.jpg"/></div>
+                <div>
+                  <p><span>北方家宴(萝岗店)</span><span>会员</span><span>满减</span></p>
+                  <p><span>
+                  <i class="iconfont halfred">&#xe614;</i>
+                  <i class="iconfont">&#xe614;</i>
+                  <i class="iconfont">&#xe614;</i>
+                  <i class="iconfont">&#xe614;</i>
+                  <i class="iconfont">&#xe614;</i>
+                </span><span>￥45/人</span></p>
+                  <p><span>高德汇 东北菜</span><span><i class="iconfont">&#xe620;</i> 3.6km</span></p>
+                </div>
+              </div>
+              <div class="item">
+                <div><img src="http://mis.iceinfo.net:8080/jiaoyou/static/w5.jpg"/></div>
+                <div>
+                  <p><span>北方家宴(萝岗店)</span><span>会员</span><span>满减</span></p>
+                  <p><span>
+                  <i class="iconfont halfred">&#xe614;</i>
+                  <i class="iconfont">&#xe614;</i>
+                  <i class="iconfont">&#xe614;</i>
+                  <i class="iconfont">&#xe614;</i>
+                  <i class="iconfont">&#xe614;</i>
+                </span><span>￥45/人</span></p>
+                  <p><span>高德汇 东北菜</span><span><i class="iconfont">&#xe620;</i> 3.6km</span></p>
+                </div>
+              </div>
+              <div class="item">
+                <div><img src="http://mis.iceinfo.net:8080/jiaoyou/static/w5.jpg"/></div>
+                <div>
+                  <p><span>北方家宴(萝岗店)</span><span>会员</span><span>满减</span></p>
+                  <p><span>
+                  <i class="iconfont halfred">&#xe614;</i>
+                  <i class="iconfont">&#xe614;</i>
+                  <i class="iconfont">&#xe614;</i>
+                  <i class="iconfont">&#xe614;</i>
+                  <i class="iconfont">&#xe614;</i>
+                </span><span>￥45/人</span></p>
+                  <p><span>高德汇 东北菜</span><span><i class="iconfont">&#xe620;</i> 3.6km</span></p>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div slot="topdiv">
+          <div class="white last-buy">
+            <p>最近点餐</p>
+            <ul>
+              <li>
+                <img src="http://mis.iceinfo.net:8080/jiaoyou/static/w5.jpg"/>
+                <p>广州酒家黄埔店</p>
+                <p><i class="iconfont">&#xe620;</i> 3.6km</p>
+              </li>
+              <li>
+                <img src="http://mis.iceinfo.net:8080/jiaoyou/static/w5.jpg"/>
+                <p>广州酒家黄埔店</p>
+                <p><i class="iconfont">&#xe620;</i> 3.6km</p>
+              </li>
+              <li>
+                <img src="http://mis.iceinfo.net:8080/jiaoyou/static/w5.jpg"/>
+                <p>广州酒家黄埔店</p>
+                <p><i class="iconfont">&#xe620;</i> 3.6km</p>
+              </li>
+              <li>
+                <img src="http://mis.iceinfo.net:8080/jiaoyou/static/w5.jpg"/>
+                <p>广州酒家黄埔店</p>
+                <p><i class="iconfont">&#xe620;</i> 3.6km</p>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </scroll>
+      <div class="index-list-fixed" ref="fixed" v-show="indexListFixed">
+        <div class="white tuijian">
+          <p><i class="iconfont">&#xe60d;</i><i class="iconfont">&#xe60f;</i>推荐商家<i class="iconfont">&#xe60f;</i><i class="iconfont">&#xe60d;</i> </p>
+          <div class="orderOption">
+            <span>综合排序<i class="iconfont">&#xe607;</i></span>
+            <span>好评优先</span>
+            <span>距离最近</span>
+            <span>筛选<i class="iconfont">&#xe627;</i></span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="main" v-if="pagerouter==='myRestaurantDetail'">
+      <div class="header">
+        <div class="top">
+          <Back class="left"><i class="iconfont">&#xe613;</i></Back><a @click="confirm" class="right"><i class="iconfont">&#xe61e;</i></a>餐厅详情
+        </div>
+      </div>
+      <div class="wrapper">
+        <div class="myRestaurantDetail">
+          <div class="white detailTop">
+            <div><img src="http://mis.iceinfo.net:8080/jiaoyou/static/w5.jpg"/></div>
+            <div>
+              <p><span>北方家宴(萝岗店)</span></p>
+              <p>
+                <i class="iconfont halfred">&#xe614;</i>
+                <i class="iconfont">&#xe614;</i>
+                <i class="iconfont">&#xe614;</i>
+                <i class="iconfont">&#xe614;</i>
+                <i class="iconfont">&#xe614;</i>
+              </p>
+              <p><span>人均：￥41</span><span><i class="iconfont">&#xe620;</i> 3.6km</span></p>
+            </div>
+
+          </div>
+          <div class="white">
+            <div class="address-c">
+              <i class="iconfont">&#xe620;</i> <span>萝岗高德汇3楼....</span><i class="iconfont">&#xe702;</i>
+            </div>
+            <div class="address-c">
+              <i class="iconfont">&#xe670;</i> <span style="color:#00c0ff;">13323309987</span>
+            </div>
+          </div>
+          <div class="white" style="margin-top:0.32rem;">
+            <div class="address-c">
+              <i class="iconfont">&#xe6d6;</i> <span>网友点评(789)</span><i class="iconfont">&#xe702;</i>
+            </div>
+            <div class="address-c">
+              <i class="iconfont">&#xe61b;</i> <span>网友推荐</span><i class="iconfont">&#xe702;</i>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="myRestaurantDetailFoot">
+        <div>确认选择</div>
+      </div>
+    </div>
+  </div>
+</template>
+<script>
+  import w5 from '../../images/w5.jpg';
+  import car from '../../images/car.png';
+  import idcard from '../../images/idcard.png';
+  import house from '../../images/house.png';
+  import health from '../../images/health.png';
+  import w2 from '../../images/w2.jpg';
+  import Loading from '@other/loading.vue';
+  import Back from '@other/back.vue';
+  import myScroller from '../scroller/myScroller.vue';
+  import BScroll from 'better-scroll'
+  import { Group,Cell,Actionsheet,Datetime ,PopupPicker,InlineXSwitch } from 'vux'
+  import listData from './data'
+  import Scroll from '@/components/betterscroll/scroll/scroll.vue'
+  import selectPhoto from '../plugs/selectPhoto'
+
+  export default {
+    name: 'other',
+    data () {
+      return {
+        myScrollerHeight:0,
+        ifinit:false,
+        indexListFixed:false,
+        indexListFixedHeight:0,
+        pullDownRefresh: true,
+        pullDownRefreshThreshold: 60,
+        pullDownRefreshStop: 40,
+        pullUpLoad: true,
+        pullUpLoadThreshold: 0,
+        pagerouter:"main",
+        imgs:{w2:w2,w5:w5,car:car,idcard:idcard,house:house,health:health},
+        isloading:false,
+        showPlace:false,
+        menus: {
+          hotel: "指定餐厅",
+          place: "大致地点"
+        },
+        activityMethod:[],//活动类型1:选缘 ,2:抢缘,3:竞缘,4:中缘,5:配缘
+        activityMethodName:'',//活动类型1:选缘 ,2:抢缘,3:竞缘,4:中缘,5:配缘
+        methodList:[[{
+          name: '选缘',
+          value: '1'
+        }, {
+          name: '抢缘',
+          value: '2'
+        }, {
+          name: '竞缘',
+          value: '3'
+        }, {
+          name: '中缘',
+          value: '4'
+        }, {
+          name: '配缘',
+          value: '5'
+        }]],
+        visibilityMethod:false,
+        activityStarttime:'',//活动开始时间
+        visibilityStarttime:false,
+        listData:[],
+        visibilityData:false,
+        place:[],
+        myplace:"",
+        selectplace1:'',
+        address:'',
+        datetime:'',
+        visibility:false,
+        minuteList:['00','05','10','15','20','25','30','35','40','45','50','55'],
+        scrollHeight:0,
+        target:null,//1女2男9不限
+        payType:null,//0AA1我请客2你买单
+        takepeople:null,//0不允许1允许
+        contentRemark:'',//带人的备注
+        followup:[],
+        followupSelect:[],
+        rule:[],
+        ruleSelect:[],
+        demand:{
+          idcard:0,//0表示不做要求，1表示要求
+          car:0,
+          house:0,
+          health:0,
+        },
+        fee:0,//报名费用
+        total:200,
+        remark:"",
+        file:null,
+        coverimgImages:null,
+        onlyTheme:0,//0不仅限1仅限
+        anonymous:0,//0不选1选中
+        datingThemes:0,
+        datingTitles:['旅行','吃饭','电影','唱歌','运动','其他'],
+        datingTitle:'',
+        datingTitleCache:'',
+        datingTitleOtherType:[],
+		xswitch:false,//系统分配(是否参与抽奖)
+        fillInTimes:0,
+      }
+    },
+    computed: {
+      startDate:function(){
+        return this.$utils.format(new Date(),'yyyy-MM-dd');
+      },
+      endDate:function(){
+        return this.$utils.getIntervalDate(this.$utils.format(new Date(),'yyyy-MM-dd'),30);
+      },
+      payTypeCls: function () {
+        return {
+          payTypeCls: this.payType
+        }
+      },
+      payTypeCls1: function () {
+        return {
+          payTypeCls: !this.payType
+        }
+      },
+      pullDownRefreshObj: function () {
+        return this.pullDownRefresh ? {
+          threshold: parseInt(this.pullDownRefreshThreshold),
+          stop: parseInt(this.pullDownRefreshStop)
+        } : false
+      },
+      pullUpLoadObj: function () {
+        return this.pullUpLoad ? {
+          threshold: parseInt(this.pullUpLoadThreshold)
+        } : false
+      },
+      checkObj:function(){
+        return {
+          datingThemes:this.datingThemes,
+          datingTitle:this.datingTitle||this.datingTitles[this.datingThemes-1],
+          activityMethod:this.activityMethod[0],
+          activityStarttime:this.activityStarttime?this.activityStarttime+":00":'',
+          longitude:null,
+          latitude:null,
+          areaId:this.place[this.place.length-1],
+          datingLocation:this.myplace,
+          datingStarttime:this.datetime?this.datetime+":00":'',
+          expectSex:this.target,
+          payType:this.payType,
+          allowCompanion:this.takepeople,
+          furtherAction:this.followupSelect.map((item)=>{
+            return item.label;
+          }).join(","),
+          behaviorType:this.ruleSelect.map((item)=>{
+            return item.label;
+          }).join(","),
+          idStatus:this.demand.idcard,
+          houseStatus:this.demand.house,
+          carStatus:this.demand.car,
+          healthyStatus:this.demand.health,
+          enrollFee:this.fee,
+          datingDesc:this.remark,
+          coverimgImages:null,
+          onlyTheme:this.onlyTheme
+        }
+      }
+    },
+    watch:{
+      checkObj(){
+        this.fillInTimes++;
+      },
+      remark(){
+        if(this.remark.length>200){
+          this.remark = this.remark.substr(0,200);
+        }
+      },
+      place(){
+        if(this.$refs.picker3){
+          this.myplace = this.$refs.picker3.getNameValues();
+        }
+        return this.myplace;
+      },
+      activityMethod(){
+        if(this.$refs.picker4){
+          this.activityMethodName = this.$refs.picker4.getNameValues();
+        }
+      }
+    },
+    beforeRouteUpdate (to, from, next) {
+      next();
+      this.pagerouter = to.params.pagerouter;
+    },
+    beforeRouteLeave (to, from, next) {
+      if(this.fillInTimes>1){
+        window.api&&window.api.confirm({
+          title: '提示',
+          msg: '确定退出活动发布吗?',
+          buttons: ['确定', '取消']
+        }, function(ret, err) {
+          if(ret.buttonIndex=='1'){
+            next()
+          }else{
+            next(false)
+          }
+        });
+      }else{
+        next()
+      }
+    },
+    async mounted () {
+      $("body").addClass("act");
+      this.datingThemes = this.$route.query.datingThemes
+      this.myScrollerHeight = document.body.clientHeight-(1.39+0.75)*parseInt(document.documentElement.style.fontSize)-3;
+      this.indexListFixedHeight = $(".indexListFixedHeight").height()
+      this.$vux.loading.show()
+      if(this.datingThemes==99){
+         let list = await this.$server.apiDict({type:"dating_title_other_type"});
+         this.datingTitleOtherType = list.data.data
+      }else{
+         let list = await this.$server.apiDict({type:"sport_type"});
+         this.datingTitleOtherType = list.data.data
+      }
+      let listData = await this.$server.getDistrict();
+      this.listData = listData.data.data
+      let apiDict = await this.$server.apiDict({type:"dating_further_action"});
+      this.followup = apiDict.data.data
+      let rule = await this.$server.apiDict({type:"dating_behavior_type"});
+      this.rule = rule.data.data
+      this.$vux.loading.hide()
+      this.$nextTick(function () {
+        this.ifinit = true;
+      })
+    },
+    destroyed () {
+      this.indexListFixed = false;
+      $("body").removeClass("act");
+    },
+    components: {
+      Loading,
+      myScroller,
+      Actionsheet,
+      Cell,
+      BScroll,
+      Group,
+      Datetime,
+      PopupPicker,
+      Scroll,
+      Back,
+      selectPhoto,
+	  InlineXSwitch,
+    },
+    methods:{
+      focus(){
+        if(window.api&&window.api.systemType == "ios")
+          $(".main").addClass("focus")
+      },
+      blur(){
+        if(window.api&&window.api.systemType == "ios")
+          $(".main").removeClass("focus")
+      },
+      async publish(){
+        let publishData={
+          datingThemes:this.datingThemes,
+          datingTitle:this.datingTitle||this.datingTitles[this.datingThemes-1],
+          activityMethod:this.activityMethod[0],
+          activityStarttime:this.activityStarttime?this.activityStarttime+":00":'',
+          longitude:null,
+          latitude:null,
+          areaId:this.place[this.place.length-1],
+          datingLocation:this.myplace,
+          datingStarttime:this.datetime?this.datetime+":00":'',
+          expectSex:this.target,
+          payType:this.payType,
+          allowCompanion:this.takepeople,
+          furtherAction:this.followupSelect.map((item)=>{
+            return item.label;
+          }).join(","),
+          behaviorType:this.ruleSelect.map((item)=>{
+            return item.label;
+          }).join(","),
+          idStatus:this.demand.idcard,
+          houseStatus:this.demand.house,
+          carStatus:this.demand.car,
+          healthyStatus:this.demand.health,
+          enrollFee:this.fee,
+          datingDesc:this.remark,
+          coverimgImages:null,
+          onlyTheme:this.onlyTheme
+        }
+        if(!publishData.activityMethod){
+          this.$vux.toast.show({
+            type:"text",
+            text: "请选择活动类型",
+            position:"middle",
+            width:"auto",
+          });
+          return;
+        }
+        if(!publishData.activityStarttime){
+          this.$vux.toast.show({
+            type:"text",
+            text: "请选择活动时间",
+            position:"middle",
+            width:"auto",
+          });
+          return;
+        }
+        if(!publishData.datingLocation){
+          this.$vux.toast.show({
+            type:"text",
+            text: "请选择约会地点",
+            position:"middle",
+            width:"auto",
+          });
+          return;
+        }
+        if(!publishData.datingStarttime){
+          this.$vux.toast.show({
+            type:"text",
+            text: "请选择约会时间",
+            position:"middle",
+            width:"auto",
+          });
+          return;
+        }
+        if(publishData.expectSex==null){
+          this.$vux.toast.show({
+            type:"text",
+            text: "请选择对象性别",
+            position:"middle",
+            width:"auto",
+          });
+          return;
+        }
+        if(publishData.payType==null){
+          this.$vux.toast.show({
+            type:"text",
+            text: "请选择买单方式",
+            position:"middle",
+            width:"auto",
+          });
+          return;
+        }
+        if(publishData.allowCompanion==null){
+          this.$vux.toast.show({
+            type:"text",
+            text: "请选择是否允许带人",
+            position:"middle",
+            width:"auto",
+          });
+          return;
+        }
+        if(!publishData.furtherAction){
+          this.$vux.toast.show({
+            type:"text",
+            text: "请选择约会后续",
+            position:"middle",
+            width:"auto",
+          });
+          return;
+        }
+        if(!publishData.behaviorType){
+          this.$vux.toast.show({
+            type:"text",
+            text: "请选择行为规范",
+            position:"middle",
+            width:"auto",
+          });
+          return;
+        }
+        if(!publishData.datingDesc){
+          this.$vux.toast.show({
+            type:"text",
+            text: "请填写约会说明",
+            position:"middle",
+            width:"auto",
+          });
+          return;
+        }
+        // let location = await this.$store.dispatch("getMylocation")
+        let locationArr=this.myplace.split(" ");
+        while(locationArr.length<3){
+          locationArr.push(" ")
+        }
+        let location = await this.$store.dispatch("getCoordsFromName",locationArr[1],locationArr[2]);
+        publishData.longitude=location.lon
+        publishData.latitude=location.lat
+        //先上传图片
+        this.$vux.loading.show()
+        if(this.file!=null){
+          let param = new FormData() //创建form对象
+          param.append('file', this.file, this.file.name) //单个图片 ，多个用循环 append 添加
+          let result = await this.$server.uploadPic(param)
+          publishData.coverimgImages = result.data.data.path;
+        }
+		publishData.sysDistribution=this.xswitch?1:0;
+        let result= await this.$server.publish(publishData);
+        this.$vux.loading.hide()
+        this.$vux.toast.show({
+          type:"success",
+          text: '发布成功',
+          position:"middle",
+          width:"auto",
+        });
+        this.fillInTimes=0;
+        setTimeout(()=>{
+          this.$router.go(-1);
+        },500)
+      },
+      fileBack (obj) {
+        const t = this
+        t.file = obj.file[0]//提交的图片
+        t.$utils.getBase64(t.file, (url) => {
+          t.coverimgImages = 'data:image/png;base64,' + url   //显示的图片
+        })
+      },
+      filter(en){
+        if(this.fee!='0'){
+          this.fee = this.fee.match(/[0-9]+/g)
+        }
+        if(!this.fee)this.fee = 0
+        this.fee = parseInt(this.fee);
+      },
+      plusfee(){
+        this.fee = 10 + parseInt(this.fee);
+      },
+      minusfee(){
+        if(this.fee<10){
+          this.fee=0
+        }else{
+          this.fee -= 10;
+        }
+      },
+      confirm(){
+        this.datingTitle = this.datingTitleCache;
+        this.$router.go(-1);
+      },
+      search(){
+
+      },
+      todetail(id){
+        this.$router.push({
+          path: "/publish/myRestaurantDetail"
+        })
+      },
+      selectplace(key){
+        if(!key){
+          this.showPlace=true;
+          return;
+        }
+        if(key==='cancel'){
+          return;
+        }
+        this.showPlace=false;
+        if(key==='place'){
+          this.$router.push({
+            path: "/publish/myplace"
+          })
+        }else if(key==='hotel'){
+          this.$router.push({
+            path: "/publish/myRestaurant"
+          })
+        }
+      },
+      selectDatingTitle(){
+        this.datingTitleCache = this.datingTitle
+        this.$router.push({
+          path: "/other/datingTitle"
+        })
+      },
+      onPullingDown() {
+        // 模拟更新数据
+        console.log('下拉刷新')
+        setTimeout(() => {
+
+          // 如果没有新数据
+          console.log('关闭刷新')
+          this.$refs.scroll.forceUpdate()
+
+        }, 5000)
+      },
+      onPullingUp() {
+        // 更新数据
+        console.log('上拉加载')
+        setTimeout(() => {
+
+          this.$refs.scroll.forceUpdate()
+
+        }, 1500)
+      },
+      myscroll(pos){
+        const newVal = pos.y;
+        if(!this.beforeIndexListFixedHeight){
+          this.beforeIndexListFixedHeight = $(".last-buy").height()+(0.3)*parseInt(document.documentElement.style.fontSize)
+        }
+        if (newVal > -this.beforeIndexListFixedHeight) {
+          this.indexListFixed = false
+          this.$nextTick(function () {
+            this.$refs.scroll.refresh();
+          })
+          return
+        }
+        if(!this.indexListFixed){
+          this.indexListFixed = true
+          this.$nextTick(function () {
+            this.$refs.scroll.refresh();
+          })
+        }
+      },
+    }
+  }
+</script>
+<style scoped lang="scss">
+  img{
+    width:100%;
+    height:100%;
+  }
+  .focus{
+    &:before{
+      position: absolute !important;
+    }
+    .header{
+      position: absolute !important;
+    }
+  }
+  .main{
+    padding-bottom: 0;
+    &:before{
+      background-color:#3a3845 ;
+    }
+    .header{
+      position: fixed;
+      width: 100%;
+      &+div{
+        margin-top:1.39rem;
+      }
+      .top{
+        background-color:#3a3845 ;
+        color:#FFF;
+        font-size: 0.52rem;
+        position: relative;
+        i{
+          font-size: 0.42rem;
+        }
+        a{
+          position:absolute;
+          padding:3px;
+        }
+        .left{
+          left:0.325rem;
+        }
+        .right{
+          right:0.325rem;
+        }
+      }
+    }
+    .wrapper{
+      background-color: #f2f2f2;
+      overflow: hidden;
+      .content{
+        padding-top:0.3rem;
+        .white{
+          background-color: #FFF;
+        }
+        .flex{
+          .active{
+            color:#31c63f;
+          }
+          .demanda{
+            background-color: #ffa800;
+          }
+          padding:0 0.4rem;
+          font-size: 0.44rem;
+          border-bottom: 1px solid #f2f2f2;
+          &:last-child{
+            border:0;
+          }
+          div{
+            flex-grow:1;
+            height: 1.54rem;
+            line-height: 1.54rem;
+          }
+          div:last-child{
+            text-align: right;
+            font-size: 0.40rem;
+            color:#c2c2c2;
+            i{
+              font-size: 0.40rem;
+              margin-left: 0.64rem;
+            }
+          }
+        }
+        .content2{
+          div>span{
+            display: inline-block;
+            width:1.7rem;
+            height: 1rem;
+            line-height: 1rem;
+            text-align: center;
+            border-right: 1px solid #f2f2f2;
+            &:last-child{
+              border: 0;
+            }
+          }
+          input{
+            width: 4.15rem;
+            outline:none;
+            border:1px #dddddd solid;
+            padding:10px 4px;
+            &::-moz-placeholder { color: #dddddd; }
+            &::-webkit-input-placeholder { color:#dddddd; }
+            &:-ms-input-placeholder { color:#dddddd; }
+          }
+        }
+        .content3{
+          .active{
+            color:#31c63f;
+            border:1px solid #31c63f;
+          }
+          .demanda{
+            background-color: #ffa800;
+          }
+          padding:0 0.4rem;
+          font-size: 0.44rem;
+          border-bottom: 1px solid #f2f2f2;
+          div:first-child{
+            height: 1rem;
+            line-height: 1rem;
+          }
+          div:last-child{
+            font-size: 0.30rem;
+            color:#aeaeae;
+            padding-bottom: 0.2rem;
+          }
+          div>span{
+            border:1px solid #aeaeae;
+            border-radius: 0.275rem;
+            margin:0.08rem 0.4rem;
+            padding:0 0.25rem;
+            height: 0.55rem;
+            display: inline-flex;
+            align-items: center;
+            text-align: center;
+          }
+        }
+        .content4{
+          div>a{
+            display: inline-block;
+            width:0.64rem;
+            height: 0.64rem;
+            line-height: 0.64rem;
+            border-radius: 0.32rem;
+            text-align: center;
+            background-color: #c4c4c4;
+            margin: 0 0.2rem;
+            img{
+              width: 65%;
+              height:65%;
+              vertical-align: middle;
+            }
+          }
+        }
+        .content5{
+          padding:0 0.4rem;
+          div:nth-of-type(2){
+            font-size: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: flex-end;
+          }
+          div>a{
+            display: inline-block;
+            width:0.70rem;
+            height: 0.70rem;
+            line-height: 0.70rem;
+            border-radius: 3px 0 0 3px;
+            text-align: center;
+            background-color: #f2f2f2;
+            i{
+              color:#7d7d7d;
+              font-size: 0.3rem;
+            }
+          }
+          div>input{
+            width:1.38rem;
+            outline:none;
+            border:1px #dddddd solid;
+            padding:0 4px;
+            height: 0.7rem;
+            box-sizing: border-box;
+          }
+          textarea{
+            resize: none;
+            width:100%;
+            outline:none;
+            border:0;
+            margin:10px 0;
+            &::-moz-placeholder { color: #dddddd; }
+            &::-webkit-input-placeholder { color:#dddddd; }
+            &:-ms-input-placeholder { color:#dddddd; }
+            font-size: 0.40rem;
+          }
+          p{
+            text-align: right;
+            color:#c4c4c4;
+          }
+        }
+        .icon{
+          padding:0 0.4rem 0.57rem;
+          div{
+            img{
+              max-height: 5rem;
+              max-width: 5rem;
+            }
+            div{
+              display: inline-block;
+              width:1.7rem;
+              height: 1.7rem;
+              line-height: 1.7rem;
+              background-color: #f2f2f2;
+              text-align: center;
+              color:#e1e1e1;
+              margin-right: 0.55rem;
+              i{
+                font-size: 1rem;
+              }
+            }
+          }
+        }
+        .foot{
+          margin: 0.3rem 0 0.5rem;text-align: right;padding:0 0.4rem;
+          span{
+            display: inline-block;height: 0.38rem;line-height: 0.38rem;font-size: 0.4rem;
+            margin-left: 0.57rem;
+            color:#61b3f8;
+            i:first-child{
+              font-size: 0.4rem;
+              color:#bfbfbf;
+              &.active{
+                color:#31c63f;
+              }
+            }
+            i:last-child{
+              font-size: 0.35rem;
+            }
+
+          }
+        }
+        .placediv{
+          padding:0 0.4rem;
+          .placeinput{
+            width:100%;
+            outline:none;
+            border:0;
+            &::-moz-placeholder { color: #dddddd; }
+            &::-webkit-input-placeholder { color:#dddddd; }
+            &:-ms-input-placeholder { color:#dddddd; }
+            font-size: 0.40rem;
+            height: 1.54rem;
+            line-height: 1.54rem;
+          }
+        }
+
+      }
+    }
+  }
+  .contentMyRestaurant{
+    padding:0.3rem 0 0;
+    font-size: 0.4rem;
+    .white{
+      background-color: #FFF;
+      padding: 0 0.4rem;
+    }
+
+    .marginTop{
+      margin-top: 0.3rem;
+    }
+    .tuijian{
+      p{
+        height:1.26rem;
+        line-height: 1.26rem;
+        font-size: 0.4rem;
+        text-align: center;
+        i{
+          font-size: 1rem;
+          display: inline-block;
+          vertical-align: middle;
+        }
+        i:nth-of-type(2),i:nth-of-type(3){
+          font-size: 0.6rem;
+        }
+      }
+      .orderOption{
+        display: flex;
+        padding:0 0 0.4rem;
+        span{
+          flex-grow: 1;
+          width: 25%;
+          text-align: center;
+          &:first-child{
+            text-align: left;
+          }
+          i{
+            font-size: 0.4rem;
+          }
+        }
+      }
+    }
+    .itemList{
+      margin:0.2rem 0 0;
+      padding-top:0.4rem;
+      .item{
+        display: flex;
+        padding-bottom: 0.4rem;
+        div{
+          &:first-child{
+            width:2rem;
+            height: 2rem;
+            img{
+              width: 100%;
+              height: 100%;
+              border-radius: 3px;
+            }
+          }
+          &:last-child{
+            flex-grow: 1;
+            padding-left:0.3rem;
+            position: relative;
+            p:first-child{
+              span{
+                display: inline-block;
+                text-align: center;
+              }
+              span:nth-of-type(2){
+                position: absolute;
+                right:0.7rem;
+                width:0.6rem;
+                font-size: 0.28rem;
+                border-radius: 2px;
+                border: 1px solid #d5ac8c;
+                color:#d5ac8c;
+              }
+              span:nth-of-type(3){
+                position: absolute;
+                right:0;
+                width:0.6rem;
+                font-size: 0.28rem;
+                border-radius: 2px;
+                border: 1px solid #d5ac8c;
+                color:#d5ac8c;
+              }
+            }
+            p:nth-of-type(2){
+              span:last-child{
+                margin-left: 0.3rem;
+                color:#adadad;
+              }
+              span:first-child{
+                i{
+                  display: inline-block;
+                  font-size: 0.1rem;
+                  height: 0.4rem;
+                  width: 0.4rem;
+                  text-align: center;
+                  line-height: 0.4rem;
+                  background-color: #adadad;
+                  border-radius: 2px;
+                  color:#FFF;
+                }
+                i.red{
+                  background-color: #ff84ac;
+                }
+                i.halfred{
+                  background: -webkit-linear-gradient(left, #ff84ac 50%,#ff84ac 51%,#adadad 52% , #adadad 100%); /* Safari 5.1 - 6.0 */
+                  background: -o-linear-gradient(right, #ff84ac 50%,#ff84ac 51%,#adadad 52% , #adadad 100%); /* Opera 11.1 - 12.0 */
+                  background: -moz-linear-gradient(right, #ff84ac 50%,#ff84ac 51%,#adadad 52% , #adadad 100%); /* Firefox 3.6 - 15 */
+                  background: linear-gradient(to right, #ff84ac 50%,#ff84ac 51%,#adadad 52% , #adadad 100%); /* 标准的语法 */
+                }
+              }
+            }
+            p:nth-of-type(3){
+              position: absolute;
+              bottom: 0;
+              width:100%;
+              color: #adadad;
+              span:first-child{
+                font-size: 0.32rem;
+              }
+              span:last-child{
+                position: absolute;
+                right: 0.2rem;
+                font-size: 0.36rem;
+                i{
+                  font-size: 0.36rem;
+                }
+              }
+            }
+          }
+        }
+      }
+
+    }
+  }
+  .last-buy{
+    padding :0 0.4rem;
+    p{
+      padding:0.34rem 0;
+    }
+    ul{
+      display: flex;
+    }
+    li{
+      width:1.65rem;
+      text-align: center;
+      font-size: 0;
+      margin-left: 0.6rem;
+      &:first-child{
+        margin-left: 0;
+      }
+      img{
+        width:1.17rem;
+        height: 1.17rem;
+        border-radius: 5px;
+      }
+      p{
+        overflow: hidden;
+        text-overflow:ellipsis;
+        white-space: nowrap;
+        &:nth-of-type(1){
+          font-size: 0.24rem;
+          padding:0.2rem 0 0;
+        }
+        &:nth-of-type(2){
+          font-size: 0.24rem;
+          i{
+            font-size: 0.24rem;
+          }
+          padding:0.1rem 0 0.3rem;
+          color: #adadad;
+        }
+      }
+
+    }
+  }
+  .list-wrapper{
+    background: #f2f2f2 !important;
+  }
+  .index-list-fixed{
+    position: absolute;
+    z-index:1 ;
+    top: 1.39+0.75rem;
+    left: 0;
+    width: 100%;
+    background-color: #FFF;
+    .tuijian{
+      padding: 0 0.4rem;
+      p{
+        height:1.26rem;
+        line-height: 1.26rem;
+        font-size: 0.4rem;
+        text-align: center;
+        i{
+          font-size: 1rem;
+          display: inline-block;
+          vertical-align: middle;
+        }
+        i:nth-of-type(2),i:nth-of-type(3){
+          font-size: 0.6rem;
+        }
+      }
+      .orderOption{
+        display: flex;
+        padding:0 0 0.4rem;
+        span{
+          flex-grow: 1;
+          width: 25%;
+          text-align: center;
+          &:first-child{
+            text-align: left;
+          }
+          i{
+            font-size: 0.4rem;
+          }
+        }
+      }
+    }
+  }
+  .datingTitleDetail{
+    display: flex;
+    flex-wrap:wrap;
+    line-height: 1.2;
+    span{
+      width: 30%;
+      margin: 10px 3%;
+      padding: 8px 0;
+      border: 1px solid #c2c2c2;
+      border-radius: 10px;
+      text-align: center;
+      background-color: #FFF;
+      &.active{
+        background-color: #c2c2c2;
+      }
+    }
+  }
+  .myRestaurantDetail{
+    .white{
+      background-color: #FFF;
+      padding:0.3rem 0.4rem 0;
+    }
+    .detailTop{
+      display: flex;
+      div:first-child{
+        width:2.88rem;
+        height:2.88rem;
+      }
+      div:last-child{
+        flex-grow: 1;
+        margin-left: 0.3rem;
+        position: relative;
+        p{
+          height:0.9rem;
+          line-height: 0.9rem;
+        }
+        p:first-child{
+          font-size: 0.44rem;
+          font-weight: 500;
+        }
+        p:nth-of-type(2){
+          i{
+            display: inline-block;
+            font-size: 0.1rem;
+            height: 0.4rem;
+            width: 0.4rem;
+            text-align: center;
+            line-height: 0.4rem;
+            background-color: #adadad;
+            border-radius: 2px;
+            color:#FFF;
+          }
+          i.red{
+            background-color: #ff84ac;
+          }
+          i.halfred{
+            background: -webkit-linear-gradient(left, #ff84ac 50%,#ff84ac 51%,#adadad 52% , #adadad 100%); /* Safari 5.1 - 6.0 */
+            background: -o-linear-gradient(right, #ff84ac 50%,#ff84ac 51%,#adadad 52% , #adadad 100%); /* Opera 11.1 - 12.0 */
+            background: -moz-linear-gradient(right, #ff84ac 50%,#ff84ac 51%,#adadad 52% , #adadad 100%); /* Firefox 3.6 - 15 */
+            background: linear-gradient(to right, #ff84ac 50%,#ff84ac 51%,#adadad 52% , #adadad 100%); /* 标准的语法 */
+          }
+        }
+        p:nth-of-type(3){
+          position: absolute;
+          bottom: 0;
+          width:100%;
+          color: #96969d;
+          span:first-child{
+            font-size: 0.4rem;
+          }
+          span:last-child{
+            position: absolute;
+            right: 0.2rem;
+            font-size: 0.36rem;
+            i{
+              font-size: 0.36rem;
+            }
+          }
+        }
+      }
+    }
+    .address-c{
+      height:1.5rem;
+      line-height: 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      border-bottom: 1px solid #f2f2f2;
+      i{
+        font-size: 0.40rem;
+        color:#96969d;
+      }
+      span{
+        flex-grow: 1;
+        margin-left: 0.3rem;
+        color:#000;
+      }
+    }
+  }
+  .myRestaurantDetailFoot{
+    position: absolute;
+    bottom: 0.45rem;
+    width: 100%;
+    div{
+      height: 1.28rem;
+      line-height: 1.28rem;
+      border-radius: 0.64rem;
+      text-align: center;
+      margin: 0 0.7rem;
+      background-color: #ff84ac;
+      color:#FFF;
+    }
+  }
+</style>

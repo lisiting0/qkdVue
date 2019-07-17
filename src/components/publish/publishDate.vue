@@ -1,0 +1,2538 @@
+<template>
+  <div style="overflow:hidden;">
+    <div v-show="pagerouter==='main'" class="page main publishAppointment" ref="scrollTop">
+      <Loading v-if="isloading"></Loading>
+      <div class="header">
+        <div class="top">
+          <a class="left" @click="showConfirmm"><i class="iconfont">&#xe613;</i></a>
+          <a class="right"><i class="iconfont"></i></a>发布约会
+        </div>
+      </div>
+      <div class="publish-menu fixed">
+        <div @click="menuClick(1)" class="timeline-text" :class="{active:menu.type==1}"><span class="text">约会详情</span>
+        </div>
+        <!--<div @click="menuClick(2)" class="timeline-text" :class="{active:menu.detail}"><span class="text">约会详情</span>-->
+        <!--</div>-->
+        <div @click="menuClick(3)" class="timeline-text" :class="{active:menu.require}"><span class="text">资格要求</span>
+        </div>
+      </div>
+      <template v-if="panel==1">
+        <div class="first-panel panel">
+          <div class="datingTitle">
+            <input ref="datingDesc_input" type="text" v-model="datingDesc" placeholder="空泛的说明，是没有人报名的">
+          </div>
+        </div>
+        <div class="panel">
+          <p class="title">约会类型</p>
+          <!--1、旅行 2、吃饭 3、电影 4、唱歌 5、运动 99、其他-->
+          <div class="check-box">
+            <span class="check-type" @click="datingThemes=2" :class="{active:datingThemes==2}"><i class="iconfont">&#xe66c;</i>吃饭</span>
+            <span class="check-type" @click="datingThemes=4" :class="{active:datingThemes==4}"><i class="iconfont">&#xe895;</i>K歌</span>
+            <span class="check-type" @click="datingThemes=3" :class="{active:datingThemes==3}"><i class="iconfont">&#xe669;</i>电影</span>
+            <span class="check-type" @click="datingThemes=1" :class="{active:datingThemes==1}"><i class="iconfont">&#xe66d;</i>旅行</span>
+            <span class="check-type" @click="datingThemes=5" :class="{active:datingThemes==5}"><i class="iconfont">&#xee41;</i>运动</span>
+            <span class="check-type" @click="datingThemes=99" :class="{active:datingThemes==99}"><i class="iconfont">&#xe66f;</i>其他</span>
+          </div>
+        </div>
+        <div class="panel select_panel">
+          <div class="select_con select_number">
+            <div>约会方式</div>
+            <div><span @click.stop="datingMethod=7" :class="{select:datingMethod==7}">一对一</span><span @click.stop="datingMethod=8;extInt7=3" :class="{select:datingMethod==8}">多人</span>
+              <!--<input v-show="datingMethod==8" type="text" placeholder="请填写人数" v-model="extInt4"/>-->
+            </div>
+          </div>
+          <div class="select_con" v-show="datingMethod==8">
+            <div>约会人数</div>
+            <div class="row-check-box renshu">
+              <input type="text" placeholder="最低人数" v-model="extInt11"/>
+              <input type="text" placeholder="最高人数" v-model="extInt12"/>
+            </div>
+          </div>
+          <div class="select_con">
+            <div>性别</div>
+            <div class="row-check-box">
+              <span class="box" @click="sex=2" :class="{active:sex==2}"><i class="iconfont" style="font-size: 0.6rem;">&#xe671;</i></span>
+              <span class="box" @click="sex=1" :class="{active:sex==1}"><i class="iconfont" style="font-size: 0.6rem;">&#xe672;</i></span>
+              <span class="box" @click="sex=9" :class="{active:sex==9}">不限</span>
+            </div>
+          </div>
+          <!--<div class="select_con" v-show="datingMethod==8&&sex==9">-->
+            <!--<div>男女人数</div>-->
+            <!--<div class="row-check-box renshu">-->
+              <!--<input type="text" placeholder="男生人数" v-model="extInt8"/>-->
+              <!--<input type="text" placeholder="女生人数" v-model="extInt9"/>-->
+            <!--</div>-->
+          <!--</div>-->
+          <template v-if="datingThemes==1">
+            <div class="select_con" @click="shAddress=true">
+              <div>目的地</div>
+              <div>{{addressText==""?"选择地点": addressText}}</div>
+              <div><i class="iconfont">&#xe702;</i></div>
+              <actionsheet v-model="shAddress" :menus="addressMenu" @on-click-menu="addressClick" show-cancel></actionsheet>
+            </div>
+            <div class="select_con select_time" @click="shdatingTime">
+              <div>出发时间</div>
+              <div @click.stop>
+                <!--<div v-show="extInt7==3">-->
+                  <!--<check-icon :value.sync="extInt10_"><i class="iconfont" style="font-size: 0.4rem;color:#cfced4;">左右</i></check-icon>-->
+                  <!--&lt;!&ndash;<check-icon :value.sync="extInt10__"><i class="iconfont" style="font-size: 0.4rem;color:#cfced4;">准时</i></check-icon>&ndash;&gt;-->
+                <!--</div>-->
+              </div>
+              <div v-if="extInt7==1||extInt7==2">{{extInt7==1?'不限时间':'平常周末'}}</div>
+              <div v-else>{{datingTimeText==""?"选择时间": datingTimeText+':00'}}</div>
+              <div><i class="iconfont">&#xe702;</i></div>
+              <group style="display: none">
+                <datetime title="约会时间" v-model="datingTimeText" :show.sync="shDatingTime" :start-date="startDate" :end-date="endDate" format="YYYY-MM-DD HH" year-row="{value}年" month-row="{value}月" day-row="{value}日" hour-row="{value}时" confirm-text="完成" cancel-text="取消"></datetime>
+              </group>
+            </div>
+            <div class="select_con" @click="visibility1=true">
+              <div>预计时间</div>
+              <div>{{tripTimeLengthName==""?"预计时间": tripTimeLengthName}}</div>
+              <div><i class="iconfont">&#xe702;</i></div>
+            </div>
+            <group style="display: none">
+              <popup-picker title="预计时间" :data="tripTimeLengthList" v-model="tripTimeLength" ref="picker5" :show.sync="visibility1"></popup-picker>
+            </group>
+            <div class="select_con" @click="visibility2=true">
+              <div>出行方式</div>
+              <div>{{tripModeName==""?"请选择": tripModeName}}</div>
+              <div><i class="iconfont">&#xe702;</i></div>
+            </div>
+            <group style="display: none">
+              <popup-picker title="出行方式" :data="tripModeList" v-model="tripMode" ref="picker6" :show.sync="visibility2"></popup-picker>
+            </group>
+          </template>
+          <template v-else>
+            <div class="select_con" @click="shAddress=true">
+              <div>地点</div>
+              <div>{{addressText==""?"选择地点": addressText}}</div>
+              <div><i class="iconfont">&#xe702;</i></div>
+              <actionsheet v-model="shAddress" :menus="addressMenu" @on-click-menu="addressClick" show-cancel></actionsheet>
+            </div>
+            <div class="select_con select_time" @click="shdatingTime">
+              <div>时间</div>
+              <div @click.stop>
+                <!--<div v-show="extInt7==3">-->
+                  <!--<check-icon :value.sync="extInt10_"><i class="iconfont" style="font-size: 0.4rem;color:#cfced4;">左右</i></check-icon>-->
+                  <!--&lt;!&ndash;<check-icon :value.sync="extInt10__"><i class="iconfont" style="font-size: 0.4rem;color:#cfced4;">准时</i></check-icon>&ndash;&gt;-->
+                <!--</div>-->
+              </div>
+              <div v-if="extInt7==1||extInt7==2">{{extInt7==1?'不限时间':'平常周末'}}</div>
+              <div v-else>{{datingTimeText==""?"选择时间": datingTimeText+':00'}}</div>
+              <div><i class="iconfont">&#xe702;</i></div>
+              <group style="display: none">
+                <datetime title="约会时间" v-model="datingTimeText" :show.sync="shDatingTime" :start-date="startDate" :end-date="endDate" format="YYYY-MM-DD HH" year-row="{value}年" month-row="{value}月" day-row="{value}日" hour-row="{value}时" confirm-text="完成" cancel-text="取消"></datetime>
+              </group>
+            </div>
+          </template>
+          <div class="select_con" @click.stop="setFeePopul()">
+            <div>费用</div>
+            <div v-if="pay!=null">{{pay==0?'AA':pay==1?'我请客':pay==3?'男A女免':'视情况而定'}}{{fee?';'+fee+'元':''}}{{extInt6==1?';多退少补':''}}{{extInt==1?';平台代收':extInt_1?';发起人收取':''}}</div>
+            <div v-else>请设置费用</div>
+            <div><i class="iconfont">&#xe702;</i></div>
+          </div>
+          <!--<div class="select_con">-->
+            <!--<div class="checkFriend" style="width: 100%;text-align: right;">-->
+              <!--<check-icon :value.sync="extInt"><i class="iconfont" style="font-size: 0.4rem;color:#cfced4;">是否需要平台代收<i @click.stop="showShuoming" style="font-size: 0.4rem;color:#279fde;" class="iconfont">&#xe676;</i></i></check-icon>-->
+            <!--</div>-->
+          <!--</div>-->
+        </div>
+        <div class="panel img-panel marginBottom">
+          <div class="checkbox-panel">
+            <label>
+              <check-icon :value.sync="expShowPic"><i class="iconfont" style="font-size: 0.4rem;color:#cfced4;">使用我的相册</i></check-icon>
+            </label>
+          </div>
+          <div class="photo-cls jy_user_img_group select_panel" style="border-bottom: 1px solid #F2F2F2;">
+            <ul class="jy_auth_up jy_feed_img user_img">
+              <draggable v-model="feedImg" @update="dragEnd" :options="{animation:500}">
+                <transition-group>
+                  <li v-for="(item,index) in feedImg" :style="'background-image:url('+getFullPath(item)+');'"
+                      @click.stop="deleteImg(index)" :key="item">
+                    <i class="iconfont">&#xe67c;</i>
+                  </li>
+                </transition-group>
+              </draggable>
+              <selectPhoto v-if="feedMaxImg-feedImg.length>0" :amount="feedMaxImg-feedImg.length" @fileBack="fileBack" :cutting="false">
+                <li class="noUploadPhoto"></li>
+              </selectPhoto>
+            </ul>
+            <div class="user_img_desc">上传图片更吸引人呦（最多三张）</div>
+          </div>
+          <!--<textarea v-model="datingDesc" cols="40" rows="2" placeholder="空泛的说明，是没有人报名的" style="border: none;margin: 0.4rem 0 0;color: #a3a3a4;font-size: 0.4rem;" @focus="setFocus" @blur="setBlur"></textarea>-->
+        </div>
+      </template>
+      <template v-if="panel==3">
+        <div class="first-panel panel">
+          <p class="title">认证要求 <em>{{certificationText}}</em></p>
+          <!--不限、身份认证、视频认证、车辆认证、房产认证-->
+          <div class="check-box">
+            <span class="five-box" @click="certificationClick(0)" :class="{active:certification.none==1}">不限</span>
+            <span class="five-box" @click="certificationClick(1)" :class="{active:certification.idStatus==1}"><i class="iconfont">&#xe69c;</i></span>
+            <span class="five-box" @click="certificationClick(2)" :class="{active:certification.videoStatus==1}"><i class="iconfont">&#xe697;</i></span>
+            <span class="five-box" @click="certificationClick(3)" :class="{active:certification.carStatus==1}"><i class="iconfont">&#xe69f;</i></span>
+            <span class="five-box" @click="certificationClick(4)" :class="{active:certification.houseStatus==1}"><i class="iconfont">&#xe69e;</i></span>
+          </div>
+        </div>
+        <div class="panel">
+          <p class="title">学历要求</p>
+          <div class="check-box">
+            <span class="three-box" @click="education=-1" :class="{active:education==-1}">不限</span>
+            <span class="three-box" @click="education=9" :class="{active:education==9}">高中及以上</span>
+            <span class="three-box" @click="education=10" :class="{active:education==10}">大专及以上</span>
+            <span class="three-box" @click="education=11" :class="{active:education==11}">本科及以上</span>
+            <span class="three-box" @click="education=12" :class="{active:education==12}">硕士及以上</span>
+            <span class="three-box" @click="education=13" :class="{active:education==13}">博士及以上</span>
+          </div>
+        </div>
+        <div class="panel">
+          <p class="title">年龄要求</p>
+          <div class="check-box">
+            <span class="three-box" @click="age=-1" :class="{active:age==-1}">不限</span>
+            <span class="three-box" @click="age=18" :class="{active:age==18}">18-23</span>
+            <span class="three-box" @click="age=24" :class="{active:age==24}">24-29</span>
+            <span class="three-box" @click="age=30" :class="{active:age==30}">30-35</span>
+            <span class="three-box" @click="age=35" :class="{active:age==35}">36-40</span>
+            <span class="three-box" @click="age=41" :class="{active:age==41}">41以上</span>
+          </div>
+        </div>
+        <div class="panel">
+          <p class="title">身高要求</p>
+          <div class="check-box">
+            <span class="five-box" @click="height=-1" :class="{active:height==-1}">不限</span>
+            <span class="five-box" @click="height=150" :class="{active:height==150}">≥150</span>
+            <span class="five-box" @click="height=155" :class="{active:height==155}">≥155</span>
+            <span class="five-box" @click="height=160" :class="{active:height==160}">≥160</span>
+            <span class="five-box" @click="height=165" :class="{active:height==165}">≥165</span>
+            <span class="five-box" @click="height=170" :class="{active:height==170}">≥170</span>
+            <span class="five-box" @click="height=175" :class="{active:height==175}">≥175</span>
+            <span class="five-box" @click="height=180" :class="{active:height==180}">≥180</span>
+            <span class="five-box" @click="height=185" :class="{active:height==185}">≥185</span>
+            <span class="five-box" @click="height=190" :class="{active:height==190}">≥190</span>
+          </div>
+        </div>
+        <div class="panel marginBottom">
+          <p class="title">收入要求</p>
+          <div class="check-box">
+            <span class="three-box" @click="expIncomeLowerLimit=null;expIncomeUpperLimit=null" :class="{active:expIncomeLowerLimit==null&&expIncomeUpperLimit==null}">不限</span>
+            <span class="three-box" @click="expIncomeUpperLimit=2000;" :class="{active:expIncomeUpperLimit==2000}">两千以下</span>
+            <span class="three-box" @click="expIncomeLowerLimit=2000;expIncomeUpperLimit=4000" :class="{active:expIncomeLowerLimit==2000&&expIncomeUpperLimit==4000}">两千到四千</span>
+            <span class="three-box" @click="expIncomeLowerLimit=4000;expIncomeUpperLimit=6000" :class="{active:expIncomeLowerLimit==4000&&expIncomeUpperLimit==6000}">四千到六千</span>
+            <span class="three-box" @click="expIncomeLowerLimit=6000;expIncomeUpperLimit=10000" :class="{active:expIncomeLowerLimit==6000&&expIncomeUpperLimit==10000}">六千到一万</span>
+            <span class="three-box" @click="expIncomeLowerLimit=10000;expIncomeUpperLimit=15000" :class="{active:expIncomeLowerLimit==10000&&expIncomeUpperLimit==15000}">一万到一万五</span>
+            <span class="three-box" @click="expIncomeLowerLimit=15000;expIncomeUpperLimit=20000" :class="{active:expIncomeLowerLimit==15000&&expIncomeUpperLimit==20000}">一万五到两万</span>
+            <span class="three-box" @click="expIncomeLowerLimit=20000;expIncomeUpperLimit=25000" :class="{active:expIncomeLowerLimit==20000&&expIncomeUpperLimit==25000}">两万到两万五</span>
+            <span class="three-box" @click="expIncomeLowerLimit=50000;expIncomeUpperLimit=null" :class="{active:expIncomeLowerLimit==50000&&expIncomeUpperLimit==null}">五万以上</span>
+          </div>
+        </div>
+        <!--<div class="panel marginBottom">-->
+          <!--<p class="title">是否允许乾坤轮匹配缘分 <i class="iconfont" style="color: #ff4200;vertical-align: middle;">&#xe682;</i><inline-x-switch v-model="isLottery"></inline-x-switch></p>-->
+        <!--</div>-->
+      </template>
+      <div class="publish_bd_btn" :class="staticPosition?'staticPosition':''">
+        <em class="bc" @click="finish(2)">保存</em>
+        <em class="next" v-if="panel==1 || panel==2 " @click="finish(1)">下一步</em>
+        <em class="next" v-else @click="finish(3)">发布</em>
+      </div>
+    </div>
+
+    <div v-transfer-dom>
+      <x-dialog v-model="showRule" hide-on-blur class="dialog-rule" :dialog-style="{'max-width': '100%', width: '100%','padding': '0.6rem 0', 'background-color': 'transparent'}">
+        <div class="rule">
+          <i class="iconfont" @click.stop="showRule=false">&#xe7de;</i>
+          <p>保证金规则</p>
+          <div><em v-for="item,index in BondRule">{{item.remarks}}</em></div>
+        </div>
+        <div class="arrow"></div>
+      </x-dialog>
+    </div>
+    <div v-transfer-dom>
+      <popup v-model="showMapPopup" height="100%" :hide-on-blur="false" position="bottom" :popup-style="{zIndex:596}" :should-scroll-top-on-show="true">
+        <div class="top_userInfo" v-if="showbMap">
+          <bMap @address="setAdress" @hidden="hiddenMap" :keyPlace="keyPlace"></bMap>
+        </div>
+      </popup>
+    </div>
+    <div v-transfer-dom>
+      <popup v-model="showStorePopup" height="100%" :hide-on-blur="false" position="bottom" :popup-style="{zIndex:596}" :should-scroll-top-on-show="true">
+        <div class="top_userInfo" v-if="showStore">
+          <addressselect @submitAddress="selStore" @hidden="hiddenStore"></addressselect>
+        </div>
+      </popup>
+    </div>
+    <div v-transfer-dom>
+      <popup v-model="showFeePopup" :hide-on-blur="true" position="bottom" :popup-style="{zIndex:596}">
+        <div class="fee_popup">
+          <p style="line-height: 1.5">设置费用</p>
+          <div>
+            <p class="title">活动费用</p>
+            <div>
+              <span :style="{'background-color':paysel==1?'#FFF':'#EEE'}" @click.stop="setDoinput(1,true,0)">我请客</span>
+              <span :style="{'background-color':paysel==0?'#FFF':'#EEE'}" @click.stop="setDoinput(0,false)">AA</span>
+              <span :style="{'background-color':paysel==3?'#FFF':'#EEE'}" @click.stop="setDoinput(3,false)">男A女免</span>
+              <span :style="{'background-color':paysel==4?'#FFF':'#EEE'}" @click.stop="setDoinput(4,true,0)">视情况而定</span>
+            </div>
+          </div>
+          <div>
+            <span>{{paysel==0?'每人':paysel==3?'男士每人':''}}</span>
+            <input type="text" v-model="feesel" placeholder="请输入费用" :disabled="!(paysel==0||paysel==3)"/>
+            <span>元</span>
+            <p><check-icon :value.sync="extInt6__s"><i class="iconfont" style="font-size: 0.4rem;color:#cfced4;">多退少补</i></check-icon></p>
+          </div>
+          <div>
+            <p class="title">收费方式</p>
+            <p>
+              <check-icon :value.sync="extInt__s"><i class="iconfont" style="font-size: 0.4rem;color:#cfced4;">平台代收</i></check-icon>
+              <check-icon :value.sync="extInt_1__s"><i class="iconfont" style="font-size: 0.4rem;color:#cfced4;">发起人收取</i></check-icon>
+            </p>
+          </div>
+          <div>
+            <span>说明：</span>
+            <span v-if="extInt__s">{{$store.state.custom_config.platfColl||''}}</span>
+            <span v-else-if="extInt_1__s">{{$store.state.custom_config.orgaColl||''}}</span>
+          </div>
+          <div>
+            <p @click.stop="showFeePopup=false">取消</p>
+            <p @click.stop="setFeePopul(true)">确定</p>
+          </div>
+        </div>
+      </popup>
+    </div>
+    <div v-transfer-dom>
+      <x-dialog v-model="shBeBeDatingTime" hide-on-blur class="dialog-chooseDatingTime" :dialog-style="{'max-width': '100%', width: '100%','padding': '0.6rem 0', 'background-color': 'transparent'}">
+        <div class="chooseDatingTime" style="font-size: 0.48rem;color:#858585;">
+          <p style="height: 1.5rem;line-height: 1.5rem;border-bottom: 1px solid #f6f6f6;" @click.stop="shBeBeDatingTime=false;extInt7=1;">不限时间</p>
+          <p style="height: 1.5rem;line-height: 1.5rem;border-bottom: 1px solid #f6f6f6;" @click.stop="shBeBeDatingTime=false;extInt7=2;">平常周末</p>
+          <p style="height: 1.5rem;line-height: 1.5rem" @click.stop="shBeBeDatingTime=false;shDatingTime=true;extInt7=3;">指定时间</p>
+        </div>
+        <div class="arrow"></div>
+      </x-dialog>
+    </div>
+    <!--<div v-transfer-dom>-->
+      <!--<x-dialog v-model="shBeDatingTime" hide-on-blur class="dialog-chooseDatingTime" :dialog-style="{'max-width': '100%', width: '100%','padding': '0.6rem 0', 'background-color': 'transparent'}">-->
+        <!--<div class="chooseDatingTime">-->
+          <!--<p>请选择时间类型</p>-->
+          <!--<div>-->
+            <!--<div @click.stop="shBeDatingTime=false;extInt10=1;shDatingTime=true;">-->
+              <!--左右-->
+            <!--</div>-->
+            <!--<div @click.stop="shBeDatingTime=false;extInt10=0;shDatingTime=true;">-->
+              <!--准时-->
+            <!--</div>-->
+          <!--</div>-->
+        <!--</div>-->
+        <!--<div class="arrow"></div>-->
+      <!--</x-dialog>-->
+    <!--</div>-->
+  </div>
+</template>
+
+<script>
+  import Loading from '../loading.vue';
+  import {TransferDom, Group, Popup, PopupPicker, Datetime, CheckIcon,Checklist ,InlineXSwitch, XDialog, Actionsheet } from 'vux';
+  import selectPhoto from '../plugs/selectPhoto'
+  import draggable from 'vuedraggable'
+  import bMap from '@/components/other/bMap.vue'
+  import store from '@/components/publish/store.vue'
+  import addressselect from '@/components/publish/addressselect.vue'
+  import shop from '@other/shop.vue';
+  import routerBack from '@/plus/routerBack.js';
+  routerBack.init("publishDate",{
+    showMapPopup:{
+      fn:"hiddenMap",
+    },
+    showStorePopup:{
+      fn:"hiddenStore",
+    },
+    showFeePopup:null,
+    shAddress:null,
+    shBeBeDatingTime:null,
+    shBeDatingTime:null,
+    shDatingTime:null,
+    visibility1:null,
+    visibility2:null,
+    showConfirm:{
+      fn:"showConfirmm",
+    },
+  })
+  export default {
+    name: "publishDate",
+    mixins:[routerBack],
+    directives: {
+      TransferDom
+    },
+    components: {
+      Loading,
+      Group,
+      Popup,
+      PopupPicker,
+      Datetime,
+      CheckIcon,
+      Checklist,
+      selectPhoto,
+      draggable,
+      InlineXSwitch,
+      XDialog,
+      Actionsheet,
+      bMap,
+      store,
+      shop,
+      addressselect
+    },
+    data() {
+      return {
+        showConfirm:true,
+        makesureConfirm:false,
+        showFeePopup:false,
+        doinput:false,
+        paysel:0,
+        feesel:null,
+        extInt8:null,//男生人数限制
+        extInt9:null,//女生人数限制
+        extInt11:null,//最低人数
+        extInt12:null,//最高人数
+        extInt6__s:false,
+        extInt__s:false,
+        extInt_1__s:false,
+
+        extInt6:false,
+        extInt:false,
+        extInt_1:false,
+
+       // platfColl:'',
+       // orgaColl:'',
+
+        //收入要求
+        expIncomeLowerLimit:null,//最低
+        expIncomeUpperLimit:null,//最高
+
+        pagerouter:'main',
+        isloading: false,
+        staticPosition: false,
+        id: null,
+        panel: 1,//选择类型模块、约会详情模块、资格要求模块
+        menu: {//选择类型、约会详情、资格要求
+          type: 1,
+          detail: "",
+          require: "",
+        },
+        datingThemes: 2,  //约会主题（1、旅行 2、吃饭 3、电影 4、唱歌 5、运动 99、其他）
+        datingMethod: 7,  //活动方式（7单人，8多人）
+		keyPlace:["美食","餐厅","料理","下午茶","小吃快餐","自助餐"],//百度地图搜索关键字
+        datingMethodList: [],
+        datingMethodTitle: '',
+        datingMethodDesc: '',
+        fee: null,
+        bail: 0,
+        showRule: false,
+
+        shAddress: false,
+        addressText: '',
+        datingChoseShopId: null,//约会地点关联商铺
+        cityName: '',
+        addressCityId: null,
+        addressAreaId: null,
+        longitude:null,
+        latitude:null,
+        datingTitle:'',
+        datingTitleCache:'',
+        datingTitleOtherType:[],
+        datingLocation: '',//约会地点
+        fullAddress:"",//详细地址
+        addressMenu: {
+          menu1: '地图选址',
+          menu2: '录入地址'
+        },
+        addressSel: '',
+        showMapPopup: false,
+        showbMap: false,
+        showStorePopup: false,
+        showStore: false,
+
+        shBeBeDatingTime:false,
+        shBeDatingTime:false,
+        shDatingTime: false,
+        datingTimeText: '',
+        extInt7:null,
+        extInt10:0,
+        extInt10_:false,
+        // extInt10__:false,
+
+        shObjTime: false,
+        objTimeText: '',
+        minuteList: ['00', '05', '10', '15', '20', '25', '30', '35', '40', '45', '50', '55'],
+
+        sex: 9,
+        pay: null,
+        carryingFriends: false,
+        expShowPic: false,
+
+        file: null,
+        headimgAttachmentId: null,
+        feedMaxImg: 3,//发布最大图片数量
+        feedImg: [],//发布图片
+        fileList: null,
+        datingDesc: '',
+
+        expGift: 0,
+        sendGift: 0,
+        giveItems: {},
+        sendItems: {},
+        giftDetail: null,
+        followup:[],
+        followupSelect:[],
+        certification: {
+          none: 1,
+          idStatus: 0,
+          videoStatus: 0,
+          carStatus: 0,
+          houseStatus: 0,
+        },// ["不限""身份认证", "视频认证", "车辆认证", "房产认证"],
+        certificationText: '',
+        education: -1,
+        height: -1,
+        age: -1,
+        isLottery: false,//抽奖默认为不允许
+        visibility1:false,//预计时间
+        tripTimeLength:[],
+        tripTimeLengthName:'',
+        tripTimeLengthList:[[{
+          name: '一两天',
+          value: '1'
+        }, {
+          name: '三五天',
+          value: '2'
+        }, {
+          name: '十天半月',
+          value: '3'
+        }]],
+        visibility2:false,
+        tripMode:[],
+        tripModeName:'',
+        tripModeList:[[{
+          name: '火车',
+          value: '1'
+        }, {
+          name: '飞机',
+          value: '2'
+        }, {
+          name: '动高铁',
+          value: '3'
+        },{
+          name: '游轮',
+          value: '4'
+        }, {
+          name: '自驾',
+          value: '5'
+        }, {
+          name: '大巴',
+          value: '6'
+        }, {
+          name: '骑行',
+          value: '7'
+        }]],
+        BondRule:'',
+      }
+    },
+    watch: {
+      extInt10_(newV){
+        if(newV){
+          // this.extInt10__=false;
+          this.extInt10 = 1;
+        }else{
+          this.extInt10 = 0;
+        }
+      },
+      // extInt10__(newV){
+      //   if(newV){
+      //     this.extInt10_=false;
+      //     this.extInt10 = 0;
+      //   }
+      // },
+      extInt6__s(newV){
+        if(newV){
+          if(this.paysel==1||this.paysel==4){
+            this.extInt6__s=false;
+          }
+        }
+      },
+      extInt__s(newV){
+        if(newV){
+          this.extInt_1__s=false;
+          if(this.paysel==1||this.paysel==4){
+            this.extInt__s=false;
+          }
+        }
+      },
+      extInt_1__s(newV){
+        if(newV){
+          this.extInt__s=false;
+          if(this.paysel==1||this.paysel==4){
+            this.extInt_1__s=false;
+          }
+        }
+      },
+      doinput(newV){
+        if(newV){
+          this.extInt=false
+          this.extInt_1=false
+          this.extInt6=false
+        }
+      },
+      extInt8(newV){
+        newV = newV+"";
+        if(newV.length==1&&newV==0){
+          return;
+        }else{
+          if(/^[1-9]\d*$/.test(newV)){
+            return;
+          }else{
+            let value = newV.replace(/^0/g,'').replace(/\\./g,'').replace(/[^\d]/g,'')
+            this.extInt8 = value;
+          }
+        }
+      },
+      extInt9(newV){
+        newV = newV+"";
+        if(newV.length==1&&newV==0){
+          return;
+        }else{
+          if(/^[1-9]\d*$/.test(newV)){
+            return;
+          }else{
+            let value = newV.replace(/^0/g,'').replace(/\\./g,'').replace(/[^\d]/g,'')
+            this.extInt9 = value;
+          }
+        }
+      },
+      extInt11(newV){
+        newV = newV+"";
+        if(newV.length==1&&newV==0){
+          return;
+        }else{
+          if(/^[1-9]\d*$/.test(newV)){
+            return;
+          }else{
+            let value = newV.replace(/^0/g,'').replace(/\\./g,'').replace(/[^\d]/g,'')
+            this.extInt11 = value;
+          }
+        }
+      },
+      extInt12(newV){
+        newV = newV+"";
+        if(newV.length==1&&newV==0){
+          return;
+        }else{
+          if(/^[1-9]\d*$/.test(newV)){
+            return;
+          }else{
+            let value = newV.replace(/^0/g,'').replace(/\\./g,'').replace(/[^\d]/g,'')
+            this.extInt12 = value;
+          }
+        }
+      },
+      extInt(newV,oldV){
+        if(newV&&!this.feesel){
+          this.extInt=false;
+          this.$vux.alert.show({
+            title: '说明',
+            content: '只有设置了活动费用之后才能选择平台代收',
+            onShow () {
+            },
+            onHide () {
+            }
+          })
+        }
+        if(newV){
+          this.extInt_1=false;
+        }
+      },
+      extInt6(newV,oldV){
+        if(newV&&!this.feesel){
+          this.extInt6=false;
+          this.$vux.alert.show({
+            title: '说明',
+            content: '只有设置了活动费用之后才能选择多退少补',
+            onShow () {
+            },
+            onHide () {
+            }
+          })
+        }
+      },
+      extInt_1(newV,oldV){
+        if(newV&&!this.feesel){
+          this.extInt_1=false;
+          this.$vux.alert.show({
+            title: '说明',
+            content: '只有设置了活动费用之后才能选择发起人收取',
+            onShow () {
+            },
+            onHide () {
+            }
+          })
+        }
+        if(newV){
+          this.extInt=false;
+        }
+      },
+      feesel(newV,oldV){
+        if(newV==null||newV==""){
+          return;
+        }else{
+          newV = newV+"";
+          let reg = /^\d+(\.\d{0,2})?$/;
+          if(!reg.test(newV)){
+            this.feesel=oldV;
+          }
+          let lsval ;
+          if(!/\./.test(newV)){
+            lsval=parseFloat(newV);
+            if(isNaN(lsval)){
+              lsval=0;
+            }
+            this.feesel=lsval;
+          }
+        }
+        // newV = newV+"";
+        // if(newV.length==1&&newV==0){
+        //   return;
+        // }else{
+        //   if(/^[1-9]\d*$/.test(newV)){
+        //     return;
+        //   }else{
+        //     let value = newV.replace(/^0/g,'').replace(/\\./g,'').replace(/[^\d]/g,'')
+        //     this.feesel = value;
+        //   }
+        // }
+      },
+      async datingThemes(newv){
+        // this.datingTitle='';
+        if(newv==1){
+			this.keyPlace=["景点","公园","动值物园","名胜古迹","旅游"];
+		}else if(newv==2){
+			this.keyPlace=["美食","餐厅","料理","下午茶","小吃快餐","自助餐"];
+		}else if(newv==3){
+			this.keyPlace=["影城","电影院"];
+		}else if(newv==4){
+			this.keyPlace=["KTV"];
+		}else if(newv==99){
+          let list = await this.$server.apiDict({type:"dating_title_other_type"});
+          this.datingTitleOtherType = list.data.data;
+		  this.keyPlace="";
+        }else if(newv==5){
+          let list = await this.$server.apiDict({type:"sport_type"});
+          this.datingTitleOtherType = list.data.data;
+		  this.keyPlace=["运动","羽毛球","篮球","足球","乒乓球","跑步"];
+        }
+      },
+      shopParam(){
+        const _this = this;
+        if(_this.$store.state.shopParam.isGive) {
+          if(_this.$store.state.shopParam.isGive==1){
+            _this.expGift = 1;
+            _this.giveItems['id'] = _this.$store.state.shopParam.id;
+            _this.giveItems['name'] = _this.$store.state.shopParam.name;
+            _this.giveItems['imagePath'] = _this.$store.state.shopParam.imagePath.substring(3);
+            _this.giveItems['num'] = _this.$store.state.shopParam.num;
+            _this.giveItems['price'] = _this.$store.state.shopParam.price;
+            _this.giveItems['expGift'] = 1;
+          }else{
+            _this.sendGift = 1;
+            _this.sendItems['id'] = _this.$store.state.shopParam.id;
+            _this.sendItems['name'] = _this.$store.state.shopParam.name;
+            _this.sendItems['imagePath'] = _this.$store.state.shopParam.imagePath.substring(3);
+            _this.sendItems['num'] = _this.$store.state.shopParam.num;
+            _this.sendItems['price'] = _this.$store.state.shopParam.price;
+            _this.sendItems['sendGift'] = 1;
+          }
+        }
+      },
+      tripTimeLength(newv){
+        if(this.$refs.picker5){
+          this.tripTimeLengthName = this.$refs.picker5.getNameValues();
+        }else{
+          this.tripTimeLengthList[0].forEach(v=>{
+            if(v.value == newv[newv.length-1]){
+              this.tripTimeLengthName = v.name
+            }
+          })
+        }
+      },
+      tripMode(newv){
+        if(this.$refs.picker6){
+          this.tripModeName = this.$refs.picker6.getNameValues();
+        }else{
+          this.tripModeList[0].forEach(v=>{
+            if(v.value == newv[newv.length-1]){
+              this.tripModeName = v.name
+            }
+          })
+        }
+      },
+    },
+    computed: {
+      startDate: function () {
+        return this.$utils.format(new Date(), 'yyyy-MM-dd');
+      },
+      endDate: function () {
+        return this.$utils.getIntervalDate(this.$utils.format(new Date(), 'yyyy-MM-dd'), 90);
+      },
+      shopParam(){
+        return this.$store.state.shopParam;
+      },
+      withoutAuth() {
+        return this.authentication.idStatus == 0 && this.authentication.carStatus == 0  && this.authentication.houseStatus == 0 && this.authentication.healthyStatus == 0 && this.authentication.videoStatus == 0
+      },
+    },
+    async mounted() {
+      this.$store.commit("CHANGEHANDLEROUTE",true);//保持页面不被返回
+      this.apiDict();
+      this.id = this.$route.query.id;
+      if(this.id){
+        this.getData();
+      }
+      this.getBondRule();//
+
+      /*let result = await this.$server.apiDict({type:"appointment_desc"});
+      result.data.data.map(v=>{
+        if(v.value=="platfColl"){
+          this.platfColl=v.remarks
+        }
+        if(v.value=="orgaColl"){
+          this.orgaColl=v.remarks
+        }
+      })*/
+    },
+    methods: {
+      change (val, label) {
+        console.log('change', val, label)
+      },
+      shdatingTime(){
+        if(this.datingMethod==8){
+          this.extInt7=3;
+          this.shDatingTime=true;
+        }else{
+          this.shBeBeDatingTime=true;
+        }
+      },
+      showConfirmm(){
+        const t=this;
+        /*t.showConfirm=false;
+        setTimeout(function(){
+          t.showConfirm=true;
+        },0)*/
+		t.$store.commit("CHANGEHANDLEROUTE",true);//保持页面不被返回
+        //if(this.makesureConfirm){
+        //  return false;
+       // }
+       // this.makesureConfirm=true;
+        t.$vux.confirm.show({
+          content: '确认要放弃发布吗？',
+          cancelText:'再想一想',
+          onCancel () {
+           // t.makesureConfirm=false;
+          },
+          onConfirm () {
+            t.showConfirm=false;
+			t.$store.commit("CHANGEHANDLEROUTE",false);
+            t.$router.back(-1);
+          }
+        })
+      },
+      showShuoming(){
+        this.$vux.alert.show({
+          title: '说明',
+          content: this.$store.state.custom_config.publishShuoMing||'选择平台代收，用户报名时，平台将向用户收取活动费用，并将最终约会对象缴纳的费用发放给您',
+          onShow () {
+            console.log('Plugin: I\'m showing')
+          },
+          onHide () {
+            console.log('Plugin: I\'m hiding')
+          }
+        })
+      },
+      setFeePopul(bool){
+        if(bool){
+          if(this.paysel==0||this.paysel==3){
+            if(this.feesel==null||this.feesel==""||this.feesel==0){
+              this.$vux.toast.show({
+                type: "text",
+                text: "请填写费用",
+                position: "middle",
+                width: "auto",
+              });
+              return;
+            }
+            if(this.feesel&&!this.extInt__s&&!this.extInt_1__s){
+              this.$vux.toast.show({
+                type: "cancel",
+                text: "请选择收费方式",
+                position: "middle",
+                width: "auto",
+              });
+              return;
+            }
+          }
+          this.pay=this.paysel
+          this.fee=this.feesel
+          this.extInt6=this.extInt6__s
+          this.extInt=this.extInt__s
+          this.extInt_1=this.extInt_1__s
+        }else{
+          this.paysel=this.pay;
+          this.feesel=this.fee
+          this.extInt6__s=this.extInt6
+          this.extInt__s=this.extInt
+          this.extInt_1__s=this.extInt_1
+        }
+        this.showFeePopup=!this.showFeePopup;
+      },
+      setDoinput(type,bool,num){
+        this.doinput=bool;
+        this.paysel=type;
+        if(num==0){
+          this.feesel=0;
+        }
+        if(type==1||type==4){
+          this.extInt__s=false;
+          this.extInt_1__s=false;
+          this.extInt6__s=false;
+        }
+        if(type==0||type==3){
+          if(this.feesel==null||this.feesel==""){
+            this.feesel=0;
+          }
+          if(!this.extInt__s&&!this.extInt_1__s){
+            this.extInt__s=true;
+          }
+        }
+      },
+      async getBondRule(){//保证金规则
+        const t=this;
+        try{
+          let result= await t.$server.apiDict({type:"margin_statement"});
+          t.BondRule=result.data.data;
+        }catch(e){
+
+        }
+      },
+      setFocus(){
+        this.staticPosition = true;
+      },
+      setBlur(){
+        this.staticPosition = false;
+      },
+      confirm111(type){
+        if(type){
+          this.pagerouter='main';
+        }else{
+          this.datingTitle = this.datingTitleCache;
+          this.pagerouter='main';
+        }
+      },
+      
+      goback() {
+        this.$router.go(-1)
+      },
+      getFullPath(path) {
+        return this.$utils.getFullPath(path)
+      },
+      menuClick(menuIndex) {
+        const _this = this;
+        if(menuIndex==1){
+          _this.menu.type = 1;
+          _this.menu.detail= '';
+          _this.menu.require= '';
+          _this.panel = 1;
+        }else if (menuIndex == 2) {
+          _this.menu.type = 1;
+          _this.menu.detail = 1;
+          _this.menu.require = '';
+          _this.panel = 2;
+        } else if (menuIndex == 3) {
+          // _this.menu.type = 1;
+          // _this.menu.detail = 1
+          // _this.menu.require = 1;
+          // _this.panel = 3;
+          this.finish(1)
+        }
+      },
+      async apiDict() {
+        let apiDict = await this.$server.apiDict({type:"dating_further_action"});
+        this.followup = apiDict.data.data;
+        if(!this.id){
+          for (let i = this.followup.length; i--;) {
+            if(this.followup[i].value== 99){
+              this.followupSelect.push(this.followup[i]);
+              break;
+            }
+          }
+        }
+        let datingMethod = await this.$server.apiDict({type:"dating_activity_method"});
+        this.datingMethodList = datingMethod.data.data;
+        for (let i = this.datingMethodList.length; i--;) {
+          if(this.datingMethodList[i].value==this.datingMethod){
+            this.datingMethodTitle = this.datingMethodList[i].label;
+            this.datingMethodDesc = this.datingMethodList[i].remarks;
+            break;
+          }
+        }
+      },
+      datingMethodClick(index){
+        const _this = this;
+        _this.datingMethod = _this.datingMethodList[index].value;
+        _this.datingMethodTitle = _this.datingMethodList[index].label;
+        _this.datingMethodDesc = _this.datingMethodList[index].remarks;
+      },
+      async fileBack(obj) {
+        const t = this
+        if(obj.serverId){
+          for(let i=0;i<obj.serverId.length;i++){
+            let result = await t.$server.wxMpMedia({
+              mediaId:obj.serverId[i],
+			  dataSources:'publishDate'
+            })
+            t.feedImg.push(result.data.data&&result.data.data.path);
+          }
+        }else{
+          t.fileList = obj.file//提交的图片
+          if (t.fileList) {
+            for (let i = t.fileList.length; i--;) {
+              let param = new FormData() //创建form对象
+              param.append('file', t.fileList[i], t.fileList[i].name) //单个图片 ，多个用循环 append 添加
+			  param.append('dataSources','publishDate');
+              try {
+                const result = await t.$server.uploadPic(param);
+                t.feedImg.push(result.data.data.path);
+              } catch (e) {
+
+              }
+            }
+
+          } else {
+            t.$vux.toast.show({
+              type: "text",
+              text: "图片出错",
+              position: "bottom",
+              width: "2rem",
+            });
+          }
+        }
+      },
+      dragEnd: function (evt) {
+        console.log('拖动前的索引：' + evt.oldIndex);
+        console.log('拖动后的索引：' + evt.newIndex);
+        console.log(this.feedImg);
+      },
+      deleteImg(index) {
+        this.feedImg.splice(index, 1);
+      },
+      delGiveGift(){
+        this.expGift = 0;
+        this.giveItems = {};
+        if(this.giftDetail && this.giftDetail.length>0){
+          for (let i= this.giftDetail.length;i--;){
+            if(this.giftDetail[i].expGift == 1){
+              this.giftDetail.splice(i,1);
+              console.log(JSON.stringify(this.giftDetail));
+            }
+          }
+        }
+      },
+      delSendGift(){
+        this.sendGift = 0;
+        this.sendItems = {};
+        if(this.giftDetail && this.giftDetail.length>0){
+          for (let i= this.giftDetail.length;i--;){
+            if(this.giftDetail[i].sendGift == 1){
+              this.giftDetail.splice(i,1);
+              console.log(JSON.stringify(this.giftDetail));
+            }
+          }
+        }
+      },
+      addressClick (key) {
+        console.log(key)
+        if(key=='menu2'){
+          this.addressSel = 1;//指定餐厅
+          this.showStorePopup = true;
+          this.showStore = true;
+        }else if(key=='menu1'){
+          this.addressSel = 2;//自选地点
+          this.showMapPopup = true;
+          this.showbMap = true;
+        }
+      },
+      setAdress(address){
+        this.showMapPopup = false;
+        console.log(JSON.stringify(address));
+        this.addressText = address.name? address.name:address.title;
+        // this.addressCityId = address.point?address.point.lat: address.coord.lat;
+        // this.addressAreaId = address.point?address.point.lng: address.coord.lon;
+        this.longitude = address.point?address.point.lng: address.coord.lon;
+        this.latitude = address.point?address.point.lat: address.coord.lat;
+        this.datingLocation = address.name? address.name:address.title;
+        if(address.address){//fullAddress
+          let reg1 = new RegExp(address.province,"g");
+          let reg2 = new RegExp(address.city,"g");
+          this.fullAddress = address.province + address.city + (address.address.replace(reg1,'').replace(reg2,''))
+        }
+        this.cityName = address.city;
+      },
+      hiddenMap(){
+        this.showMapPopup = false;
+      },
+      selStore(id, addressText, addressDetailText){
+        console.log(JSON.stringify(name));
+        this.showStorePopup = false;
+        // this.datingChoseShopId = id;
+        // this.addressText = name+ '（'+ city +'店）';
+        this.addressText = addressDetailText;
+        this.datingLocation = addressDetailText;
+        this.fullAddress = addressText+addressDetailText;
+        this.addressAreaId = id;
+      },
+      hiddenStore(){
+        this.showStorePopup = false;
+      },
+      certificationClick(val){
+        const _this = this;
+        // 不限、身份认证、视频认证、车辆认证、房产认证
+        if(val!=0){
+          _this.certification.none= 0
+        }
+        if(val==0){
+          _this.certification.none== 0? _this.certification.none=1 : _this.certification.none= 0;
+          _this.certification.idStatus=0;
+          _this.certification.videoStatus= 0;
+          _this.certification.carStatus= 0;
+          _this.certification.houseStatus= 0;
+          _this.certificationText = '';
+        }else if(val==1){
+          _this.certification.idStatus== 0? _this.certification.idStatus=1 : _this.certification.idStatus=0
+          _this.certificationText = '身份认证';
+        }else if(val==2){
+          _this.certification.videoStatus== 0? _this.certification.videoStatus=1 : _this.certification.videoStatus= 0
+          _this.certificationText = '视频认证';
+        }else if(val==3){
+          _this.certification.carStatus== 0? _this.certification.carStatus=1 : _this.certification.carStatus= 0
+          _this.certificationText = '车辆认证';
+        }else if(val==4){
+          _this.certification.houseStatus== 0? _this.certification.houseStatus=1 : _this.certification.houseStatus= 0
+          _this.certificationText = '房产认证';
+        }
+        setTimeout(() => {
+          _this.certificationText = '';
+        }, 500);
+      },
+      async getData() {
+        const _this = this;
+        _this.$vux.loading.show();
+        let result = await _this.$server.getSingle({datingDetailsId: _this.id});
+        let detail = result.data.data;
+        _this.datingThemes = detail.datingThemes;
+        _this.datingTitle = detail.datingTitle;
+        _this.longitude = detail.longitude;
+        _this.latitude = detail.latitude;
+        _this.tripTimeLength=typeof detail.tripTimeLength == 'undefined'?[]:[detail.tripTimeLength+''],
+          _this.tripMode=typeof detail.tripMode == 'undefined'?[]:[detail.tripMode+''],
+          _this.datingMethod = detail.activityMethod;
+        _this.fee = detail.enrollFee;
+        _this.bail = detail.expDepositMoney;
+        _this.datingChoseShopId = detail.datingChoseShopId;
+        if(detail.longitude){
+          this.addressSel = 1;//指定餐厅
+          // _this.addressText = detail.datingChoseShopName;
+          _this.addressText = detail.datingLocation;
+        }else{
+          this.addressSel = 2;//自选地点
+          _this.addressText = detail.datingLocation;
+        }
+        _this.datingLocation = detail.datingLocation;
+        _this.fullAddress = detail.datingDetailsExt.extString;
+        _this.addressAreaId = detail.areaId;
+        _this.datingTimeText = detail.datingStarttime.substring(0,13);
+        _this.objTimeText = detail.activityStarttime.substring(0,16);
+        _this.sex = detail.expectSex;
+        _this.pay = detail.payType;
+
+        _this.expIncomeLowerLimit = detail.expIncomeLowerLimit;
+        _this.expIncomeUpperLimit = detail.expIncomeUpperLimit;
+
+        _this.carryingFriends = detail.allowCompanion==1? true:false;
+        _this.expShowPic = detail.expShowPic==2?true:false;
+        _this.extInt = detail.datingDetailsExt&&detail.datingDetailsExt.extInt==1?true:false;
+        _this.extInt6 = detail.datingDetailsExt&&detail.datingDetailsExt.extInt6==1?true:false;
+        _this.extInt4 = detail.datingDetailsExt&&detail.datingDetailsExt.extInt4;
+        _this.extInt7 = detail.datingDetailsExt&&detail.datingDetailsExt.extInt7;
+        _this.extInt10= detail.datingDetailsExt&&detail.datingDetailsExt.extInt10;
+        _this.extInt10_=_this.extInt10==1?true:false;
+        // _this.extInt10__=_this.extInt10==0?true:false;
+        _this.extInt8= detail.datingDetailsExt&&detail.datingDetailsExt.extInt8;
+        _this.extInt9= detail.datingDetailsExt&&detail.datingDetailsExt.extInt9;
+        _this.extInt11= detail.datingDetailsExt&&detail.datingDetailsExt.extInt11;
+        _this.extInt12= detail.datingDetailsExt&&detail.datingDetailsExt.extInt12;
+
+        _this.feedImg = (detail.coverimgImages && detail.coverimgImages.split(',')) || [];
+        _this.datingDesc = detail.datingDesc;
+        _this.expGift = detail.expGift;
+        _this.sendGift = detail.sendGift;
+        _this.giftDetail = detail.giftDetail?JSON.parse(detail.giftDetail):[];
+        for (let i = 0; i < _this.giftDetail.length; i++) {
+          if(_this.giftDetail[i].expGift==1){
+            _this.giveItems = _this.giftDetail[i];
+          }
+          if(_this.giftDetail[i].sendGift==1){
+            _this.sendItems = _this.giftDetail[i];
+          }
+        }
+        _this.certification['idStatus'] = detail.idStatus;
+        _this.certification['videoStatus'] = detail.videoStatus;
+        _this.certification['carStatus'] = detail.carStatus;
+        _this.certification['houseStatus'] = detail.houseStatus;
+        if(detail.idStatus==0 && detail.videoStatus==0 && detail.carStatus==0 && detail.houseStatus==0){
+          _this.certification['none'] = 1;
+        }
+        if(detail.idStatus==1 || detail.videoStatus==1 || detail.carStatus==1 || detail.houseStatus==1){
+          _this.certification['none'] = 0;
+        }
+        if(detail.furtherAction){
+          let labels = detail.furtherAction.split(',');
+          for (let i = 0; i < _this.followup.length; i++) {
+            for (let j=0; j < labels.length; j++) {
+              if(_this.followup[i].label == labels[j]){
+                _this.followupSelect.push(_this.followup[i]);
+              }
+              console.log(JSON.stringify(_this.followupSelect));
+            }
+          }
+        }
+        _this.education = detail.expEdu;
+        _this.age = detail.expAgeLowerLimit;
+        _this.height = detail.expHeightLowerLimit,
+          _this.isLottery = detail.sysDistribution==1? true: false;
+        _this.$vux.loading.hide();
+      },
+      async finish(state){
+        const _this = this;
+        //下一步的操作
+        if(state==1){
+          if(_this.datingDesc==''){
+            this.$vux.toast.show({
+              type: "cancel",
+              text: "请填写描述说明",
+              position: "middle",
+              width: "auto",
+            });
+			$("body,html").animate({scrollTop:0},0);
+            setTimeout(()=>{
+				this.$refs["datingDesc_input"].focus();
+			},50)
+            return;
+          }
+          if(_this.extInt11==null&&_this.datingMethod==8){
+            this.$vux.toast.show({
+              type: "cancel",
+              text: "请填写最低人数限制",
+              position: "middle",
+              width: "auto",
+            });
+            return;
+          }
+          if(_this.extInt12==null&&_this.datingMethod==8){
+            this.$vux.toast.show({
+              type: "cancel",
+              text: "请填写最高人数限制",
+              position: "middle",
+              width: "auto",
+            });
+            return;
+          }
+          // if(_this.extInt8==null&&_this.sex==9&&_this.datingMethod==8){
+          //   this.$vux.toast.show({
+          //     type: "cancel",
+          //     text: "请填写男生人数限制",
+          //     position: "middle",
+          //     width: "auto",
+          //   });
+          //   return;
+          // }
+          // if(_this.extInt9==null&&_this.sex==9&&_this.datingMethod==8){
+          //   this.$vux.toast.show({
+          //     type: "cancel",
+          //     text: "请填写女生人数限制",
+          //     position: "middle",
+          //     width: "auto",
+          //   });
+          //   return;
+          // }
+          if(_this.addressSel==''){
+            this.$vux.toast.show({
+              type: "cancel",
+              text: "请选择地点",
+              position: "middle",
+              width: "auto",
+            });
+            return;
+          }
+          if(!_this.extInt7){
+            this.$vux.toast.show({
+              type: "cancel",
+              text: "请选择约会时间",
+              position: "middle",
+              width: "auto",
+            });
+            return;
+          }else if(_this.extInt7==3){
+            if(!_this.datingTimeText){
+              this.$vux.toast.show({
+                type: "cancel",
+                text: "请选择约会时间",
+                position: "middle",
+                width: "auto",
+              });
+              return;
+            }
+          }
+		  if(_this.pay==null){
+              this.$vux.toast.show({
+                type: "cancel",
+                text: "请选择费用",
+                position: "middle",
+                width: "auto",
+              });
+              return;
+          }
+          if(_this.pay==0||_this.pay==3){
+            if(!_this.fee){
+              this.$vux.toast.show({
+                type: "cancel",
+                text: "请设置费用",
+                position: "middle",
+                width: "auto",
+              });
+              return;
+            }
+            if(_this.fee&&!_this.extInt&&!_this.extInt_1){
+              this.$vux.toast.show({
+                type: "cancel",
+                text: "请选择收费方式",
+                position: "middle",
+                width: "auto",
+              });
+              return;
+            }
+          }
+          _this.menu.type = 1;
+          _this.menu.detail = 1
+          _this.menu.require = 1;
+          _this.panel = 3;
+          $("body,html").animate({"scrollTop":0},0);
+          return false;
+        }else if(state==3){//发布
+          if(_this.datingDesc==''){
+            this.$vux.toast.show({
+              type: "cancel",
+              text: "请填写描述说明",
+              position: "middle",
+              width: "auto",
+            });
+           $("body,html").animate({scrollTop:0},0);
+            setTimeout(()=>{
+				this.$refs["datingDesc_input"].focus();
+			},50)
+            return;
+          }
+          if(_this.extInt11==null&&_this.datingMethod==8){
+            this.$vux.toast.show({
+              type: "cancel",
+              text: "请填写最低人数限制",
+              position: "middle",
+              width: "auto",
+            });
+            return;
+          }
+          if(_this.extInt12==null&&_this.datingMethod==8){
+            this.$vux.toast.show({
+              type: "cancel",
+              text: "请填写最高人数限制",
+              position: "middle",
+              width: "auto",
+            });
+            return;
+          }
+          // if(_this.extInt8==null&&_this.sex==9&&_this.datingMethod==8){
+          //   this.$vux.toast.show({
+          //     type: "cancel",
+          //     text: "请填写男生人数限制",
+          //     position: "middle",
+          //     width: "auto",
+          //   });
+          //   return;
+          // }
+          // if(_this.extInt9==null&&_this.sex==9&&_this.datingMethod==8){
+          //   this.$vux.toast.show({
+          //     type: "cancel",
+          //     text: "请填写女生人数限制",
+          //     position: "middle",
+          //     width: "auto",
+          //   });
+          //   return;
+          // }
+          if(_this.addressSel==''){
+            this.$vux.toast.show({
+              type: "cancel",
+              text: "请选择地点",
+              position: "middle",
+              width: "auto",
+            });
+            return;
+          }
+          if(!_this.extInt7){
+            this.$vux.toast.show({
+              type: "cancel",
+              text: "请选择约会时间",
+              position: "middle",
+              width: "auto",
+            });
+            return;
+          }else if(_this.extInt7==3){
+            if(!_this.datingTimeText){
+              this.$vux.toast.show({
+                type: "cancel",
+                text: "请选择约会时间",
+                position: "middle",
+                width: "auto",
+              });
+              return;
+            }
+          }
+
+		  if(_this.pay==null){
+              this.$vux.toast.show({
+                type: "cancel",
+                text: "请选择费用",
+                position: "middle",
+                width: "auto",
+              });
+              return;
+          }
+          if(_this.pay==0||_this.pay==3){
+            if(!_this.fee){
+              this.$vux.toast.show({
+                type: "cancel",
+                text: "请设置费用",
+                position: "middle",
+                width: "auto",
+              });
+              return;
+            }
+          }
+          if(_this.fee&&!_this.extInt&&!_this.extInt_1){
+            this.$vux.toast.show({
+              type: "cancel",
+              text: "请选择收费方式",
+              position: "middle",
+              width: "auto",
+            });
+            return;
+          }
+        }
+		if(_this.addressSel==2){
+			let cityData = await this.$server.getDistrict();
+            for (let i = cityData.data.data.length; i--;) {
+              if(cityData.data.data[i].name==_this.cityName.substring(0, 2)){
+                _this.addressAreaId = cityData.data.data[i].value;
+              }
+            }
+          }
+        let data =  {
+          id: _this.id,
+          state: state==1 || state==2 ? 2 : 3 ,
+          datingTitle:_this.datingTitle,
+          datingThemes: _this.datingThemes,
+          activityMethod: _this.datingMethod,
+          enrollFee: _this.fee,
+          expDepositMoney: _this.bail,
+          datingChoseShopId: _this.datingChoseShopId,
+          datingLocation: _this.datingLocation,
+          areaId: _this.addressAreaId,
+          longitude:_this.longitude,
+          latitude:_this.latitude,
+          activityStarttime: _this.objTimeText?_this.objTimeText+":00":'',
+          datingStarttime: _this.extInt7==3?_this.datingTimeText?_this.datingTimeText+':00:00':'':'',
+          tripTimeLength:this.tripTimeLength[this.tripTimeLength.length-1],
+          tripMode:this.tripMode[this.tripMode.length-1],
+          expectSex: _this.sex,
+          payType: _this.pay,
+          allowCompanion: _this.carryingFriends?1:0,
+          expShowPic: _this.expShowPic?2:3,
+          expIncomeLowerLimit : _this.expIncomeLowerLimit,
+          expIncomeUpperLimit : _this.expIncomeUpperLimit,
+          datingDetailsExt:{
+            extInt:_this.extInt?1:0,
+            extInt6:_this.extInt6?1:0,
+            extInt4:_this.extInt4,
+            extInt7:_this.extInt7,
+            // extInt10:_this.extInt10,
+            // extInt8:_this.extInt8,
+            // extInt9:_this.extInt9,
+            extInt11:_this.extInt11,
+            extInt12:_this.extInt12,
+            extString:_this.fullAddress,
+          },
+          coverimgImages: _this.feedImg ? _this.feedImg.join(","):null,
+          datingDesc: _this.datingDesc||_this.datingTitle,
+          expGift: _this.expGift,
+          sendGift: _this.sendGift,
+          giftDetail: _this.giftDetail?JSON.stringify(_this.giftDetail):null,
+          furtherAction:_this.followupSelect.map((item)=>{
+            return item.label;
+          }).join(","),
+          idStatus: _this.certification.idStatus,
+          houseStatus: _this.certification.houseStatus,
+          carStatus: _this.certification.carStatus,
+          healthyStatus: _this.certification.healthyStatus,
+          videoStatus: _this.certification.videoStatus,
+          expEdu: _this.education,
+          onlyTheme: 1,
+          expAgeLowerLimit: _this.age,
+          expAgeUpperLimit: _this.age==-1? -1:_this.age==18? 24:_this.age==24? 30:_this.age==30? 36:_this.age==36? 41: -1,
+          expHeightLowerLimit: _this.height,
+          expHeightUpperLimit: -1,
+          sysDistribution: _this.isLottery? '1' : '0'
+        }
+        console.log(JSON.stringify(data));
+        const result = await this.$server.publish(data);
+        _this.id = result.data.data.id;
+        console.log(JSON.stringify(result))
+        this.$vux.loading.hide();
+        if(result.data.status==1){
+          if(state==2 || state==3){
+            this.$vux.toast.show({
+              type: "success",
+              text: state==2 ? '保存成功':'发布成功',
+              position: "middle",
+              width: "auto",
+            });
+            if(state == 3){
+              this.$store.commit("UPDATAPUBLISHACTIVITY",{
+                isRefresh:true,
+                active:1,
+              })
+              setTimeout(() => {
+                this.showConfirm=false;
+                this.$store.commit("CHANGEHANDLEROUTE",false);
+				this.$router.back(-1);
+              }, 500)
+            }else{
+              this.$router.replace({
+                path: 'publishDate',
+                query:{
+                  id:this.id
+                }
+              })
+            }
+          }
+        }else{
+          this.$vux.toast.show({
+            type: "success",
+            text: '保存失败',
+            position: "middle",
+            width: "auto",
+          });
+        }
+      },
+    },
+    destroyed() {
+      this.$store.state.shopParam = null;
+    }
+  }
+</script>
+
+<style scoped lang="scss">
+  .chooseDatingTime{
+    background-color: white;
+    width: 8.9rem;
+    margin: auto;
+    border-radius: 5px;
+    &>div{
+      margin: 25px 0;
+      display: flex;
+      justify-content: space-around;
+      div{
+        width: 80px;
+        height: 30px;
+        line-height: 30px;
+        border: 1px solid #b7b7b7;
+        border-radius: 5px;
+      }
+    }
+  }
+  .fee_popup{
+    line-height: 1;
+    padding: 0.7rem 0 0;
+    color:#b5b4b4;
+    background-color: #FFF;
+    &>p{
+      font-size: 0.48rem;
+      text-align: center;
+    }
+    &>div:nth-of-type(1){
+      &>p.title{
+        font-size: 0.4rem;
+        line-height: 1.5;
+        color: #000;
+        width: 10rem;
+        margin: auto;
+        border-top: 1px solid #f2f2f2;
+      }
+      &>div{
+        margin:0.3rem 0.34rem 0.6rem;
+        display: flex;
+        font-size: 0.36rem;
+        justify-content: space-between;
+        span{
+          width: 2.4rem;
+          height: 0.8rem;
+          line-height: 0.8rem;
+          background-color: #eeeeee;
+          border-radius: 5px;
+          text-align: center;
+          border: 1px solid #d4d4d4;
+        }
+      }
+    }
+
+    &>div:nth-of-type(2){
+      display: flex;
+      font-size: 0.36rem;
+      justify-content: center;
+      align-items: center;
+      margin-bottom: 0.4rem;
+      span{
+        width: 1.6rem;
+        text-align: center;
+      }
+      input{
+        border: 1px solid #d4d4d4;
+        border-radius: 5px;
+        text-align: center;
+        height: 1rem;
+        line-height: 1rem;
+        width: 3rem;
+        color:#b5b4b4;
+        &::-webkit-input-placeholder {
+          color: #b5b4b4;
+        }
+        &::-moz-placeholder { /* Mozilla Firefox 19+ */
+          color: #b5b4b4;
+        }
+        &:-moz-placeholder { /* Mozilla Firefox 4 to 18 */
+          color: #b5b4b4;
+        }
+        &:-ms-input-placeholder { /* Internet Explorer 10-11 */
+          color: #b5b4b4;
+        }
+      }
+    }
+    &>div:nth-of-type(3){
+      &>p.title{
+        font-size: 0.4rem;
+        line-height: 1.5;
+        color: #000;
+        width: 10rem;
+        margin: auto;
+        border-top: 1px solid #f2f2f2;
+      }
+      &>p:nth-of-type(2){
+        width: 10rem;
+        margin:0.2rem auto;
+      }
+    }
+    &>div:nth-of-type(4){
+      display: flex;
+      color: #cccccc;
+      line-height: 2;
+      font-size: 0.3rem;
+      width: 10rem;
+      margin: auto;
+      span:first-child{
+        width: 1rem;
+        flex-shrink:0 ;
+      }
+    }
+    &>div:nth-of-type(5){
+      margin: 0.3rem 0 0;
+      height: 1.20rem;
+      display: flex;
+      p{
+        text-align: center;
+        line-height: 1.2rem;
+        flex-grow: 1;
+        background-color: #eeeeee;
+      }
+      p:last-child{
+        background-color: #ff4200;
+        color:#FFF;
+        font-weight: 500;
+        font-size: 0.48rem;
+      }
+    }
+  }
+
+
+
+
+  .jy_isBrowser{
+    .main{
+      .publish-menu{
+        top:1.40rem;
+      }
+
+    }
+  }
+  .main {
+    padding-bottom: 0;
+    &:before {
+      background-color: #3a3845;
+    }
+    .header {
+      position: fixed;
+      width: 100%;
+      z-index: 10;
+      .top {
+        background-color: #3a3845;
+        color: #FFF;
+        font-size: 0.6rem;
+        position: relative;
+        i {
+          font-size: 0.52rem;
+        }
+        a {
+          position: absolute;
+          padding: 3px;
+        }
+        .left {
+          left: 0.325rem;
+        }
+        .right {
+          right: 0.325rem;
+        }
+      }
+    }
+    .publish-menu {
+      top:2.15rem;
+      height: 1.32rem;
+      background-color: #f2f2f2;
+      .timeline-text {
+        width: 50%;
+        float: left;
+        text-align: center;
+        border-bottom: 3px solid #e5e5e5;
+        padding: 0.28rem 0 0.2rem;
+        margin-bottom: 0;
+        position: relative;
+        background-color: #ffffff;
+        :before {
+          content: "";
+          width: 0.4rem;
+          height: 0.4rem;
+          border-radius: 50%;
+          background-color: #e5e5e5;
+          margin: 0 auto;
+          position: absolute;
+          bottom: -0.25rem;
+          left: 0;
+          right: 0;
+        }
+        .text {
+          font-size: 0.4rem;
+          color: #a0a0a0;
+          display: inline-block;
+          text-rendering: auto;
+          -webkit-font-smoothing: antialiased;
+          -moz-osx-font-smoothing: grayscale;
+        }
+        &.active {
+          border-bottom: 3px solid #ff4200;
+          :before {
+            content: "";
+            width: 0.2rem;
+            height: 0.2rem;
+            border-radius: 50%;
+            margin: 0 auto;
+            position: absolute;
+            bottom: -0.25rem;
+            left: 0;
+            right: 0;
+            background-color: #ffffff;
+            border: 0.1rem solid #ff4200;
+          }
+          .text {
+            color: #ff4200;
+          }
+        }
+      }
+    }
+    .first-panel{
+      margin-top: 3.25rem !important;
+    }
+    .panel {
+      z-index: 13;
+      margin-top: 0.2rem;
+      padding: 0.2rem 0.4rem;
+      /*margin-bottom: 0.2rem;*/
+      background-color: #ffffff;
+      &.marginBottom{
+        padding-bottom: 2.4rem;
+      }
+      .datingTitle{
+        height: 1.65rem;
+        padding-left: 0.3rem;
+        input{
+          height: 1.65rem;
+          width: 100%;
+          line-height: 1.65rem;
+          color:#cfced4;
+          font-size: 0.48rem;
+          &::-webkit-input-placeholder {
+            color: #cfced4;
+          }
+          &::-moz-placeholder { /* Mozilla Firefox 19+ */
+            color: #cfced4;
+          }
+          &:-moz-placeholder { /* Mozilla Firefox 4 to 18 */
+            color: #cfced4;
+          }
+          &:-ms-input-placeholder { /* Internet Explorer 10-11 */
+            color: #cfced4;
+          }
+        }
+      }
+      .feeTitle{
+        span,i{
+          position: absolute;
+          right:0;
+        }
+        span{
+          right:0.5rem;
+        }
+        i.iconfont{
+          font-size: 0.4rem;
+        }
+      }
+      .title {
+        font-size: 0.4rem;
+        color: #333333;
+        line-height: 0.8rem;
+        position: relative;
+        &:before {
+          content: '';
+          margin-right: 0.2rem;
+          border-left: 0.1rem solid #ff0000;
+        }
+
+        em{
+          float: right;
+          font-size: 0.4rem;
+          color: #666666;
+          background-color: #f2f2f2;
+          padding: 0 0.2rem;
+          border-radius: 0.2rem;
+        }
+        .inline-x-switch {
+          position: absolute;
+          right: 0.29rem;
+          top: 50%;
+          margin-top: -16px;
+        }
+        .weui-switch:checked, .weui-switch-cp__input:checked ~ .weui-switch-cp__box {
+          border-color: #ff4200;
+          background-color: #ff4200;
+        }
+      }
+      .check-box {
+        padding: 0.2rem 0;
+        span {
+          display: inline-block;
+          height: 0.8rem;
+          color: #b6b6b6;
+          font-size: 0.4rem;
+          line-height: 0.9rem;
+          border-radius: 0.4rem;
+          border: 1px solid #f5f5f5;
+          text-align: center;
+          &.active {
+            border: 1px solid #ff0000;
+            color: #ff0000;
+            i {
+              color: #ff0000;
+            }
+          }
+          &.check-type {
+            width: 29%;
+            margin: 0.14rem 0.12rem;
+            i {
+              margin: 0 0.2rem;
+              vertical-align: middle;
+            }
+          }
+          &.check-method {
+            width: 17%;
+            margin: 0.06rem;
+          }
+          &.fee {
+            width: 23%;
+            i.qkb-icon {
+              display: inline-block;
+              vertical-align: middle;
+              width: 0.4rem;
+              height: 0.4rem;
+              margin-right: 0.18rem;
+              background: url("../../images/qkb-icon.png") no-repeat;
+              background-size: 100% 100%;
+            }
+          }
+          &.bail {
+            width: 23%;
+            i.bzj-icon {
+              display: inline-block;
+              vertical-align: middle;
+              width: 0.4rem;
+              height: 0.4rem;
+              margin-right: 0.18rem;
+              background: url("../../images/bzj-icon.png") no-repeat;
+              background-size: 100% 100%;
+            }
+          }
+          &.three-box{
+            width: 29%;
+            margin: 0.14rem 0.12rem;
+          }
+          &.five-box{
+            width: 15%;
+            margin: 0.14rem 0.12rem;
+          }
+        }
+      }
+      .tips {
+        padding: 0.2rem 0.4rem;
+        margin-bottom: 0.2rem;
+        background-color: #F5F5F5;
+        border-radius: 0.2rem;
+        p {
+          color: #666666;
+          line-height: 0.68rem;
+          &:nth-of-type(1) {
+            font-size: 0.4rem;
+          }
+          &:nth-of-type(2) {
+            font-size: 0.36rem;
+          }
+        }
+      }
+      .right-con{
+        position: relative;
+        display: -webkit-box;
+        display: -ms-flexbox;
+        display: flex;
+        -webkit-box-align: center;
+        -webkit-align-items: center;
+        padding: 0.4rem;
+        border-bottom: 1px solid #F2F2F2;
+        &:last-child{
+          border: none;
+        }
+        .left-title{
+          width: 35%;
+          font-size: 0.48rem;
+          color: #3b3b3b;
+        }
+        .right-title{
+          width: 60%;
+          text-align: right;
+          margin-right: 0.2rem;
+          font-size: 0.36rem;
+          color: #b1b1b1;
+          .gift-info{
+            background-color: #F2F2F2;
+            border-radius: 0.2rem;
+            width: 100%;
+            height: auto;
+            position: relative;
+            .gift-icon {
+              float: left;
+              width: 1rem;
+              height: 1rem;
+              background-size: cover;
+              background-position: center;
+              border-radius: 0.2rem;
+              background-image: url("../../images/p1.jpg");
+              margin: 0.1rem;
+            }
+            p{
+              font-size: 0.3rem;
+              color: #666666;
+              text-align: left;
+              &:nth-of-type(2){
+                margin-left:1.2rem;
+              }
+            }
+          }
+        }
+        .next-icon{
+          width: 5%;
+        }
+      }
+    }
+    .select_panel{
+      padding: 0;
+      background-color: #FFFFFF;
+      color: #3b3b3b;
+      .flex{
+        .active{
+          color:#31c63f;
+        }
+        .demanda{
+          background-color: #ffa800;
+        }
+        padding:0 0.4rem;
+        font-size: 0.44rem;
+        border-bottom: 1px solid #f2f2f2;
+        &:last-child{
+          border:0;
+        }
+        div{
+          flex-grow:1;
+          height: 1.54rem;
+          line-height: 1.54rem;
+        }
+        div:last-child{
+          text-align: right;
+          font-size: 0.40rem;
+          color:#c2c2c2;
+          i{
+            font-size: 0.40rem;
+            margin-left: 0.64rem;
+          }
+        }
+        .datingTitle{
+          &::-moz-placeholder { color: #c2c2c2; }
+          &::-webkit-input-placeholder { color:#c2c2c2; }
+          &:-ms-input-placeholder { color:#c2c2c2; }
+          font-size: 0.40rem;
+          text-align: right;
+          color:#c2c2c2;
+        }
+      }
+      .select_title{
+        font-size: 0.36rem;
+        padding: 0.4rem;
+        background-color: #f5f5f5;
+      }
+      .select_con{
+        position: relative;
+        display: -webkit-box;
+        display: -webkit-flex;
+        display: flex;
+        -webkit-box-align: center;
+        -webkit-align-items: center;
+        padding: 0.4rem;
+        border-bottom: 1px solid #F2F2F2;
+        &:last-of-type{
+          border-bottom: none;
+        }
+        &>div{
+          &:nth-of-type(1){
+            width: 35%;
+            font-size: 0.48rem;
+            color: #3b3b3b;
+          }
+          &:nth-of-type(2){
+            width: 60%;
+            text-align: right;
+            margin-right: 0.2rem;
+            font-size: 0.36rem;
+            color: #b1b1b1;
+          }
+          &:nth-of-type(3){
+            width: 5%;
+          }
+        }
+      }
+      .select_time{
+        &>div{
+          &:nth-of-type(1){
+            width: 25%;
+            font-size: 0.48rem;
+            color: #3b3b3b;
+          }
+          &:nth-of-type(2){
+            width: 35%;
+            text-align: right;
+            margin-right: 0.2rem;
+            font-size: 0.36rem;
+            color: #b1b1b1;
+          }
+          &:nth-of-type(3){
+            width: 35%;
+            text-align: right;
+            margin-right: 0.2rem;
+            font-size: 0.36rem;
+            color: #b1b1b1;
+          }
+          &:nth-of-type(4){
+            width: 5%;
+          }
+        }
+      }
+      .select_number{
+        div{
+          /*&:nth-of-type(1){*/
+            /*width: 2.7rem;*/
+            /*font-size: 0.48rem;*/
+            /*color: #3b3b3b;*/
+          /*}*/
+          &:nth-of-type(2){
+            /*width: 7.21rem;*/
+            /*font-size: 0.36rem;*/
+            /*color: #bcbbc0;*/
+            display: inline-flex;
+            justify-content: flex-end;
+            span{
+              width: 1.77rem;
+              height: 0.78rem;
+              line-height: 0.78rem;
+              margin-left: 0.1rem;
+              text-align: center;
+              border-radius: 0.39rem;
+              font-size: 0.40rem;
+              border: 1px solid #bcbbc0;
+              &.select{
+                border: 1px solid #ff0000;
+                color: #ff0000;
+              }
+            }
+            input{
+              &::-moz-placeholder { color: #bcbbc0; }
+              &::-webkit-input-placeholder { color:#bcbbc0; }
+              &:-ms-input-placeholder { color:#bcbbc0; }
+              font-size: 0.40rem;
+              color:#bcbbc0;
+              width: 2.5rem;
+              border-radius: 0.39rem;
+              border: 1px solid #bcbbc0;
+              padding-left: 0.4rem;
+            }
+          }
+        }
+      }
+      .renshu{
+        display: inline-flex;
+        justify-content: flex-end;
+        input{
+          &::-moz-placeholder { color: #bcbbc0; }
+          &::-webkit-input-placeholder { color:#bcbbc0; }
+          &:-ms-input-placeholder { color:#bcbbc0; }
+          font-size: 0.40rem;
+          color:#bcbbc0;
+          width: 2rem;
+          height: 0.78rem;
+          line-height: 0.78rem;
+          border-radius: 0.39rem;
+          border: 1px solid #bcbbc0;
+          padding-left: 0.4rem;
+          margin-left: 0.1rem;
+        }
+      }
+    }
+    .publish_bd_btn {
+      width: 100%;
+      padding: 1em 0;
+      text-align: center;
+      background-color: rgba(0, 0, 0, 0.1);
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      em {
+        display: inline-block;
+        width: 4.8rem;
+        height: 1.26rem;
+        line-height: 1.26rem;
+        font-size: 0.52rem;
+        color: #FFFFFF;
+        background-color: #ababab;
+        border-radius: 1rem;
+        &.next {
+          background-color: #ff4200;
+        }
+      }
+    }
+    .marginBottom02 {
+      margin-bottom: 0.2rem;
+    }
+    .row-check-box {
+      .box {
+        width: 28%;
+        height: 0.8rem;
+        font-size: 0.4rem;
+        line-height: 0.8rem;
+        border-radius: 0.4rem;
+        display: inline-block;
+        box-sizing: border-box;
+        text-align: center;
+        vertical-align: bottom;
+        border: 1px solid rgba(0,0,0,0);
+        &.active {
+          color: #ff4200;
+          border: 1px solid #ff4200;
+        }
+      }
+    }
+    .checkFriend {
+      .vux-check-icon {
+        width: 100% !important;
+      }
+    }
+    .img-panel {
+      padding: 0.4rem;
+      background-color: #FFFFFF;
+      color: #3b3b3b;
+      .checkbox-panel{
+        padding-bottom: 0.2rem;
+
+        .radio{
+          display: inline-block;
+          position: relative;
+          line-height: 18px;
+          margin-right: 10px;
+          cursor: pointer;
+        }
+        .radio input{
+          display: none;
+        }
+        .radio .radio-bg{
+          display: inline-block;
+          height: 14px;
+          width: 14px;
+          margin-right: 5px;
+          padding: 0;
+          background-color: #fff;
+          border: 1px solid #C9C9C9;
+          border-radius: 100%;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          vertical-align: middle;
+        }
+        .radio .radio-on{
+          display: none;
+        }
+        .radio input:checked + span.radio-on{
+          width: 8px;
+          height: 8px;
+          position: absolute;
+          border-radius: 100%;
+          background: #ff4200;
+          top: 5px;
+          left: 4px;
+          background-image: linear-gradient(#FF5508 0, #ff4200 100%);
+          transform: scale(0, 0);
+          transition: all 0.2s ease;
+          transform: scale(1, 1);
+          display: inline-block;
+        }
+      }
+    }
+    .user_img_desc{
+      padding: 0 0.2rem 0.2rem 0;
+    }
+  }
+  .selectdatingTitle{
+    position: absolute;
+    width: 100%;
+    top:0;
+    z-index: 1000;
+    .wrapper{
+      background-color: #f2f2f2;
+      overflow: hidden;
+      .content{
+        padding-top:0.3rem;
+        .white{
+          background-color: #FFF;
+        }
+        .flex{
+          .active{
+            color:#31c63f;
+          }
+          .demanda{
+            background-color: #ffa800;
+          }
+          padding:0 0.4rem;
+          font-size: 0.44rem;
+          border-bottom: 1px solid #f2f2f2;
+          &:last-child{
+            border:0;
+          }
+          div{
+            flex-grow:1;
+            height: 1.54rem;
+            line-height: 1.54rem;
+          }
+          div:last-child{
+            text-align: right;
+            font-size: 0.40rem;
+            color:#c2c2c2;
+            i{
+              font-size: 0.40rem;
+              margin-left: 0.64rem;
+            }
+          }
+        }
+        .content2{
+          div>span{
+            display: inline-block;
+            width:1.7rem;
+            height: 1rem;
+            line-height: 1rem;
+            text-align: center;
+            border-right: 1px solid #f2f2f2;
+            &:last-child{
+              border: 0;
+            }
+          }
+          input{
+            width: 4.15rem;
+            outline:none;
+            border:1px #dddddd solid;
+            padding:10px 4px;
+            &::-moz-placeholder { color: #dddddd; }
+            &::-webkit-input-placeholder { color:#dddddd; }
+            &:-ms-input-placeholder { color:#dddddd; }
+          }
+        }
+        .content3{
+          .active{
+            color:#31c63f;
+            border:1px solid #31c63f;
+          }
+          .demanda{
+            background-color: #ffa800;
+          }
+          padding:0 0.4rem;
+          font-size: 0.44rem;
+          border-bottom: 1px solid #f2f2f2;
+          div:first-child{
+            height: 1rem;
+            line-height: 1rem;
+          }
+          div:last-child{
+            font-size: 0.30rem;
+            color:#aeaeae;
+            padding-bottom: 0.2rem;
+          }
+          div>span{
+            border:1px solid #aeaeae;
+            border-radius: 0.275rem;
+            margin:0.08rem 0.4rem;
+            padding:0 0.25rem;
+            height: 0.55rem;
+            display: inline-flex;
+            align-items: center;
+            text-align: center;
+          }
+        }
+        .content4{
+          div>a{
+            display: inline-block;
+            width:0.64rem;
+            height: 0.64rem;
+            line-height: 0.64rem;
+            border-radius: 0.32rem;
+            text-align: center;
+            background-color: #c4c4c4;
+            margin: 0 0.2rem;
+            img{
+              width: 65%;
+              height:65%;
+              vertical-align: middle;
+            }
+          }
+        }
+        .content5{
+          padding:0 0.4rem;
+          div:nth-of-type(2){
+            font-size: 0;
+            display: inline-flex;
+            align-items: center;
+            justify-content: flex-end;
+          }
+          div>a{
+            display: inline-block;
+            width:0.70rem;
+            height: 0.70rem;
+            line-height: 0.70rem;
+            border-radius: 3px 0 0 3px;
+            text-align: center;
+            background-color: #f2f2f2;
+            i{
+              color:#7d7d7d;
+              font-size: 0.3rem;
+            }
+          }
+          div>input{
+            width:1.38rem;
+            outline:none;
+            border:1px #dddddd solid;
+            padding:0 4px;
+            height: 0.7rem;
+            box-sizing: border-box;
+          }
+          textarea{
+            resize: none;
+            width:100%;
+            outline:none;
+            border:0;
+            margin:10px 0;
+            &::-moz-placeholder { color: #dddddd; }
+            &::-webkit-input-placeholder { color:#dddddd; }
+            &:-ms-input-placeholder { color:#dddddd; }
+            font-size: 0.40rem;
+          }
+          p{
+            text-align: right;
+            color:#c4c4c4;
+          }
+        }
+        .icon{
+          padding:0 0.4rem 0.57rem;
+          div{
+            img{
+              max-height: 5rem;
+              max-width: 5rem;
+            }
+            div{
+              display: inline-block;
+              width:1.7rem;
+              height: 1.7rem;
+              line-height: 1.7rem;
+              background-color: #f2f2f2;
+              text-align: center;
+              color:#e1e1e1;
+              margin-right: 0.55rem;
+              i{
+                font-size: 1rem;
+              }
+            }
+          }
+        }
+        .foot{
+          margin: 0.3rem 0 0.5rem;text-align: right;padding:0 0.4rem;
+          span{
+            display: inline-block;height: 0.38rem;line-height: 0.38rem;font-size: 0.4rem;
+            margin-left: 0.57rem;
+            color:#61b3f8;
+            i:first-child{
+              font-size: 0.4rem;
+              color:#bfbfbf;
+              &.active{
+                color:#31c63f;
+              }
+            }
+            i:last-child{
+              font-size: 0.35rem;
+            }
+
+          }
+        }
+        .placediv{
+          padding:0 0.4rem;
+          .placeinput{
+            width:100%;
+            outline:none;
+            border:0;
+            &::-moz-placeholder { color: #dddddd; }
+            &::-webkit-input-placeholder { color:#dddddd; }
+            &:-ms-input-placeholder { color:#dddddd; }
+            font-size: 0.40rem;
+            height: 1.54rem;
+            line-height: 1.54rem;
+          }
+        }
+
+      }
+    }
+    .datingTitleDetail{
+      display: flex;
+      flex-wrap:wrap;
+      line-height: 1.2;
+      span{
+        width: 30%;
+        margin: 10px 3%;
+        padding: 8px 0;
+        border: 1px solid #c2c2c2;
+        border-radius: 10px;
+        text-align: center;
+        background-color: #FFF;
+        &.active{
+          background-color: #c2c2c2;
+        }
+      }
+    }
+  }
+  .staticPosition
+  {
+    position: static !important;
+  }
+  .rule {
+    background-color: #FFF;
+    width: 7.81rem;
+    margin: 0 auto;
+    border-radius: 5px;
+    position: relative;
+    .iconfont {
+      position: absolute;
+      z-index: 1;
+      right: 0.3rem;
+      top: 0.3rem;
+      color: #FFF;
+    }
+    p {
+      height: 1.93rem;
+      line-height: 1.93rem;
+      background-image: url("../../images/prizedraw/rulebg.png");
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      font-size: 0.48rem;
+      color: #FFF;
+      position: relative;
+      &:before {
+        content: "";
+        position: absolute;
+        margin-left: -2.8rem;
+        left: 100%;
+        height: 1px;
+        width: 1.1rem;
+        top: 50%;
+        background-color: rgba(255, 255, 255, 0.2);
+      }
+      &:after {
+        content: "";
+        position: absolute;
+        margin-right: -2.8rem;
+        right: 100%;
+        height: 1px;
+        width: 1.1rem;
+        top: 50%;
+        background-color: rgba(255, 255, 255, 0.2);
+      }
+    }
+    div {
+      height: 6.46rem;
+      padding: 0.365rem 0.4rem 0;
+      box-sizing: border-box;
+    }
+  }
+</style>

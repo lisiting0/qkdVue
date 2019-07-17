@@ -1,0 +1,402 @@
+<template>
+  <div class="main">
+    <Loading v-if="isloading"></Loading>
+    <div class="header">
+      <div class="top">
+        <Back class="left" v-if="!datingId"><i class="iconfont">&#xe613;</i></Back>
+        <a v-else class="left" @click="hiddenInfo"><i class="iconfont">&#xe613;</i></a>
+        <a class="right"></a>最近来访
+      </div>
+    </div>
+    <div class="title">
+      <div class="underline" ref="underline" :style="{left:underlineLeft}"></div>
+      <div @click="getList(1)" :class="{active:active==1}">最近来访</div>
+      <div @click="getList(2)" :class="{active:active==2}">最近足迹</div>
+    </div>
+    <div class="search fixed" style="margin-top: 3rem">
+      <input type="search" placeholder="搜索" v-model="searchKey" @search="search">
+    </div>
+    <myScroller :style="$store.state.isBrowser?'padding:4.2rem 0 0;':'padding:4.95rem 0 0;'" :infinite="infinite" :refresh="refresh" :loadRefresh="loadRefresh" :loadInfinite="loadInfinite" ref="myScroller">
+      <div class="myscoll">
+        <div class="content">
+          <template v-if="listArr">
+            <template v-if="listArr.length>0">
+              <div v-for="(item,index) in listArr" :key="item.id">
+                <router-link :to="{name:'userInfo',query:{id:item.jiaoyouUser.id}}" tag="div" :style="{'background-image':'url('+getFullPath(item.jiaoyouUser.headimgAttachmentId)+')'}"></router-link>
+                <router-link :to="{name:'userInfo',query:{id:item.jiaoyouUser.id}}" tag="div" class="userinfo">
+                  <p>{{item.jiaoyouUser.aliasName}}<i class="jy_auth_age" :class="{jy_auth_age_man:item.jiaoyouUser.sex==2}">{{item.jiaoyouUser.sex==1?'&#xe64a;':'&#xe605;'}}{{item.jiaoyouUser.age}}</i>
+                  </p>
+                  <p v-if="item.updateDate">{{getTimeFromNow(item.updateDate)}} {{active==2 ? item.jiaoyouUser.sex==1?'访问了她的主页':'访问了他的主页':''}}</p>
+                  <p>{{item.jiaoyouUser.selfLabel}}</p>
+                </router-link>
+                <div>
+                  <span v-if="item.jiaoyouUser.isFollow==0" @click="followFriend(item.jiaoyouUser.id,index)"> +关注 </span>
+                  <span v-else @click="unfollowFriend(item.jiaoyouUser.id,index)"> 取消关注</span>
+                </div>
+              </div>
+            </template>
+            <template v-else>
+              <div class="no-data" style="display: block;height: 0.44rem;line-height: 0.44rem;border-bottom: none;">暂无数据</div>
+            </template>
+          </template>
+          <!--<div v-for="item in people" :key="item.id">-->
+          <!--<div :style="{'background-image':'url('+item.icon+')'}"></div>-->
+          <!--<div>-->
+          <!--<p>{{item.name}}<img v-if="item.level!=null" :src="'../../../static/img/V'+item.level+'.png'"/></p>-->
+          <!--<p>{{item.signs}}</p>-->
+          <!--</div>-->
+          <!--<div>-->
+          <!--<span v-if="item.attentioned==0"> +关注 </span><span v-else> 取消关注 </span>-->
+          <!--</div>-->
+          <!--</div>-->
+        </div>
+      </div>
+    </myScroller>
+  </div>
+</template>
+<script>
+  import Loading from '@other/loading.vue';
+  import Back from '@other/back.vue';
+  import myScroller from '@other/myScroller.vue';
+
+  let fontsize = parseInt(document.documentElement.style.fontSize);
+  export default {
+    name: 'recentVisit',
+    components: {
+      Loading,
+      myScroller,
+      Back,
+    },
+    props: ['datingId'],
+    data() {
+      return {
+        active: 1,
+        isloading: false,
+        listArr: [],
+        searchKey: null,
+        //分页参数
+        pageNo: 1,
+        isRead: false,
+        isEnd: false,
+        loadRefresh: true,//下拉刷新
+        loadInfinite: true, //上拉加载
+      }
+    },
+    computed: {
+      underlineLeft: function () {
+        if (this.active == 1) {
+          return document.body.clientWidth * 0.5 / 4 + 'px'
+        } else {
+          return document.body.clientWidth * 0.63 + 'px'
+        }
+      },
+    },
+    created() {
+
+    },
+    destroyed() {
+    },
+    mounted() {
+      this.datingId && this.getList(1);
+    },
+    methods: {
+      hiddenInfo() {
+        this.$emit('hiddenInfo');
+      },
+      getFullPath(path) {
+        return this.$utils.getFullPath(path)
+      },
+      getTimeFromNow(datetime) {
+        let date2 = new Date();
+        let date = new Date(Date.parse(datetime.replace(/-/g, "/")));
+        let date3 = Date.parse((this.$utils.format(date2, "yyyy-MM-dd 00:00:00")).replace(/-/g, "/"));
+        let times = Math.floor((date2.getTime() - date.getTime()) / 1000)
+        let times2 = Math.floor((date2.getTime() - date3) / 1000)
+        if (times < 60 * 60) {
+          return "今天"+ this.$utils.format(date,' hh:mm');
+        } else if (times < times2) {
+          return "今天"+ this.$utils.format(date,' hh:mm');
+        } else {
+          return this.$utils.format(date,'MM-dd hh:mm')
+        }
+        return '';
+      },
+      async getList(active, searchKey, flag) {
+        const _this = this;
+        if (_this.isRead) {
+          return false;
+        }
+        _this.isRead = true;
+        if (_this.isRefresh || flag || _this.active != active || _this.searchKey != searchKey) {
+          _this.pageNo = 1;
+          if (flag) {
+            _this.isloading = true;
+          }
+        }
+        try {
+          let data = {
+            searchKey: _this.searchKey,
+            page: _this.pageNo,
+            rows: _this.$store.state.pageSize
+          };
+          if (!_this.listArr || _this.isRefresh || flag || _this.active != active || _this.searchKey != searchKey) {
+            _this.$refs.myScroller.scrollTo(1);
+            _this.listArr = [];
+            _this.active = active;
+          }
+          let result = null;
+          if (_this.active == 1) {
+            result = await
+              _this.$server.visitor(data);
+          } else {
+            result = await
+              _this.$server.footprint(data);
+          }
+          if (result.data.list) {
+            _this.listArr.push(...result.data.list);
+          }
+          if (result.data.count <= _this.$store.state.pageSize * _this.pageNo || result.data.list.length < _this.$store.state.pageSize || result.data.data.length < _this.$store.state.pageSize) {//判断是否最后一页
+            _this.isEnd = true;
+          } else {
+            _this.isEnd = false;
+            _this.$refs.myScroller.finishInfinite(false);
+          }
+          this.datingId && this.$emit('openWin');
+        } catch (e) {
+          console.log(e)
+          this.datingId && this.$emit('openWin', true);
+        }
+        _this.isRead = false;
+        _this.isloading = false;
+        _this.isRefresh = false;
+        _this.pageNo++;
+      }
+      ,
+      infinite(done) {//上拉加载(防止初始内容不满一屏会无限加载)
+        const t = this;
+        if (t.isEnd) {
+          done(true);
+          return false;
+        }
+        console.log("加载");
+        t.getList(this.active, this.searchKey).then(() => {
+          if (t.isEnd) {
+            done(true);
+          } else {
+            done();
+          }
+        });
+      }
+      ,
+      refresh(done) {//下拉刷新
+        const t = this;
+        console.log("刷新");
+        t.isRefresh = true;
+        t.getList(this.active, this.searchKey).then((res) => {
+          done();
+        });
+      }
+      ,
+      search(event) {
+        this.getList(this.active, this.searchKey, true);
+      }
+      ,
+      async followFriend(id, index) { //关注好友接口
+        this.$vux.loading.show()
+        let result = await
+          this.$server.followFriend(id);
+        this.$vux.loading.hide()
+        this.$vux.toast.show({
+          type: 'text',
+          text: result.data.message,
+          position: 'middle',
+          width: 'auto',
+        })
+        this.$set(this.listArr[index].jiaoyouUser, "isFollow", 1)
+      }
+      ,
+      async unfollowFriend(id, index) { //取消关注好友接口
+        this.$vux.loading.show()
+        let result = await
+          this.$server.unfollowFriend(id);
+        this.$vux.loading.hide();
+        this.$vux.toast.show({
+          type: 'text',
+          text: result.data.message,
+          position: 'middle',
+          width: 'auto',
+        })
+        this.$set(this.listArr[index].jiaoyouUser, "isFollow", 0)
+      }
+      ,
+    }
+  }
+</script>
+<style scoped lang="scss">
+  .main {
+    padding-bottom: 0;
+    &:before {
+      background-color: #3a3845;
+    }
+    .header {
+      position: fixed;
+      width: 100%;
+      z-index: 10;
+      .top {
+        background-color: #3a3845;
+        color: #FFF;
+        font-size: 0.52rem;
+        position: relative;
+        i {
+          font-size: 0.52rem;
+        }
+        a {
+          position: absolute;
+          padding: 3px;
+        }
+        .left {
+          left: 0.325rem;
+        }
+        .right {
+          right: 0.325rem;
+        }
+      }
+    }
+    .title {
+      width: 100%;
+      font-size: 0;
+      margin-top: 1.39rem;
+      padding: 0.28rem 0 0;
+      height: 1.32rem;
+      line-height: 1.32rem;
+      background-color: #f2f2f2;
+      z-index: 11;
+      position: fixed;
+      .underline {
+        position: absolute;
+        width: 25%;
+        top: 0.62rem;
+        height: auto;
+        z-index: 1000;
+        background-color: rgba(0, 0, 0, 0);
+        -webkit-transition: 0.2s all linear;
+        transition: 0.2s all linear;
+        &:before {
+          content: "";
+          margin-top: -6px;
+          width: 25%;
+          height: auto;
+          display: inline-block;
+          border-bottom: 2px solid #ff4300;
+        }
+      }
+      div {
+        position: relative;
+        font-size: 0.44rem;
+        display: inline-block;
+        color: #9a9a9d;
+        box-sizing: border-box;
+        width: 50%;
+        text-align: center;
+        background-color: #fff;
+        overflow: hidden;
+        /*position: relative;*/
+        /*font-size: 0.44rem;*/
+        /*display: inline-block;*/
+        /*color:#9a9a9d;*/
+        /*box-sizing: border-box;*/
+        /*width: 50%;*/
+        /*text-align: center;*/
+        /*background-color: #fff;*/
+        /*overflow: hidden;*/
+        /*&::before {*/
+        /*content: "";*/
+        /*position: absolute;*/
+        /*bottom: 6px;*/
+        /*left: 100%;*/
+        /*width: 15%;*/
+        /*height: 0;*/
+        /*border-bottom: 2px solid #ff4300;*/
+        /*transition: 0.2s all linear;*/
+        /*}*/
+      }
+      div.active {
+        /*&::before {*/
+        /*left: 42.5%;*/
+        /*transition-delay: 0.1s;*/
+        /*}*/
+        color: #000;
+      }
+      /*div.active ~ div{
+        &::before {
+          left: -18%;
+        }
+      }*/
+    }
+    .myscoll {
+      background-color: #ffffff;
+      .content {
+        padding: 0 0.3rem;
+        & > div {
+          position: relative;
+          display: flex;
+          align-items: center;
+          height: 3rem;
+          line-height: 3rem;
+          border-bottom: 1px solid #f2f2f2;
+          & > div:first-child {
+            width: 2.4rem;
+            height: 2.4rem;
+            background-size: cover;
+            background-position: center;
+            border-radius: 50%;
+          }
+          & > div:nth-of-type(2) {
+            width: 6rem;
+            p {
+              line-height: 2;
+              padding: 0 0 0 0.2rem;
+              font-size: 0.48rem;
+              img {
+                margin-left: 0.1rem;
+                width: 0.35rem;
+                height: 0.35rem;
+              }
+            }
+            p:nth-of-type(2) {
+              font-size: 0.32rem;
+              color: #9a9a9d;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
+            }
+            p:last-child {
+              font-size: 0.36rem;
+              color: #000000;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
+            }
+          }
+          & > div:last-child {
+            position: absolute;
+            right: 0;
+            width: 1.8rem;
+            text-align: center;
+            color: #ffa443;
+            font-size: 0.36rem;
+            span {
+              border: 1px solid #ffa443;
+              display: inline-block;
+              width: 100%;
+              height: 0.7rem;
+              line-height: 0.7rem;
+              border-radius: 5px;
+            }
+          }
+        }
+      }
+    }
+  }
+</style>
+

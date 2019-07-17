@@ -1,0 +1,484 @@
+<template>
+  <div class="main">
+    <Loading v-if="isloading"></Loading>
+    <div class="header">
+      <div class="top">
+        <a class="left" @click="goback"><i class="iconfont">&#xe613;</i></a>
+        <a class="right"><i class="iconfont"></i></a>{{title}}
+      </div>
+    </div>
+    <div class="myscoll fixed">
+      <scroll ref="scroll" :pullDownRefresh="pullDownRefreshObj" :pullUpLoad="pullUpLoadObj" @pullingDown="onPullingDown" @pullingUp="onPullingUp" :ifinit="ifinit" :style="{height:myScrollerHeight+'px'}" :click="true">
+        <template v-if="listArr">
+          <template v-if="listArr.length>0">
+            <template v-if="active==1 || active==2">
+              <swipeout>
+                <div class="content">
+                  <div v-for="(item,index) in listArr" :key="item.id" >
+                    <swipeout-item transition-mode="follow">
+                      <div slot="right-menu">
+                        <swipeout-button @click.native="unfollowFriend(item.rid,index,true)" type="primary" :width="100">取消关注</swipeout-button>
+                        <swipeout-button @click.native="setTop(item.rid,index)" type="warn" :width="100">置顶</swipeout-button>
+                      </div>
+                      <div class="c_wrap" slot="content">
+                        <router-link :to="{name:'userInfo',query:{id:item.rid,silentState: item.jiaoyouUser.silentState}}" tag="div" :style="{'background-image':'url('+getFullPath(item.jiaoyouUser.headimgAttachmentId)+')'}" v-if="active==1|| active==2"></router-link>
+                        <div @click.stop="intoChat(active,item)">
+                          <p>{{item.jiaoyouUser.aliasName}}</p>
+                          <p>{{item.jiaoyouUser.selfLabel}}</p>
+                        </div>
+                        <div></div>
+                      </div>
+                    </swipeout-item>
+                  </div>
+                </div>
+              </swipeout>
+            </template>
+            <template v-else-if="active==3">
+              <div class="content">
+                <div class="c_wrap" v-for="(item,index) in listArr" :key="item.id" >
+                  <router-link :to="{name:'userInfo',query:{id:item.userId,silentState: item.jiaoyouUser.silentState}}" tag="div" :style="{'background-image':'url('+getFullPath(item.jiaoyouUser.headimgAttachmentId)+')'}"></router-link>
+                  <div @click.stop="intoChat(active,item)">
+                    <p>{{item.jiaoyouUser.aliasName}}</p>
+                    <p>{{item.jiaoyouUser.selfLabel}}</p>
+                  </div>
+                  <div>
+                    <span v-if="item.jiaoyouUser.isFollow==0" @click="followFriend(item.userId,index)">关注</span>
+                    <span v-if="item.jiaoyouUser.isFollow==1" @click="unfollowFriend(item.userId,index)">取消关注</span>
+                  </div>
+                </div>
+              </div>
+            </template>
+            <template v-else-if="active==4">
+              <div class="groupChat_con">
+                <div class="groupChat" v-for="item in listArr" :key="item.id">
+                  <i></i><!--:style="{'background-image':'url('+getFullPath(item.jiaoyouUser.headimgAttachmentId)+')'}"-->
+                  <div class="group_info">
+                    <span>{{item.chatgroupName}}</span>
+                    <span>1.6km</span>
+                  </div>
+                </div>
+              </div>
+              <p class="total_group">{{listArr.length}}个群聊</p>
+            </template>
+          </template>
+          <template v-else>
+            <div class="no-data">暂无数据</div>
+          </template>
+        </template>
+      </scroll>
+    </div>
+  </div>
+</template>
+<script>
+  import Loading from '../loading.vue';
+  import Scroll from '@/components/betterscroll/scroll/scroll.vue'
+  import { Swipeout, SwipeoutItem, SwipeoutButton } from 'vux'
+  let fontsize = parseInt(document.documentElement.style.fontSize);
+  export default {
+    name: 'fansList',
+    data() {
+      return {
+        pullDownRefresh: true,
+        pullDownRefreshThreshold: 60,
+        pullDownRefreshStop: 40,
+        pullUpLoad: true,
+        pullUpLoadThreshold: 0,
+        ifinit: false,
+        myScrollerHeight: 0,
+        showPopover: false,
+        title: null,
+        active: 1,
+        isloading: false,
+        listArr:[],
+        searchKey:null,
+        //分页参数
+        page:1,
+        rows:5,
+        news:{},
+        type:null,
+      }
+    },
+    computed: {
+      underlineLeft:function(){
+        return (this.active-1)*document.body.clientWidth*0.25 +'px'
+      },
+      pullDownRefreshObj: function () {
+        return this.pullDownRefresh ? {
+          threshold: parseInt(this.pullDownRefreshThreshold),
+          stop: parseInt(this.pullDownRefreshStop)
+        } : false
+      },
+      pullUpLoadObj: function () {
+        return this.pullUpLoad ? {
+          threshold: parseInt(this.pullUpLoadThreshold)
+        } : false
+      }
+    },
+    components: {
+      Loading,
+      Scroll,
+      Swipeout,
+      SwipeoutItem,
+      SwipeoutButton,
+    },
+    created() {
+
+    },
+    destroyed() {
+    },
+    mounted() {
+      this.active = this.$route.query.type;
+      this.title = this.active==2?'关注':this.active==3?'粉丝':'群聊'
+      this.myScrollerHeight = document.body.clientHeight - $(".header").height() - (0.75) * parseInt(document.documentElement.style.fontSize);
+      this.getList(this.active);
+      this.unreadNews();
+      this.$nextTick(function () {
+        this.ifinit = true;
+      })
+    },
+    methods: {
+      addFriend(){
+        this.$router.push({
+          path: "/addFriend"
+        })
+      },
+      intoChat(active,item){
+        let query={
+          id:item.rid,
+          name:item.jiaoyouUser.aliasName,
+        }
+        if(active==3){
+          query={
+            id:item.userId,
+            name:item.jiaoyouUser.aliasName,
+          }
+        }
+        if(window.api){
+          this.$router.push({
+            path: "/chatWindow",
+            query:query
+          })
+        }else{
+          this.$router.push({
+            path: "/chatWindowWeb",
+            query:query
+          })
+        }
+        // this.$router.push({
+        //   path: "/chatWindow",
+        //   query:query
+        // })
+      },
+      goback() {
+        this.$router.go(-1);
+      },
+      getFullPath (path) {
+        return this.$utils.getFullPath(path)
+      },
+      async onPullingDown() {
+        // 模拟更新数据
+        console.log('下拉刷新')
+        this.$refs.scroll.forceUpdate()
+        let totalPage = await this.getList(this.active,null,true)
+      },
+      async onPullingUp() {
+        // 更新数据
+        console.log('上拉加载')
+        let totalPage = await this.getList(this.active)
+      },
+      refresh(done) {//下拉刷新
+        console.log("刷新 ");
+        setTimeout(()=>{
+          console.log("刷新完成");
+          done();
+        },1000);
+      },
+      infinite(done){
+        console.log("加载 ");
+        setTimeout(()=>{
+          console.log("加载完成");
+          done(true);
+        },1000);
+      },
+      async getList(active,search,PullingDown){
+        try {
+          const _this = this;
+          if(_this.active!=active){
+            this.page = 1;
+            _this.searchKey=null;
+            _this.listArr=[];
+            this.$refs.scroll.openPullUp()
+            console.log("打开上拉加载")
+          }
+          if(PullingDown){
+            this.page = 1;
+          }
+          _this.active = active;
+          _this.$vux.loading.show();
+          let data = Object.assign({
+            searchKey:_this.searchKey,
+            page:this.page,
+            rows:this.rows
+          },search)
+          let result = null;
+          if(_this.active == 1){
+            result = await _this.$server.myFriendsList(data);
+          }else if(_this.active == 2){
+            result = await _this.$server.myFocusOnList(data);
+          }else if(_this.active == 3){
+            result = await _this.$server.myFansList(data);
+          }else{
+            result = await _this.$server.chatGroupList(data);
+          }
+          this.page++
+          if(PullingDown){
+            _this.listArr=[];
+          }
+          if(result.data.list){
+            _this.listArr.push(...result.data.list);
+          }
+          if(_this.active==4&& result.data.data){
+            _this.listArr.push(...result.data.data);
+          }
+          this.$vux.loading.hide()
+          this.$refs.scroll.forceUpdate()
+          if(this.page>result.data.totalPage){
+            console.log("关闭上拉加载")
+            this.$refs.scroll.closePullUp()
+          }
+          return Promise.resolve(result.data.totalPage)
+        }catch (e) {
+          console.log(e)
+          return Promise.reject("error")
+        }
+      },
+      search(event) {
+        this.getList(this.active,this.searchKey,true);
+      },
+      async unreadNews() {
+        const _this = this;
+        _this.$vux.loading.show();
+        let newsResult = await _this.$server.userUnreadVisitNumer();
+
+        _this.news = newsResult.data.data||{};
+        _this.$vux.loading.hide()
+      },
+      async followFriend(id,index){ //关注好友接口
+        this.$vux.loading.show()
+        let result= await this.$server.followFriend(id);
+        this.$vux.loading.hide()
+        this.$vux.toast.show({
+          type: 'text',
+          text: result.data.message,
+          position: 'middle',
+          width: 'auto',
+        })
+        this.$set(this.listArr[index].jiaoyouUser,"isFollow",1)
+      },
+      async setTop(id,index){//置顶
+        this.$vux.toast.show({
+          type: 'text',
+          text: "功能暂未开放",
+          position: 'bottom',
+          width: 'auto',
+        })
+      },
+      async unfollowFriend(id,index,flag){ //取消关注好友接口
+        this.$vux.loading.show()
+        let result = await this.$server.unfollowFriend(id);
+        this.$vux.loading.hide();
+        this.$vux.toast.show({
+          type: 'text',
+          text: result.data.message,
+          position: 'middle',
+          width: 'auto',
+        })
+        if(flag){
+          this.listArr.splice(index,1);
+        }else{
+          this.$set(this.listArr[index].jiaoyouUser,"isFollow",0)
+        }
+
+      },
+    }
+  }
+</script>
+<style scoped lang="scss">
+  .main {
+    padding-bottom: 0;
+    &:before {
+      background-color: #3a3845;
+    }
+    .header {
+      width: 100%;
+      z-index: 10;
+      .top {
+        background-color: #3a3845;
+        color: #FFF;
+        font-size: 0.52rem;
+        position: relative;
+        i {
+          font-size: 0.52rem;
+        }
+        a {
+          position: absolute;
+          padding: 3px;
+        }
+        .left {
+          left: 0.325rem;
+        }
+        .right {
+          right: 0.325rem;
+        }
+      }
+    }
+
+    .title {
+      font-size: 0;
+      margin-top: 1.39rem;
+      padding: 0.28rem 0 0;
+      height: 1.32rem;
+      line-height: 1.32rem;
+      background-color: #f2f2f2;
+      div.underline{
+        position:absolute;
+        width: 25%;
+        top:0.28rem;
+        height: 1.32rem;
+        z-index: 1000;
+        background-color: rgba(0,0,0,0);
+        transition: 0.2s all linear;
+        &::before {
+          content: "";
+          margin-top:-6px;
+          width: 30%;
+          height: 1.32rem;
+          display: inline-block;
+          border-bottom: 2px solid #ff4300;
+        }
+      }
+      div {
+        position: relative;
+        font-size: 0.44rem;
+        display: inline-block;
+        color: #9a9a9d;
+        box-sizing: border-box;
+        width: 25%;
+        text-align: center;
+        background-color: #fff;
+        overflow: hidden;
+        /*&::before {*/
+        /*content: "";*/
+        /*position: absolute;*/
+        /*bottom: 6px;*/
+        /*left: 118%;*/
+        /*width: 15%;*/
+        /*height: 0;*/
+        /*border-bottom: 2px solid #ff4300;*/
+        /*transition: 2s all linear;*/
+        /*}*/
+        .news {
+          display: inline-block;
+          text-align: center;
+          background: #f74c31;
+          color: #fff;
+          font-size: 12px;
+          height: 7px;
+          line-height: 7px;
+          border-radius: 50%;
+          padding: 0 3.5px;
+          background-clip: padding-box;
+          vertical-align: middle;
+          position: absolute;
+          top: 0.2rem;
+        }
+      }
+      div.active {
+        /*&::before {*/
+        /*width: 15%;*/
+        /*left: 43%;*/
+        /*transition-delay: 1s;*/
+        /*}*/
+        color: #000;
+      }
+      div.active ~ div {
+        /*&::before {*/
+        /*left: -18%;*/
+        /*}*/
+      }
+    }
+    .myscoll {
+      background-color: #f8f8fc;
+      .content {
+
+        .c_wrap {
+          position: relative;
+          padding: 0 0.3rem;
+          display: flex;
+          align-items: center;
+          height: 2.2rem;
+          line-height: 2.2rem;
+          border-bottom: 1px solid #f6f6f6;
+          & > div:first-child {
+            width: 1.4rem;
+            height: 1.4rem;
+            background-size: cover;
+            background-position: center;
+            border-radius: 50%;
+          }
+          & > div:nth-of-type(2) {
+            width: 6rem;
+            p {
+              line-height: 2;
+              padding: 0 0 0 0.2rem;
+              font-size: 0.48rem;
+              img {
+                margin-left: 0.1rem;
+                width: 0.35rem;
+                height: 0.35rem;
+              }
+            }
+            p:last-child {
+              font-size: 0.36rem;
+              color: #9a9a9d;
+              overflow: hidden;
+              text-overflow: ellipsis;
+              white-space: nowrap;
+            }
+          }
+          & > div:last-child {
+            position: absolute;
+            right: 0.3rem;
+            width: 1.8rem;
+            text-align: center;
+            color: #ffa443;
+            font-size: 0.36rem;
+            span {
+              border: 1px solid #ffa443;
+              display: inline-block;
+              width: 100%;
+              height: 0.7rem;
+              line-height: 0.75rem;
+              border-radius: 5px;
+              &.hxgz{
+                border: 1px solid #f2f2f2;
+                color: #d0cdd1;
+              }
+              i{
+                &.hxgz_icon{
+                  vertical-align: 0.04rem;
+                  display: inline-block;
+                  width: 0.22rem;
+                  height: 0.16rem;
+                  background: url("../../images/hxgz_icon.png") no-repeat;
+                  background-size: 100% 100%;
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+</style>
+

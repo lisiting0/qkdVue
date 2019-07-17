@@ -1,0 +1,124 @@
+<template>
+  <div class="main">
+    <div class="header">
+      <div class="top">
+        <a class="left" @click="goback"><i class="iconfont">&#xe613;</i></a>我的代理
+      </div>
+    </div>
+    <div :style="$store.state.isBrowser?'padding:2.8rem 0 0;':'padding:2.6rem 0 0;'" style="text-align:center;">
+      <div class="qrcode_panel">
+        <p>告诉小伙伴你在乾坤岛等Ta</p>
+        <vue-qr :logoSrc="imageUrl" :text="qrcodeValue" :size="150" :margin="0" :logoMargin="5" :logoCornerRadius="4"></vue-qr>
+        <p>扫一扫</p>
+        <p>登陆乾坤岛</p>
+      </div>
+      <div class="button" >已邀请了{{$store.state.userInfo.agentNumber}}个好友</div>
+    </div>
+  </div>
+</template>
+
+<script>
+  import VueQr from 'vue-qr'
+  import imageUrl from '../../images/logo_240.png'
+
+  export default {
+    name: "promoteQRCode",
+    components: {
+      VueQr
+    },
+    data() {
+      return {
+        qrcodeValue: 'http://mis.iceinfo.net/api/account/publicAddressLoginUrl?&state=login__pid_'+ this.$store.state.userInfo.jyNumber,
+        imageUrl: imageUrl,
+      }
+    },
+    mounted(){
+
+    },
+    methods:{
+      goback() {
+        this.$router.go(-1);
+      },
+      downloadImg(){
+        var oQrcode = document.querySelector('#qrcode img')
+        var url = oQrcode.src
+        var a = document.createElement('a')
+        var event = new MouseEvent('click')
+        // 下载图名字
+        a.download = '张三的二维码'
+        //url
+        a.href = url
+        //合成函数，执行下载
+        a.dispatchEvent(event)
+      }
+    }
+  }
+</script>
+<style scoped lang="scss">
+  .main{
+    width:100%;
+    height: 100%;
+    font-weight: normal;
+    background: url('../../images/qrcode_bg.jpg') no-repeat;
+    background-size: 100%;
+    background-position: center;
+    overflow: auto;
+    padding-bottom: 0;
+    position: fixed;
+
+    .header {
+      position: fixed;
+      width: 100%;
+      z-index: 10;
+      .top {
+        background-color: #3a3845;
+        color: #FFF;
+        font-size: 0.52rem;
+        position: relative;
+        i {
+          font-size: 0.52rem;
+        }
+        a {
+          position: absolute;
+          padding: 3px;
+        }
+        .left {
+          left: 0.325rem;
+        }
+        .right {
+          right: 0.325rem;
+        }
+      }
+    }
+  }
+  .qrcode_panel{
+    width: 9.16rem;
+    height: 10.86rem;
+    background: url("../../images/code_border.png") no-repeat;
+    background-size: cover;
+    margin: 0 auto 1rem;
+
+    p{
+      &:nth-of-type(1){
+        font-size: 0.48rem;
+        color: #3f3c3f;
+        line-height: 3rem;
+      }
+      &:nth-of-type(2),&:nth-of-type(3){
+        font-size: 0.56rem;
+        color: #3f3c3f;
+        line-height: 1rem;
+      }
+    }
+  }
+  .button{
+    width: 9rem;
+    height: 1.6rem;
+    line-height: 1.6rem;
+    margin:0 auto;
+    background: url("../../images/code_button.png") no-repeat;
+    background-size: cover;
+    font-size: 0.48rem;
+    color: #ffffff;
+  }
+</style>

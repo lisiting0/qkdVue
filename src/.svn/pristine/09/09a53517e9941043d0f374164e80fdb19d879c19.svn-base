@@ -1,0 +1,392 @@
+<template>
+<div class="main jy_all_top jy_new_love jy_state_top">
+	<div class="header">
+		<div class="top">
+			<a class="left" @click="close"><i class="iconfont">&#xe613;</i></a><a @click="makesure" class="right">确定</a><p>筛选</p>
+		</div>
+	</div>
+	<div class="jy_setsort_list">
+		<template v-if="keytype.sex">
+		<p class="jy_setsort_tit">性别</p>
+		<div class="jy_setsort_ul">
+			<div class="jy_setsort_li jy_setsort_li_third" :class="{cur:sex==-1}" @click="sex=-1"><i>不限</i></div>
+			<div class="jy_setsort_li jy_setsort_li_third " :class="{cur:sex==2}" @click="sex=2"><i>男</i></div>
+			<div class="jy_setsort_li jy_setsort_li_third " :class="{cur:sex==1}" @click="sex=1"><i>女</i></div>
+		</div>
+		</template>
+		<template v-if="keytype.place">
+			<p class="jy_setsort_tit">地区</p>
+			<div class="jy_setsort_ul">
+				<div class="jy_setsort_li jy_setsort_li_third" :class="{cur:location==0}" @click="location=0"><i>不限</i></div>
+				<div class="jy_setsort_li jy_setsort_li_two jy_setsort_li_jt" :class="{cur:location==1}" @click="showPlacePicker"><i>{{place===''?'请选择地区':place}}</i></div>
+			</div>
+		<group style="display: none">
+		  <popup-picker :data="areaData" :columns="3" v-model="selectArea" show-name ref="placePicker" :show.sync="shPlacePicker"></popup-picker>
+		</group>
+		</template>
+		<template v-if="keytype.income">
+			<p class="jy_setsort_tit">收入范围</p>
+			<div class="jy_setsort_ul">
+				<div class="jy_setsort_li jy_setsort_li_third" :class="{cur:income==-1}" @click="incomeReArr=[-1,-1]"><i>不限</i></div>
+				<div class="jy_setsort_li jy_setsort_li_two jy_setsort_li_jt" :class="{cur:income!=-1}" @click="showIncome"><i>{{incomeReText===''?'请选择收入范围':incomeReText}}</i></div>
+			</div>
+		<group style="display: none">
+            <popup-picker title="收入范围" :data="incomeReList" :columns="2" v-model="incomeReArr" ref="incomeRePicker" :show.sync="shIncomeRe"></popup-picker>
+          </group>
+		</template>
+		<template v-if="keytype.date">
+		<p class="jy_setsort_tit">时间</p>
+		<div class="jy_setsort_ul">
+			<div class="jy_setsort_li jy_setsort_li_third" :class="{cur:datingTime==0}" @click="datingTime=0"><i>不限</i></div>
+			<div class="jy_setsort_li jy_setsort_li_two jy_setsort_li_jt" :class="{cur:datingTime==1}" @click="shStartDate=true;datingTime=1"><i>{{startDate===''?'请选择时间':startDate+'~'+endDate}}</i></div>
+		</div>
+    <group style="display: none">
+      <datetime v-model="startDate" @on-confirm="startConfirm" :start-date="startseDate" :end-date="endseDate"  :show.sync="shStartDate"></datetime>
+    </group>
+    <group style="display: none">
+      <datetime v-model="endDate" @on-confirm="endConfirm" :start-date="startseDate" :end-date="endseDate" :show.sync="shEndDate"></datetime>
+    </group>
+	</template>
+		<template v-if="keytype.auth">
+		<p class="jy_setsort_tit">认证</p>
+		<div class="jy_setsort_ul ">
+			<div class="jy_setsort_li jy_setsort_li_third" :class="{cur:withoutAuth}" @click="auth"><i>不限</i></div>
+			<div class="jy_setsort_li jy_setsort_li_third" :class="{cur:authentication.idcard == 1}" @click="authentication.idcard = authentication.idcard==1?0:1"><i class="jy_icon_sort">&#xe69c;</i></div>
+			<div class="jy_setsort_li jy_setsort_li_third" :class="{cur:authentication.house == 1}" @click="authentication.house = authentication.house==1?0:1"><i class="jy_icon_sort">&#xe69e;</i></div>
+			<div class="jy_setsort_li jy_setsort_li_third" :class="{cur:authentication.video == 1}" @click="authentication.video = authentication.video==1?0:1"><i class="jy_icon_sort">&#xe697;</i></div>
+			<div class="jy_setsort_li jy_setsort_li_third" :class="{cur:authentication.car == 1}" @click="authentication.car = authentication.car==1?0:1"><i class="jy_icon_sort">&#xe69f;</i></div>
+			
+		</div>
+		</template>
+		<template v-if="keytype.edu">
+		<p class="jy_setsort_tit">学历</p>
+		<div class="jy_setsort_ul">
+      <div v-for="item in result" class="jy_setsort_li jy_setsort_li_third" :class="{cur:education==item.value}" @click="education=item.value"><i>{{item.label}}</i></div>
+		</div>
+		</template>
+		<template v-if="keytype.height">
+		<p class="jy_setsort_tit">身高要求</p>
+		<div class="jy_setsort_ul">
+			<div class="jy_setsort_li jy_setsort_li_five" :class="{cur:minHeight==-1}" @click="minHeight=-1"><i>不限</i></div>
+			<div class="jy_setsort_li jy_setsort_li_five" :class="{cur:minHeight==150}" @click="minHeight=150"><i>≥150</i></div>
+			<div class="jy_setsort_li jy_setsort_li_five" :class="{cur:minHeight==155}" @click="minHeight=155"><i>≥155</i></div>
+			<div class="jy_setsort_li jy_setsort_li_five" :class="{cur:minHeight==160}" @click="minHeight=160"><i>≥160</i></div>
+			<div class="jy_setsort_li jy_setsort_li_five" :class="{cur:minHeight==165}" @click="minHeight=165"><i>≥165</i></div>
+			<div class="jy_setsort_li jy_setsort_li_five" :class="{cur:minHeight==170}" @click="minHeight=170"><i>≥170</i></div>
+			<div class="jy_setsort_li jy_setsort_li_five" :class="{cur:minHeight==175}" @click="minHeight=175"><i>≥175</i></div>
+			<div class="jy_setsort_li jy_setsort_li_five" :class="{cur:minHeight==180}" @click="minHeight=180"><i>≥180</i></div>
+			<div class="jy_setsort_li jy_setsort_li_five" :class="{cur:minHeight==185}" @click="minHeight=185"><i>≥185</i></div>
+			<div class="jy_setsort_li jy_setsort_li_five" :class="{cur:minHeight==190}" @click="minHeight=190"><i>≥190</i></div>
+		</div>
+		</template>
+		<template v-if="keytype.age">
+		<p class="jy_setsort_tit">年龄要求</p>
+		<div class="jy_setsort_ul">
+			<div class="jy_setsort_li jy_setsort_li_third" :class="{cur:minAge==-1&&maxAge==-1}" @click="minAge=-1;maxAge=-1"><i>不限</i></div>
+			<div class="jy_setsort_li jy_setsort_li_third" :class="{cur:minAge==18&&maxAge==23}" @click="minAge=18;maxAge=23"><i>18-23</i></div>
+			<div class="jy_setsort_li jy_setsort_li_third" :class="{cur:minAge==24&&maxAge==29}" @click="minAge=24;maxAge=29"><i>24-29</i></div>
+			<div class="jy_setsort_li jy_setsort_li_third" :class="{cur:minAge==30&&maxAge==35}" @click="minAge=30;maxAge=35"><i>30-35</i></div>
+			<div class="jy_setsort_li jy_setsort_li_third" :class="{cur:minAge==36&&maxAge==40}" @click="minAge=36;maxAge=40"><i>36-40</i></div>
+			<div class="jy_setsort_li jy_setsort_li_third" :class="{cur:minAge==41&&maxAge==-1}" @click="minAge=41;maxAge=-1"><i>41以上</i></div>
+		</div>
+		</template>
+		<template v-if="keytype.distance">
+			<p class="jy_setsort_tit">距离</p>
+			<div class="jy_setsort_ul">
+		  <div v-for="item in distanceArr" class="jy_setsort_li jy_setsort_li_third" :class="{cur:distance==item.val}" @click="distance=item.val"><i>{{item.text}}</i></div>
+			</div>
+			</template>
+	</div>
+</div>
+</template>
+<script>
+import {PopupPicker,Group,Datetime} from 'vux'
+export default {
+	name: 'setSort',
+	props: {
+      showStartDate: {
+        type: Boolean,
+        default: false,
+      },showEndDate: {
+        type: Boolean,
+        default: false,
+      },
+	  placePicker: {
+        type: Boolean,
+        default: false,
+      },
+	  showIncomeRe: {
+        type: Boolean,
+        default: false,
+      },
+	  keytype:{
+		type: Object,
+        default: function () {
+			return {}
+		  },
+	  }
+    },
+	data () {
+		return {
+		  datingTime: 0,//1选择0不限
+		  shStartDate:false,
+		  shEndDate:false,
+		  startDate: '',
+		  endDate: '',
+		  shPlacePicker:false,
+		  areaData: [],
+		  selectArea: [],
+		  location: 0,//1选择0不限
+		  place: '',
+		  sex:-1,
+		  areaId:null,
+		  beginActivityStarttime:null,
+		  endActivityStarttime:null,
+		  authentication: {//认证信息0不需要1需要
+			idcard: 0,
+			car: 0,
+			house: 0,
+			video: 0,
+		  },
+		  education:-1,
+		  minHeight:-1,//-1表示无要求
+		  minAge:-1,//
+		  maxAge:-1,//
+		  result:[],//学历枚举
+			income:-1,
+			minIncome:0,
+			maxIncome:0,
+			incomeReList: [
+			  {name: '不限', value: '-1', parent: 0},
+			  {name: '2千元', value: '2000', parent: 0},
+			  {name: '4千元', value: '4000', parent: 0},
+			  {name: '6千元', value: '6000', parent: 0},
+			  {name: '1万元', value: '10000', parent: 0},
+			  {name: '2万元', value: '20000', parent: 0},
+			  {name: '5万元', value: '50000', parent: 0},
+
+			  {name: '不限', value: '-1', parent: '-1'},
+			  {name: '2千元', value: '2000', parent: '-1'},
+			  {name: '4千元', value: '4000', parent: '-1'},
+			  {name: '6千元', value: '6000', parent: '-1'},
+			  {name: '1万元', value: '10000', parent: '-1'},
+			  {name: '2万元', value: '20000', parent: '-1'},
+			  {name: '5万元', value: '50000' , parent: '-1'},
+
+			  {name: '不限', value: '-1', parent: '2000'},
+			  {name: '4千元', value: '4000', parent: '2000'},
+			  {name: '6千元', value: '6000', parent: '2000'},
+			  {name: '1万元', value: '10000', parent: '2000'},
+			  {name: '2万元', value: '20000', parent: '2000'},
+			  {name: '5万元', value: '50000' , parent: '2000'},
+
+			  {name: '不限', value: '-1', parent: '4000'},
+			  {name: '6千元', value: '6000', parent: '4000'},
+			  {name: '1万元', value: '10000', parent: '4000'},
+			  {name: '2万元', value: '20000', parent: '4000'},
+			  {name: '5万元', value: '50000' , parent: '4000'},
+
+			  {name: '不限', value: '-1', parent: '6000'},
+			  {name: '1万元', value: '10000', parent: '6000'},
+			  {name: '2万元', value: '20000', parent: '6000'},
+			  {name: '5万元', value: '50000' , parent: '6000'},
+
+			  {name: '不限', value: '-1', parent: '10000'},
+			  {name: '2万元', value: '20000', parent: '10000'},
+			  {name: '5万元', value: '50000' , parent: '10000'},
+
+			  {name: '不限', value: '-1', parent: '20000'},
+			  {name: '5万元', value: '50000' , parent: '20000'},
+
+			  {name: '不限', value: '-1', parent: '50000'},
+			],//列表
+			
+			incomeReArr: [],//选中的数组
+			incomeReLVal: null,//联动显示的值
+			incomeReRVal: null,//联动显示的值
+			incomeReText: '',//获取值相应的文字
+			shIncomeRe: false,
+			distance:-1,
+			distanceArr:[{text:"不限",val:-1},{text:"10km以内",val:10000},{text:"20km以内",val:20000},{text:"40km以内",val:40000},{text:"60km以内",val:60000},{text:"80km以内",val:80000}]
+		}
+	},
+  components: {
+    PopupPicker,
+    Group,
+    Datetime,
+  },
+  computed: {
+    withoutAuth() {
+      return this.authentication.idcard == 0 && this.authentication.car == 0 && this.authentication.house == 0 && this.authentication.video == 0
+    },
+    handleRoute(){
+      return this.$store.state.handleRoute;
+    },
+	startseDate: function () {
+        return this.$utils.format(new Date(), 'yyyy-MM-dd');
+    },
+	endseDate: function () {
+        return this.$utils.getIntervalDate(this.$utils.format(new Date(), 'yyyy-MM-dd'), 90);
+    },
+  },
+	watch:{
+		incomeReArr() {
+			if (this.$refs.incomeRePicker) {
+			  this.incomeReText = this.$refs.incomeRePicker.getNameValues();
+			  this.incomeReLVal = this.incomeReArr[0];
+			  this.incomeReRVal = this.incomeReArr[1];
+			  if(this.incomeReLVal== -1 &&  this.incomeReRVal==-1){
+				this.income=-1;
+				this.incomeReText = "";
+			  }else if(this.incomeReLVal==-1 && this.incomeReRVal >= 2000){
+				this.incomeReText = this.incomeReRVal + '元以下';
+			  }else if(this.incomeReLVal>= 2000 && this.incomeReRVal==-1) {
+				this.incomeReText =this.incomeReLVal + '元以上';
+			  }else if(this.incomeReLVal>= 2000 && this.incomeReRVal >= 2000) {
+				this.incomeReText = this.incomeReLVal+'-'+ this.incomeReRVal+"元";
+			  }
+			}
+		  },
+		shPlacePicker(val){//地区
+			this.$emit("shPlacePicker",val);
+		},
+		shStartDate(val){//时间
+			this.$emit("shStartDate",val);
+		},
+		shEndDate(val){//时间
+			this.$emit("shEndDate",val);
+		},
+		shIncomeRe(val){//收入
+			this.$emit("shIncomeRe",val);
+		},
+		placePicker(val){
+			this.shPlacePicker=val;
+		},
+		showStartDate(val){
+			this.shStartDate=val;
+		},
+		showEndDate(val){
+			this.shEndDate=val;
+		},
+		showIncomeRe(val){
+			this.shIncomeRe=val;
+		},
+    /*startDate(newv){
+      if(newv){
+       setTimeout(()=>{
+		this.shEndDate=true;
+	   },350)
+      }
+    },
+    endDate(newv){
+      if(newv){
+        let start = new Date(this.startDate.replace("-", "/").replace("-", "/"));
+        let end = new Date(newv.replace("-", "/").replace("-", "/"));
+        if (end < start) {
+          this.$vux.toast.show({
+            type: "text",
+            text: "开始日期不能大于结束日期",
+            position: "bottom",
+            width: "2rem",
+          });
+		  this.datingTime=0;
+        }
+      }
+    },*/
+    selectArea(newv){
+      console.log(newv)
+      if(this.$refs.placePicker){
+        this.place = this.$refs.placePicker.getNameValues();
+      }
+      this.areaId = newv[2]||null;
+    },
+	},
+	async mounted () {
+    let result = await this.$server. enum({
+      type:'ExpEducationEnum'
+    })
+		this.result = result.data.data
+    let listData = await this.$server.getDistrict();
+    this.areaData = listData.data.data;
+	},
+	destroyed () {
+		
+	},
+	methods:{
+		startConfirm(){
+			const t=this;
+			if(t.startDate){
+				setTimeout(()=>{
+					this.shEndDate=true;
+				},350)
+			}
+		},
+		endConfirm(){
+			const t=this;
+			if(t.endDate){
+				let start = new Date(t.startDate.replace("-", "/").replace("-", "/"));
+				let end = new Date(t.endDate.replace("-", "/").replace("-", "/"));
+				if (end < start) {
+				  t.$vux.toast.show({
+					type: "text",
+					text: "开始日期不能大于结束日期",
+					position: "bottom",
+					width: "2rem",
+				  });
+				  t.startDate='';
+				  t.endDate='';
+				  t.datingTime=0;
+				}
+			}
+		},
+    showPlacePicker(){
+      this.location=1;
+      this.shPlacePicker=!this.shPlacePicker;
+    },
+	showIncome(){
+		this.income=1;
+		this.shIncomeRe=!this.shIncomeRe;
+	},
+    auth() {
+      this.authentication.idcard = 0;
+      this.authentication.car = 0;
+      this.authentication.house = 0;
+      this.authentication.video = 0;
+    },
+    close(){
+      this.$emit('close',false)
+    },
+    async makesure() {
+      let obj={}
+      if(this.location==0?null:this.areaId){
+        obj=await this.$store.dispatch('getCoordsFromName',(this.place.split(" "))[1],(this.place.split(" "))[2])
+      }
+      let result={
+        lat:obj.lat?obj.lat:null,
+        lon:obj.lon?obj.lon:null,
+        sex:this.sex,
+		location:this.location,
+        areaId:this.location==0?null:this.areaId,
+        beginActivityStarttime:this.datingTime==0?null:this.startDate,
+        endActivityStarttime:this.datingTime==0?null:this.endDate,
+        authentication:this.authentication,
+        education:this.education,
+        minHeight:this.minHeight,
+        minAge:this.minAge,
+        maxAge:this.maxAge,
+		minIncome:this.incomeReLVal,
+		maxIncome:this.incomeReRVal,
+		distance:this.distance,
+      }
+      this.$emit('makesure', result)
+    },
+	}
+}
+</script>
+<style lang="scss" scoped>
+  .main{
+    position: absolute;
+    top:0;
+    z-index: 410;
+  }
+</style>

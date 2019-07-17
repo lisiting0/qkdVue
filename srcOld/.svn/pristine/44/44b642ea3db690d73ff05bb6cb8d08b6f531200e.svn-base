@@ -1,0 +1,27 @@
+<template>
+<ul class="menu">
+	<li><router-link :to="{name:'home'}" class="icon_home">首页</router-link></li>
+	<li class="unreadCount"><router-link :to="{name:'friend'}" class="icon_jy">消息</router-link><badge v-show="$store.state.unreadCount!=0||$store.state.webMessageStorage.unreadCount!=0" class="badge" :text="$store.state.unreadCount||$store.state.webMessageStorage.unreadCount"></badge></li>
+	<li><router-link :to="{name:'love'}" class="icon_love">娇缘</router-link></li>
+	<li><router-link :to="{name:'search'}" class="icon_f">发现</router-link></li>
+	<li><router-link :to="{name:'user'}" class="icon_user">我的</router-link></li>
+</ul>
+</template>
+<script>
+  import { Badge } from 'vux'
+  export default {
+    components: {
+      Badge
+    },
+  }
+</script>
+<style scoped lang="scss">
+.unreadCount{
+  position: relative;
+  .badge{
+    position:absolute;
+    top:3px;
+    right: 10px;
+  }
+}
+</style>

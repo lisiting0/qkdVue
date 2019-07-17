@@ -1,0 +1,225 @@
+<template>
+<div class="main jy_all_top jy_state_top">
+	<Loading v-if="isloading"></Loading>
+	<div class="header">
+		<div class="top">
+			<Back class="left"><i class="iconfont">&#xe613;</i></Back><p>第三方登录</p>
+		</div>
+	</div>
+	<p class="jy_auth_id" v-if="typeId">绑定ID：{{typeId}}</p>
+	<p v-if="typeId" class="jy_auth_btn" @click.stop="toUnbind">解绑</p>
+	<p v-else class="jy_auth_btn" @click.stop="bind">绑定</p>
+</div>
+</template>
+<script>
+import Loading from '@other/loading.vue';
+import Back from '@other/back.vue';
+export default {
+	name: 'bindLogin',
+	data () {
+		return {
+			isloading:false,
+			username:'',
+			type:'',
+			isFlag:false,
+			typeId:'',
+		}
+	},
+	mounted () {
+		const t=this;
+		t.type=t.$route.query.type;
+		t.typeId=t.$store.state.userInfo[t.type+"Id"];
+	},
+	components: {
+		//Routerlink,
+		Loading,
+		Back,
+		//myScroller
+	},
+	methods: {
+		bind(){
+			const t=this;
+			switch (t.type){
+				case "qq":
+					t.QQLogin();
+				case "wechat":
+					t.weChatLogin();
+					break;
+				default:
+					t.$vux.toast.show({
+						type:"text",
+						text: "暂没开通此通道",
+						position:"bottom",
+						width:"auto",
+					});
+					break;
+			}
+		},
+		async toUnbind(type){
+			const t=this;
+			t.isloading=true;
+			try{
+				const bind= await t.$server['untie'+t.type]();
+				//alert(JSON.stringify(bind));
+				t.$store.commit("EDITUSERINFO",{key:t.type+"Id",value:''});
+				t.$router.replace({ name: 'accountSecurity'});
+			}catch(e){
+				t.isloading=false;
+				t.$vux.toast.show({
+					type:"cancel",
+					text: "解绑出错",
+					position:"middle",
+					width:"2rem",
+				});
+			}
+		},
+		toResult(res){
+			const t=this;
+			t.isloading=false;
+			t.$vux.toast.show({
+				type:"success",
+				text: "绑定成功",
+				position:"middle",
+				width:"2rem",
+			});
+			t.$store.commit("EDITUSERINFO",{key:t.type+"Id",value:res.data.data[t.type+"Id"]});
+			t.$router.replace({ name: 'accountSecurity'});
+		},	
+		QQLogin(){//绑定
+			const t=this;
+			let api=window.api||"";
+			if(api){
+				// return false;
+				let qq = api.require('QQPlus');
+				t.isloading=true;
+				qq.installed(function(ret, err) {
+					if (ret.status) {
+						qq.login(async function(loginRet, loginErr) {
+							if(loginRet.status) {
+								try{	
+									const bind= await t.$server.bindqq({
+										accessToken:loginRet.accessToken,
+									});
+									//alert(JSON.stringify(bind));
+									t.toResult(bind);
+								}catch(e){
+									//alert(JSON.stringify(e))
+									t.$vux.toast.show({
+									   type:"cancel",
+									   text: "绑定出错",
+									   position:"middle",
+									   width:"2rem",
+									});
+								}
+								t.isloading=false;
+							 } else {
+								t.isloading=false;
+								t.$vux.toast.show({
+									type:"cancel",
+									text: "获取授权信息失败",
+									position:"middle",
+									width:"2rem",
+							    });
+							 }
+						});
+					} else {
+						t.isloading=false;
+						t.$vux.toast.show({
+							type:"text",
+							text: "当前设备未安装QQ客户端",
+							position:"bottom",
+							width:"2rem",
+						});
+					}
+				});
+			}else{
+				t.$vux.toast.show({
+					type:"text",
+					text: "当前环境不支持该登录方式",
+					position:"bottom",
+					width:"2rem",
+				});
+			}
+		},
+		weChatLogin(){//绑定
+			const t=this;
+			let api=window.api||"";
+			if(api){
+				let wx = api.require('wx');
+				t.isloading=true;
+				let loadTimeout=setTimeout(()=>{
+					t.isloading=false;
+				},6000);
+				wx.isInstalled(function(ret, err) {
+					if (ret.installed) {
+						wx.auth({
+							//apiKey: ''
+						}, function(authRet, authErr) {
+							clearTimeout(loadTimeout);
+							if (authRet.status) {
+								wx.getToken({
+									code: authRet.code
+								}, async function(loginRet, loginErr) {	
+									if (loginRet.status) {
+										try{
+											const bind= await t.$server.bindwx({
+												accessToken:loginRet.accessToken,
+												openId:loginRet.openId
+											});
+											//alert(JSON.stringify(bind))
+											t.toResult(bind);
+										}catch(e){
+										
+											t.$vux.toast.show({
+											   type:"cancel",
+											   text: "绑定出错",
+											   position:"middle",
+											   width:"2rem",
+											});
+										}
+										t.isloading=false;
+									} else {
+										t.isloading=false;
+										t.$vux.toast.show({
+											type:"cancel",
+											text: "获取授权信息失败",
+											position:"middle",
+											width:"2rem",
+										});
+									}
+								});
+							} else {
+								t.isloading=false;
+								t.$vux.toast.show({
+									type:"cancel",
+									text: "获取授权信息失败",
+									position:"middle",
+									width:"2rem",
+								});
+							}
+						});
+					} else {
+						t.isloading=false;
+						t.$vux.toast.show({
+							type:"text",
+							text: "当前设备未安装微信客户端",
+							position:"bottom",
+							width:"2rem",
+						});
+					}
+				});
+			}else{
+				t.$vux.toast.show({
+					type:"text",
+					text: "当前环境不支持该登录方式",
+					position:"bottom",
+					width:"2rem",
+				});
+			}
+		},
+	},
+	destroyed () {
+		
+	}
+}
+</script>

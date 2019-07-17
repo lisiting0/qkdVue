@@ -1,0 +1,44 @@
+<template>
+<div class="main jy_all_top jy_new_love jy_state_top">
+	<Loading v-if="isloading"></Loading>
+	<div class="header">
+		<div class="top">
+			<Back class="left"><i class="iconfont">&#xe613;</i></Back><a class="right">确定</a><p>筛选</p>
+		</div>
+	</div>
+	
+</div>
+</template>
+<script>
+import Loading from '@other/loading.vue';
+import Back from '@other/back.vue';
+import myScroller from '@other/myScroller.vue';
+export default {
+	name: 'setSort',
+	data () {
+		return {
+			isloading:false,
+			
+		}
+	},
+	components: {
+		Loading,
+		Back,
+		myScroller,
+	},
+	watch:{	
+		
+	},
+	mounted () {
+		const t=this;
+		
+		
+	},
+	destroyed () {
+		
+	},
+	methods:{
+	
+	}
+}
+</script>

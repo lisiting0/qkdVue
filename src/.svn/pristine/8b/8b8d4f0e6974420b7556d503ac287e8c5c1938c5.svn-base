@@ -1,0 +1,112 @@
+<template>
+	<div v-transfer-dom>
+        <popup class="dialog-gift" v-model="showGift" height="50%" :hide-on-blur="true" style="background-color: #FFFFFF;border-top-left-radius: 0.4rem;border-top-right-radius: 0.4rem;">
+          <div class="gift_con">
+            <div class="reward_title">打赏： <span>{{aliasName}}</span><i @click="showGift=false"></i></div>
+            <div class="gift_list">
+              <div class="gift">
+                <template v-if="giftList">
+                  <template v-if="giftList.length>0">
+                    <swiper height="6.2rem" :show-dots="false" @on-index-change="onIndexChange">
+                      <swiper-item class="black" v-for="(item,index) in giftList" :key="index+1000">
+                        <div class="gift_li" v-for="(v,num) in item" :class="{active:giftId==v.id}" @click="clickSelGift(v.id,v.giftName)">
+                          <img :src="getFullPath(v.giftImage)" />
+                          <p class="name">{{v.giftName}}</p>
+                          <p class="jiaobi">乾坤币{{v.jiaobi}}</p>
+                        </div>
+                      </swiper-item>
+                    </swiper>
+                  </template>
+                </template>
+              </div>
+              <div class="diot" @click.stop="">
+                <span v-for="item,index in giftList" :key="index" :class="{active:activeIndex==index}"></span>
+              </div>
+            </div>
+            <div class="footer"><img src="../../images/coin.png"/><span>{{userMoney}}</span><div class="gift_button" @click="reward">确定打赏<br><span>{{giftName?'（'+giftName+'）':''}}</span> </div><span class="cz" @click="linkTo('recharge')">充值</span></div>
+          </div>
+        </popup>
+      </div>
+</template>
+<script>
+import {TransferDom, Popup,Swiper, SwiperItem} from 'vux'
+export default {
+	name: 'shop',
+	data () {
+		return{
+			giftList:null,
+			userMoney:0,
+			giftId:null,//礼物Id
+			giftName:null,//礼物名称
+		}
+	},
+	directives: {
+      TransferDom
+    },
+	components: {
+      Popup,
+      Swiper,
+      SwiperItem,
+    },
+	props:['candidateId','aliasName'],
+	mounted(){
+		const t=this;
+		t.userMoney = t.$store.state.userInfo.userMoney;
+		t.getGiftList();
+	},
+	methods:{
+		async getGiftList() {
+			let listData = await this.$server.getGiftList();
+			if(listData.data.data){
+				this.giftList=[];
+				let data = listData.data.data;
+				let page = Math.ceil(data.length/8)
+				for(let i=0;i<page;i++){
+					let arr=[];
+					for(let j=0;j<8;j++){
+						if(8*i+j==data.length){
+							break;
+						}
+						arr.push(data[8*i+j])
+					}
+					this.giftList.push(arr);
+				}
+			}
+		},
+		async reward() {
+			const t = this;
+			let data ={
+				"receiverUser.id":t.candidateId,
+				"objectId":t.activeId,
+				"giftId":t.giftId,
+				"amount":1,//打赏数，默认是1
+			}
+			let result = await t.$server.giveGift(data);
+			t.showGift=false;
+			t.userMoney = parseInt(t.$store.state.userInfo.userMoney - t.amount)
+			t.$store.commit('EDITUSERINFO',{key:"userMoney" ,value:t.userMoney});
+			this.$vux.toast.show({
+				type:"text",
+				text: "打赏成功",
+				position:"middle",
+				width:"auto",
+			});
+		},
+		clickShowGift(aliasName,activeId,candidateId){
+			if(this.$store.state.userInfo.id==candidateId){
+				this.$vux.toast.show({
+					type: 'text',
+					text: '不能给自已打赏',
+					position: 'middle',
+					width: 'auto',
+				})
+				return false;
+			}
+			this.showGift = !this.showGift;
+			this.aliasName = aliasName;
+			this.activeId = activeId;
+			this.candidateId = candidateId;
+		},
+	}
+}
+</script>

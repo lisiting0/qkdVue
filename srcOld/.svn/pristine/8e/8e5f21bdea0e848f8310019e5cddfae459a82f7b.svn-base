@@ -1,0 +1,360 @@
+<template>
+<div class="main jy_all_top  jy_new_act">
+	<Loading v-if="isloading"></Loading>
+	<div class="header" :class="{backgroundColorheader:opacity>0.2}" :style="{'background-color':'rgba(255,255,255,'+opacity+')'}">
+		<div class="top">
+			<Back class="left" v-if="!actDatingId"><i class="iconfont">&#xe613;</i></Back>
+			<a v-else class="left" @click="hiddenInfo"><i class="iconfont">&#xe613;</i></a>
+			<a class="right"><i class="iconfont">&#xe679;</i></a><p>详情</p>
+		</div>
+	</div>
+	<myScroller  :loadRefresh="loadRefresh" :loadInfinite="loadInfinite" :bouncing="!1" :touchmove="touchmove" ref="myScroller">
+	<div class="jy_new_act_top" v-if="datingDetail">
+		<!--<ul class="jy_new_act_top_list">
+			<li></li>
+		</ul>-->
+		<div class="swiper_container user_info_swiper" id="swiper_container">
+			<swiper loop auto :show-dots="false" height="10.8rem" v-model="currIndex">
+				<template v-if="coverimgAttachement&&coverimgAttachement.length>0">
+				  <swiper-item v-for="item in coverimgAttachement" v-if="item" :key="item">
+					<i class="backImageCover" :style="'background-image:url('+$utils.getFullPath(item)+');width:100%;padding-bottom:100% !important'"></i>
+				  </swiper-item>
+				</template>
+			</swiper>
+			<p class="swiper_count" v-if="coverimgAttachement.length>0">{{(currIndex+1)}} / {{coverimgAttachement.length}}</p>
+			<p class="swiper_count" v-else>0 / 0</p>
+		</div>
+	</div>
+	<div class="jy_new_act_b" v-if="datingDetail">
+		<div class="jy_new_act_block">
+			<div class="jy_new_act_uinfo">
+				<i class="jy_new_act_uinfo_img" :style="'background-image:url('+$utils.getFullPath(datingDetail.jiaoyouUser.headimgAttachmentId)+')'"></i>
+				<h4><em> 1.3km</em>{{datingDetail.jiaoyouUser.aliasName}}<i class="jy_auth_age" :class="{jy_auth_age_man:datingDetail.jiaoyouUser.aliasName.sex==2}">{{datingDetail.jiaoyouUser.aliasName.sex==1?'&#xe64a;':'&#xe605;'}}{{datingDetail.jiaoyouUser.age}}</i></h4>
+				<p class="jy_new_act_uinfo_tip"><span>{{payTypeText[datingDetail.payType]}}</span><i class="jy_act_ico">
+					{{datingDetail.datingThemes==1?'&#xe66d;':datingDetail.datingThemes==2?'&#xe66c;':datingDetail.datingThemes==3?'&#xe669;':datingDetail.datingThemes==4?'&#xe895;':datingDetail.datingThemes==5?'&#xee41;':'&#xe66f;'}}{{datingTitles[datingDetail.datingThemes>5?6:datingDetail.datingThemes]}}</i><i :class="'jy_act_ico jy_act_ico_'+tmp[datingDetail.activityMethod]">{{jiaoyouType[datingDetail.activityMethod]}}</i><em class="jy_ico_ask" @click.stop="showRule=true">&#xe682;</em></p>
+			</div>
+			<p class="jy_new_act_desc" v-if="datingDetail.datingDesc">{{datingDetail.datingDesc}}</p>
+			<ul class="jy_new_act_gift" v-if="(datingDetail.expGift&&expGift)||(datingDetail.sendGift&&sendGift)">
+				<li v-if="datingDetail.expGift&&expGift">参加有礼<em>(送给参加者)</em>：<div class="jy_new_act_gift_r"><i :style="'background-image:url('+$store.state.phpURL + '/'+ expGift.imagePath+');'"></i><p>{{expGift.name}}*{{expGift.num}}</p><p>价值:{{expGift.price}}元</p></div></li>
+				<li v-if="datingDetail.sendGift&&sendGift">携礼参加<em>(送给发起者)</em>：<div class="jy_new_act_gift_r"><i :style="'background-image:url('+$store.state.phpURL + '/'+ sendGift.imagePath+');'"></i><p>{{sendGift.name}}*{{sendGift.num}}</p><p>价值:{{sendGift.price}}元</p></div></li>
+			</ul>
+		</div>
+		<div class="jy_new_act_block">
+			<template v-if="datingDetail.datingThemes==1">
+				<p class="jy_new_act_p"><i>&#xe667;</i>出发时间：{{datingDetail.datingStarttime}}</p>
+				<p class="jy_new_act_p"><i>&#xe677;</i>目的地点：{{datingDetail.datingLocation}}</p>
+				<p class="jy_new_act_p"><i>&#xe657;</i>旅行周期：{{tripTimeLength[datingDetail.tripTimeLength]}}</p>
+				<p class="jy_new_act_p"><i>&#xe696;</i>出行方式：{{tripMode[datingDetail.tripMode]}}</p>
+			</template>
+			<template v-if="datingDetail.datingThemes==2">
+				<p class="jy_new_act_p"><i>&#xe667;</i>用餐时间：{{datingDetail.datingStarttime}}</p>
+				<p class="jy_new_act_p"><i>&#xe677;</i>用餐地点：{{datingDetail.datingLocation}}</p>
+			</template>
+			<template v-if="datingDetail.datingThemes==3">
+				<p class="jy_new_act_p" v-if="datingDetail.datingTitle"><i>&#xe6a4;</i>影片名称：{{datingDetail.datingTitle}}</p>
+				<p class="jy_new_act_p"><i>&#xe667;</i>观影时间：{{datingDetail.datingStarttime}}</p>
+				<p class="jy_new_act_p"><i>&#xe677;</i>观影地点：{{datingDetail.datingLocation}}</p>
+			</template>
+			<template v-if="datingDetail.datingThemes==4">
+				<p class="jy_new_act_p"><i>&#xe667;</i>唱歌时间：{{datingDetail.datingStarttime}}</p>
+				<p class="jy_new_act_p"><i>&#xe677;</i>唱歌地点：{{datingDetail.datingLocation}}</p>
+			</template>
+			<template v-if="datingDetail.datingThemes==5">
+				<p class="jy_new_act_p" v-if="datingDetail.datingTitle"><i>&#xe667;</i>运动项目：一起 {{datingDetail.datingTitle}}</p>
+				<p class="jy_new_act_p"><i>&#xe667;</i>运动时间：{{datingDetail.datingStarttime}}</p>
+				<p class="jy_new_act_p"><i>&#xe677;</i>运动地点：{{datingDetail.datingLocation}}</p>
+			</template>
+			<template v-else>
+				<p class="jy_new_act_p" v-if="datingDetail.datingTitle"><i>&#xe6a4;</i>约会主题：一起 {{datingDetail.datingTitle}}</p>
+				<p class="jy_new_act_p"><i>&#xe667;</i>约会时间：{{datingDetail.datingStarttime}}</p>
+				<p class="jy_new_act_p"><i>&#xe677;</i>约会地点：{{datingDetail.datingLocation}}</p>
+			</template>
+			<p class="jy_new_act_p"><i>&#xea59;</i>对象：{{expectSex[datingDetail.expectSex>2?3:datingDetail.expectSex]}}　　　{{datingDetail.allowCompanion==0?'不允许带好友':'可协商携带好友'}}</p>
+			<p class="jy_new_act_p"><i class="icon_bi"></i>报名费用：{{datingDetail.enrollFee}}乾坤币</p>
+			<div class="jy_new_act_p">
+				<i class="icon_bib"></i>保证金：{{datingDetail.expDepositMoney}}元<em @click.stop="showCash=!showCash">&#xe676;</em>
+				<p class="jy_new_act_p_a" v-if="showCash">约会完成后，若无违规，则会退回<br>至付款账户<!--<a>[查看详情]</a>--></p>
+			</div>
+		</div>
+		<div class="jy_new_act_block">
+			<p class="jy_new_act_time">选择对象时间：{{datingDetail.activityStarttime}}</p>
+		</div>
+		<div class="jy_new_act_block">
+			<p class="jy_new_act_p"><i>&#xe636;</i>认证要求：　　<template v-if="!datingDetail.idStatus&&!datingDetail.videoStatus&&!datingDetail.carStatus&&!datingDetail.houseStatus">不限</template><template v-else><i class="jy_color_red" v-if="datingDetail.idStatus">&#xe69c;</i>　<i class="jy_color_red" v-if="datingDetail.videoStatus">&#xe697;</i>　<i class="jy_color_red jy_color_car_red" v-if="datingDetail.carStatus">&#xe699;</i>　<i class="jy_color_red" v-if="datingDetail.houseStatus">&#xe6a2;</i></template></p>
+			<p class="jy_new_act_p"><i>&#xe69d;</i>年龄：{{datingDetail.expAgeLowerLimit==-1?'不限':datingDetail.expAgeUpperLimit==-1?datingDetail.expAgeLowerLimit+'以上':datingDetail.expAgeLowerLimit+"-"+datingDetail.expAgeUpperLimit}}</p>
+			<p class="jy_new_act_p"><i>&#xe675;</i>身高：{{datingDetail.expHeightLowerLimit==-1?'不限':'不低于'+datingDetail.expHeightLowerLimit+'cm'}}</p>
+			<p class="jy_new_act_p"><i>&#xe666;</i>学历：{{datingDetail.expEdu==-1?'不限':expEdu['e'+datingDetail.expEdu]}}</p>
+		</div>
+		<div class="jy_new_act_block">
+			<p class="jy_new_act_p"><i>&#xe67e;</i>约会后续：<template v-for="item,index in (datingDetail.furtherAction).split(',')">{{index>0?'、':''}}{{item}}</template></p>
+		</div>
+		<div class="jy_new_act_block" v-if="datingDetail.enrollCount&&datingDetail.enrollCount>0">
+			<div class="jy_new_act_bmList_wrap" :class="{jy_new_act_bmList_blur:datingDetail.isCandidate!=1}">
+				<p class="jy_new_act_t"><router-link tag="i" :to="{name:'actJoinMember',query:{id:id}}">&#xe702;</router-link>已报名({{datingDetail.enrollCount}})</p>
+				<div class="jy_new_act_hidden">
+					<ul class="jy_new_act_bmList" v-if="baomingUser">
+						<li v-for="item,index in baomingUser" v-if="index<7"><i :style="'background-image:url('+$utils.getFullPath(item.jiaoyouUser.headimgAttachmentId)+');'"></i></li>
+						<router-link tag="li" :to="{name:'actJoinMember',query:{id:id}}" v-if="baomingUser.length>6" class="jy_new_act_bmList_more"><i></i></router-link>
+					</ul>
+				</div>
+			</div>
+		</div>
+	</div>
+	</myScroller>
+	<p class="identity_act" v-if="datingDetail">
+		<!--活动发布者进入-->
+      <template v-if="datingDetail.jiaoyouUser.id == $store.state.userId">
+        <em class="grey" v-if="datingDetail.state==5">活动已结束</em>
+		<router-link tag="em" :to="{name:'publishAppointment',query:{id:datingDetail.id}}" class="grey" v-else-if="datingDetail.state==2">编辑</router-link>
+        <em class="orange" @click="enter">进入现场</em>
+      </template>
+      <template v-else>
+        <template v-if="datingDetail.state==5">
+          <em class="grey" v-if="datingDetail.state==5">活动已结束</em>
+          <em class="orange" @click="enter" v-if="datingDetail.isCandidate==1||datingDetail.jiaoyouUser.id == $store.state.userId">进入现场</em>
+        </template>
+        <template v-else>
+			<template v-if="!$store.state.isLogin">
+            <em class="pink" @click="candidate">确定参加</em>
+            <em class="blue" @click="followActivity" >关注</em>
+          </template>
+          <template v-if="datingDetail.isCandidate==0">
+            <em  class="pink"@click="candidate">确定参加</em>
+            <em class="blue" @click="followActivity" v-if="datingDetail.isFollow==0">关注</em>
+            <em class="blue" @click="unfollowActivity" v-if="datingDetail.isFollow==1">取消关注</em>
+          </template>
+          <template v-else>
+            <em class="orange" @click="enter" v-if="datingDetail.isCandidate==1||datingDetail.jiaoyouUser.id == $store.state.userId">进入现场</em>
+            <em class="pink" @click="cancelCandidate" v-if="datingDetail.isCandidate==1">退出活动</em>
+          </template>
+        </template>
+      </template>
+	</p>
+	
+</div>
+</template>
+<script>
+import Vue from 'vue';
+import Loading from '@other/loading.vue';
+import Back from '@other/back.vue';
+import { Swiper, SwiperItem ,AlertPlugin} from 'vux'
+import myScroller from '@other/myScroller.vue';
+Vue.use(AlertPlugin);
+export default {
+	name: 'act',
+	props: ['actDatingId'],
+	data () {
+		return {
+			isloading:false,
+			id:null,
+			datingDetail:null,
+			currIndex:0,
+			coverimgAttachement:[],
+			payTypeText:["AA","你买单","我买单"],
+			tmp:["","xy","qy","jy","zy","py","xm"],
+			jiaoyouType: ["", "选缘", "抢缘", "竞缘", "中缘", "配缘", "寻觅对象"],
+			datingTitles: ['','旅行', '吃饭', '电影', '唱歌', '运动', '其他'],
+			datingIcon:['','&#xe66d;','&#xe66c;','&#xe669;','&#xe895;','&#xee41;','&#xe66f;'],
+			tripTimeLength: ['', '一两天', '三五天', '十天半月'],
+			tripMode: ['', '火车', '飞机', '动高铁', '游轮', '自驾', '大巴', '骑行'],
+			expectSex:['','女','男','不限'],
+			showCash:false,
+			expGift:null,//我要送
+			sendGift:null,//我要收
+			expEdu:{
+				"e9":"高中及以上",
+				"e10":"大专及以上",
+				"e11":"本科及以上",
+				"e12":"硕士及以上",
+				"e13":"博士及以上"	
+			},
+			baomingUser:null,
+			opacity: 0,
+			opacityTrans: 0,	
+			loadRefresh:true,//下拉刷新
+			loadInfinite:false, //上拉加载
+			showRule:false,
+			rule:{
+				"xy":"选缘：入场选缘开始后，发起人版主选择约会对象（可以通过聊天、送礼等来博取缘主的关注和好感哦），活动持续30分钟。",
+				"qy":"抢缘：入场抢缘开始后，会有3轮抢点的机会，每轮间隔2分钟，三轮累计抢点次数最高者胜出，为了女神，施展你的弹指神通吧！活动持续30分钟。",
+				"jy":"竞缘：入场竞缘开始后，通过竞价的方式来竞得本次的邀约，竞价开始后30秒内如果没有加价，则当前竞价者胜出，活动持续到竞价完成为止。",
+				"zy":"中缘：入场中缘开始后，通过聊天、送礼等会增加自己的活跃度，每消耗120活跃度可以进行一次抽奖，快来抽走你的女神吧！活动持续30分钟。",
+				"py":"配缘：入场配缘开始后，系统会有30分钟内匹配一位伙伴与缘主进行约会，通过聊天、送礼等会增加自己的匹配率哦！",
+			}
+		}
+	},
+	components: {
+		Loading,
+		Back,
+		Swiper,
+		SwiperItem,
+		myScroller,
+	},
+	watch:{	
+		opacityTrans(newv) {
+			//console.log(newv)
+			this.opacity = newv;
+		},
+		showRule(val){
+			const t=this;
+			if(val){
+				t.$vux.alert.hide();
+				t.$vux.alert.show({
+					title: '',
+					content: t.rule[t.tmp[t.datingDetail.activityMethod]]||"",
+					buttonText:"知道了",
+					onShow(){
+						t.showRule=false;
+					}
+				})
+			}
+		}
+	},
+	mounted () {
+		const t=this;
+		t.id = t.$route.query.id || t.actDatingId;
+		t.getSingle();
+		//$(document).bind("touchmove.act",t.scrollTop);
+	},
+	destroyed () {
+	//	$(document).unbind("touchmove.act");
+	},
+	methods:{
+		touchmove(left,top,zoom){
+			this.opacity = Math.ceil(top) / 100;
+		},
+		scrollTop(){
+			const t=this;
+			t.opacity = Math.ceil($(document).scrollTop()) / 100;
+		},
+		hiddenInfo(){
+			this.$emit('hiddenInfo');
+		},
+		enter() {
+			this.$router.push({
+				path: "/actSceneNew",
+				query: {
+					id: this.datingDetail.activityMethod,
+					datingId: this.id
+				}
+			})
+		},
+		async getBaomingUser(){
+			const t=this;
+			try{
+				const result =await t.$server.getDatingCandidateList({
+					datingId:t.id,
+					rows:7,
+					page:1,
+				});
+				console.log(result)
+				t.baomingUser=result.data.list||null;
+			}catch(e){
+				console.log(JSON.stringify(e));
+			}
+		},
+		async getSingle(){
+			const t=this;
+			try{
+				t.isloading=true;
+				let result = await t.$server.getSingle({datingDetailsId: t.id});
+				t.datingDetail=result.data.data;
+				if(result.data.data.giftDetail){
+					let giftDetail = JSON.parse(result.data.data.giftDetail);	
+					for (let i = giftDetail.length; i--;) {
+					  if(giftDetail[i].expGift==1){
+						  t.expGift = giftDetail[i];
+					  }
+					  if(giftDetail[i].sendGift==1){
+						t.sendGift = giftDetail[i];
+					  }
+					}
+				}
+				
+				if(result.data.data.enrollCount&&result.data.data.enrollCount>0){
+					t.getBaomingUser();
+				}
+				t.coverimgAttachement=result.data.data.showPic&&result.data.data.showPic.split(",").filter((v,i)=>{
+					return v!='';
+				});
+				t.isloading=false;
+			}catch(e){
+				t.isloading=false;
+				console.log(JSON.stringify(e));
+			}
+		},
+		onSwiperItemIndexChange(){
+			const t=this;
+		},
+		async cancelCandidate() {//取消参加活动
+			let _t = this
+			this.$vux.confirm.show({
+			  content: `确定退出活动吗?`,
+			  onCancel() {
+			  },
+			  async onConfirm() {
+				_t.$vux.loading.show()
+				await _t.$server.unCandidate({id: _t.id});
+				_t.datingDetail.isCandidate = 0;
+				_t.$vux.toast.show({
+				  type: 'text',
+				  text: '退出成功',
+				  position: 'middle',
+				  width: 'auto',
+				})
+				_t.$vux.loading.hide();
+			  }
+			})
+		  },
+		async followActivity() { //关注活动接口
+			this.$vux.loading.show()
+			await this.$server.followActivity(this.id);
+			this.$vux.loading.hide()
+			this.showHideOnBlur = true;
+			this.datingDetail.isFollow = 1;
+		  },
+		  async unfollowActivity() { //取消关注活动接口
+			this.$vux.loading.show()
+			await this.$server.unfollowActivity(this.id);
+			this.$vux.loading.hide()
+			this.showHideOnBlur = true;
+			this.datingDetail.isFollow = 0;
+		  },
+		async candidate() {
+			//参加活动接口
+			let _t = this
+			if (this.datingDetail.enrollFee != 0) {
+			  this.$vux.confirm.show({
+				content: `参加此活动会消耗${this.datingDetail.enrollFee}乾坤币，确定参加吗`,
+				onCancel() {
+				},
+				async onConfirm() {
+				  _t.$vux.loading.show()
+				  await _t.$server.candidate({id: _t.id})
+				  _t.$vux.loading.hide()
+				  _t.$router.push({
+					path: "/actSceneNew",
+					query: {
+					  id: _t.datingDetail.activityMethod,
+					  datingId: _t.id
+					}
+				  })
+				}
+			  })
+			} else {
+			  _t.$vux.loading.show()
+			  await _t.$server.candidate({id: _t.id})
+			  _t.$vux.loading.hide()
+			  _t.$router.push({
+				path: "/actSceneNew",
+				query: {
+				  id: _t.datingDetail.activityMethod,
+				  datingId: _t.id
+				}
+			  })
+			}
+		},
+		
+	}
+}
+</script>

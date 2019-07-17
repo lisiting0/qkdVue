@@ -1,0 +1,306 @@
+<template>
+  <div class="main">
+    <Loading v-if="isloading"></Loading>
+    <!--<div class="top">-->
+    <!--<router-link :to="{name:'friendlist'}" class="friendl"></router-link><a class="add"></a>好友-->
+    <!--</div>-->
+    <div class="header">
+      <div class="top">
+        <Back class="left"><i class="iconfont">&#xe613;</i></Back>
+        {{type==1?'系统消息':'互动消息'}}
+      </div>
+    </div>
+    <div style="position: relative">
+      <div class="wrapper" ref="wrapper" :style="{height:myScrollerHeight+'px'}">
+          <ul class="friend" v-if="type==1">
+            <div v-for="item in systemList" :key="item.ID">
+                  <li>
+                    <a class="i" @click="intoItem(item.TYPE)">
+                      <i v-if="item.TYPE==1" :style="'background-image:url('+(imgs.yonghu)+');'"></i>
+                      <i v-if="item.TYPE==2" :style="'background-image:url('+(imgs.huodong)+');'"></i>
+                      <i v-if="item.TYPE==3" :style="'background-image:url('+(imgs.zijin)+');'"></i>
+                      <div>
+                        <h3><em>{{datetimes(item.time)}}</em>{{item.NAME}}</h3>
+                        <p :style="{color:'#666'}"><em v-if="item.COUNT!=0">{{item.COUNT}}</em>{{item.TEXT}}</p>
+                      </div>
+                    </a>
+                  </li>
+                </div>
+          </ul>
+          <ul class="activeClass" v-else>
+            <div v-for="item in activeList" :key="item.ID">
+                <li @click="tolink(item.URL)">
+                  <div class="item">
+                    <div :style="'background-image:url('+$utils.getFullPath(item.ICON)+');'"></div>
+                    <div>
+                      <p>{{item.NAME}}<span><i v-if="item.SEX==1" class="iconfont">&#xe64a;</i><i v-else class="iconfont">&#xe605;</i><i>{{item.AGE}}</i></span></p>
+                      <p :style="{color:'#b7b7b7'}">{{item.TEXT}}</p>
+                      <p :style="{color:'#b7b7b7'}">{{datetimes(item.time)}}</p>
+                    </div>
+                    <div>
+                      <img v-if="item.MOMENT_IMG" :src="$utils.getFullPath(item.MOMENT_IMG)"/>
+                      <p v-else>{{item.MOMENT_TEXT.length>18?item.MOMENT_TEXT.substr(0,17)+'...':item.MOMENT_TEXT}}</p>
+                    </div>
+                  </div>
+                </li>
+              </div>
+          </ul>
+      </div>
+    </div>
+  </div>
+</template>
+<script>
+  import { Swipeout, SwipeoutItem, SwipeoutButton } from 'vux'
+  import zijin from '../../images/message/zijin.png';
+  import yonghu from '../../images/message/yonghu.png';
+  import huodong from '../../images/message/huodong.png';
+  import Loading from '@other/loading.vue';
+  import BScroll from 'better-scroll'
+  import Back from '@other/back.vue';
+
+  export default {
+    name: 'message',
+    data () {
+      return {
+        imgs:{zijin,yonghu,huodong},
+        scroll:null,
+        myScrollerHeight:0,
+        isloading:false,
+        loadRefresh:false,//下拉刷新
+        loadInfinite:false, //上拉加载
+        type:1,//1系统消息，2互动消息
+        systemList:[],
+        activeList:[],
+      }
+    },
+    computed:{
+      datetimes:function(){
+        return (datetime)=>{
+          return this.$utils.getMessageTimeFromNow(datetime,this.now);
+        }
+      },
+      getNewNotice:function(){
+        return this.$store.state.getNewNotice;
+      }
+    },
+    watch:{
+      getNewNotice(newV){
+        if(newV==true){
+          this.$store.commit('CHANGEGETNEWNOTICE',false)
+          this.getNewNoticeList();
+        }
+      }
+    },
+    mounted () {
+      this.$store.commit('CHANGEGETNEWNOTICE',false)
+      this.type = this.$route.query.type
+      this.myScrollerHeight = document.body.clientHeight-$(".header").height()-0.75*parseInt(document.documentElement.style.fontSize)-3;
+      this.getNewNoticeList();
+    },
+    destroyed () {
+      this.scroll && this.scroll.destroy()
+    },
+    components: {
+      Loading,
+      Swipeout,
+      SwipeoutItem,
+      SwipeoutButton,
+      Back,
+    },
+    methods: {
+      tolink(url){
+        if(url){
+          if(url.indexOf('?')!=-1){
+            let querystr = url.split("?")[1]
+            let query = {}
+            query[querystr.split("=")[0]] = querystr.split("=")[1];
+            this.$router.push({
+              path: "/"+url,
+              query:query
+            })
+          }else{
+            this.$router.push({
+              path: "/"+url,
+            })
+          }
+        }
+      },
+      deleteNotice(){
+
+      },
+      getNewNoticeList(){
+        if(this.type==1){
+          this.systemList = this.$db.getSystemMessage(this.$store.state.userId);
+          // console.log("systemList:"+JSON.stringify(this.systemList))
+          this.$db.resetCount('001',this.$store.state.userId);
+          this.$store.dispatch("getConversationList")
+        }else{
+          this.activeList = this.$db.getActiveMessage(this.$store.state.userId);
+          // console.log("activeList:"+JSON.stringify(this.activeList))
+          this.$db.resetCount('002',this.$store.state.userId);
+          this.$store.dispatch("getConversationList")
+        }
+      },
+      refresh(done) {//下拉刷新
+        console.log("刷新 ");
+        setTimeout(()=>{
+          console.log("刷新完成");
+          done();
+        },1000);
+      },
+      search(){
+        this.searchText;
+        if(!this.searchText){
+          this.rongConversationList = this.$store.state.rongConversationList;
+        }else{
+          let list = this.$store.state.rongConversationList;
+          this.rongConversationList = list.filter(item=>{
+            return item.bname.indexOf(this.searchText)!=-1
+          })
+        }
+      },
+      toFriendList(){
+        // this.$router.push({
+        //   path: "/myFocus",
+        //   query:{
+        //     active:'1'
+        //   }
+        // })
+        this.$router.push({
+          path: "/friendlist",
+        })
+      },
+      deleteItem(key){
+        this.$db.deleteCount(key,this.$store.state.userId)
+        this.$store.dispatch("getConversationList")
+      },
+      stickItem(key,stick){
+        this.$db.stickCount(key,this.$store.state.userId,stick);
+        this.$store.dispatch("getConversationList")
+      },
+      intoItem(type){
+        this.$router.push({
+          path: "/messageDetail",
+          query:{
+            type:type,
+          }
+        })
+      }
+    }
+  }
+</script>
+<style scoped lang="scss">
+  .main{
+    &:before{
+      background-color:#3a3845 ;
+    }
+    padding-bottom: 0;
+    .header{
+      .top{
+        background-color:#3a3845 ;
+        color:#FFF;
+        font-size: 0.52rem;
+        position: relative;
+        i{
+          font-size: 0.52rem;
+        }
+        a{
+          position:absolute;
+          padding:3px;
+        }
+        .left{
+          left:0.325rem;
+        }
+        .right{
+          right:0.325rem;
+        }
+      }
+    }
+    .myscrollerdiv{
+      overflow-y:auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+    }
+    .wrapper{
+      position: relative;
+      box-sizing: border-box;
+      overflow-y:auto;
+      overflow-x: hidden;
+      -webkit-overflow-scrolling: touch;
+    }
+    .friend{
+      li{
+        background-color: #FFF;
+      }
+      .i{
+        line-height: 1.5;
+      }
+      .grey{
+        background-color: #f6f6f6;
+      }
+    }
+    .activeClass{
+      li{
+        padding: 0 0.3rem;
+        background-color: #FFF;
+        border-bottom: 1px solid #f6f6f6;
+      }
+      .item{
+        display: flex;
+        align-items:flex-start;
+        padding: 0.25rem 0 0.15rem;
+        div:nth-of-type(1){
+          width: 1.4rem;
+          height: 1.4rem;
+          border-radius: 5px;
+          background-size: cover;
+          background-position: center;
+        }
+        div:nth-of-type(2){
+          margin-left: 0.4rem;
+          width: 5.5rem;
+          p{
+            font-size: 0.4rem;
+            margin-bottom: 0.15rem;
+          }
+          p:first-child{
+            font-size: 0.48rem;
+            display: flex;
+            align-items: center;
+            span{
+              margin-left: 0.1rem;
+              background-color: #ff84ac;
+              height: 0.32rem !important;
+              display: inline-flex;
+              align-items: center;
+              border-radius: 0.16rem;
+              color:#FFF;
+              padding: 2px 0.15rem 0;
+              i{
+                font-size: 0.28rem !important;
+              }
+              i.iconfont{
+                font-size: 0.24rem !important;
+              }
+            }
+          }
+
+        }
+        div:nth-of-type(3){
+          margin-left: 1rem;
+          width: 1.8rem;
+          height: 1.8rem;
+          font-size: 0.35rem;
+          img{
+            width: 100%;
+            height: 100%;
+            border-radius: 5px;
+          }
+        }
+      }
+    }
+  }
+  button{
+    outline: 0;
+  }
+</style>

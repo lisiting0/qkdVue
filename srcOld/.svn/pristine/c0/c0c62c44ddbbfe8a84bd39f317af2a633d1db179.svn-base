@@ -1,0 +1,538 @@
+<template>
+  <div style="height: 100%;">
+
+    <div class="login">
+      <Loading v-if="isloading"></Loading>
+      <div style="padding: 0.2rem 0;color: #ff788c;" @click="back"><i class="iconfont">&#xe613;</i></div>
+      <p class="join_text" v-if="qkId && qkName">您的好友{{qkName}}邀请你加入乾坤岛</p>
+      <img class="login_logo" :class="{cur:qkId && qkName}" :src="imgs.login_logo"/>
+      <p class="logo_name">乾坤岛</p>
+
+      <div class="div_input">
+        <input class="userName" v-model="loginName" type="text" placeholder="请输入您的手机号">
+      </div>
+      <div v-if="loginType=='code'" class="div_input">
+        <input class="verification" v-model="verificationCode" type="text" placeholder="请输入验证码">
+        <span @click="getVerificationCode" :style="colorRed">{{verificationCodeContent}}</span>
+      </div>
+      <div v-else class="div_input">
+        <input class="passWord" v-model="password" type="password" placeholder="密码" v-if="!showPassword" style="width: 90%;">
+        <input class="passWord" v-model="password" type="text" placeholder="密码" v-else style="width: 90%;">
+        <label @click="switchPwdState"><i class="switching-icon" :class="{on: !showPassword}"></i></label>
+      </div>
+      <div style="position: relative;margin-top: 0.5rem">
+        <a v-if="loginType=='code'" class="reg" href="javascript:;" @click="loginType='password';verificationCode=''">{{$store.state.otherLogin.isBind?'密码登录':'密码登录'}}</a>
+        <a v-else class="reg" href="javascript:;" @click="loginType='code';password=''">{{$store.state.otherLogin.isBind?'验证码登录':'验证码登录'}}</a>
+      </div>
+      <div @click="login" class="btn_login" :class="{'btn_logined':showOpacity}">
+        {{$store.state.otherLogin.isBind?'登录':loginType=='code'? qkId && qkName?'加入乾坤岛':'快速登录':qkId && qkName?'加入乾坤岛':'登录'}}
+      </div>
+      <div style="position: relative;">
+        <a class="forgot" href="javascript:;" @click="toForgetPassword">忘记密码</a>
+        <router-link :to="{name:'login',query:$route.query}" v-if="$store.state.isWeixin" class="reg">注册</router-link>
+        <a v-else class="reg" href="javascript:;" @click="toRegistered">注册</a>
+        <!--<a class="language_a" href="javascript:;" @click="toShow">{{menus[language]}}<i class="iconfont userName_i">&#xe600;</i></a>-->
+      </div>
+      <div class="other_login" v-if="!$store.state.otherLogin.isBind">
+        <i v-if="!$store.state.otherLogin.isBind&&!$store.state.isWeixin&&!$store.state.isiOSApp">快捷登录</i>
+        <otherLogin v-if="!$store.state.otherLogin.isBind&&!$store.state.isWeixin" @changeLoading="changeLoading"></otherLogin>
+        <p>登录代表您同意<span @click="showAgreement=true">&lt;&lt;乾坤岛用户协议&gt;&gt;</span></p>
+      </div>
+      <div v-else class="other_login registered_bottom">
+        <p>绑定代表您同意<span @click="showAgreement=true">&lt;&lt;乾坤岛用户协议&gt;&gt;</span></p>
+      </div>
+      <!--<actionsheet v-model="show" :menus="menus" @on-click-menu="selectLanguage"></actionsheet>-->
+    </div>
+    <transition enter-active-class="slideInUp" leave-active-class="slideOutUp">
+      <agreement v-if="showAgreement" @goback="goback"></agreement>
+    </transition>
+  </div>
+</template>
+<script>
+  import md5 from 'js-md5';
+  import login_logo from '../../images/registered/logo.png';
+  import otherLogin from './otherLogin.vue';
+  import agreement from './agreement.vue';
+  import Loading from '@other/loading.vue';
+  import {TransferDom, Actionsheet, PopupPicker} from 'vux'
+
+  export default {
+    name: 'loginApp',
+    components: {
+      Actionsheet,
+      PopupPicker,
+      Loading,
+      otherLogin,
+      agreement
+    },
+    directives: {
+      TransferDom
+    },
+    data() {
+      return {
+        loginType: 'code',
+        showAgreement: false,
+        isloading: false,
+        imgs: {login_logo: login_logo},
+        language: "cn",
+        show: false,
+        menus: {
+          cn: "简体中文",
+          en: "English"
+        },
+        verificationCodeContent: "发送",
+        verificationCodeUse: true,
+        verificationCodeTime: 60,
+        colorRed: {'color': '#ff788c', 'border-color': '#ff788c'},
+        loginName: '',
+        password: '',
+        showPassword: false,
+        verificationCode: '',
+        qkId: '',
+        qkName: '',
+      }
+    },
+    computed: {
+      canloading() {
+        return this.$store.state.otherLogin.isBind;
+      },
+      showOpacity() {
+        return !!(this.loginName && (this.password || this.verificationCode));
+      },
+      handleRoute() {
+        return this.$store.state.handleRoute;
+      },
+    },
+    watch: {
+      handleRoute(newV) {
+        if (!newV) {
+          this.showAgreement = false;
+        }
+      },
+      showAgreement() {
+        let status = this.showAgreement
+        this.$store.commit("CHANGEHANDLEROUTE", status)
+      },
+      canloading(val) {
+        if (val) {
+          this.isloading = false;
+        }
+      },
+      verificationCode(curVal) {
+        if (curVal && typeof curVal == 'string') {
+          this.verificationCode = curVal.match(/^\d{0,6}/)[0];
+        }
+      }
+    },
+    mounted() {
+      if(this.$store.state.qrcode){
+        this.qkId = this.$store.state.qrcode.pid;
+        this.qkName = this.$store.state.qrcode.name;
+      }
+    },
+    methods: {
+      back() {
+        if (window.history.length <= 1) {
+         // alert("没有返回");
+          this.$router.push({name: 'home'})
+        } else {
+          this.$router.go(-1);
+        }
+      },
+      switchPwdState() {
+        this.showPassword = !this.showPassword;
+      },
+      bindEvent() {
+        const t = this;
+        //t.isloading=true;(暂不用)
+        window.api && window.api.addEventListener({
+          name: 'closeShopWin'
+        }, function (ret, err) {
+          t.deBindEvent();
+          if (ret.value.to) {
+            t.$router.push({name: ret.value.to});
+            if (ret.value.to == "login") {
+              t.$store.commit("CHANGESTORE", {name: "redirectShop", value: ret.value.redirectUrl || true});
+            } else {
+              t.$store.commit("CHANGESTORE", {name: "redirectShop", value: false});
+            }
+          }
+          t.$store.commit("CHANGESTORE", {name: "shopParam", value: ret.value});
+          window.api && window.api.openWin({
+            name: 'root',
+            animation: {
+              type: 'push',
+              subType: 'from_left',
+            },
+            slidBackEnabled: false,
+          });
+          t.isloading = false;
+        });
+      },
+      deBindEvent() {
+        window.api && window.api.removeEventListener({
+          name: 'closeShopWin'
+        });
+      },
+      goToShop(openUrl) {
+        const t = this;
+        if (!window.api) {
+          window.location.href = t.$store.state.baseShopMobileURL + '?' + new Date().getTime();
+          return false;
+          t.$vux.toast.show({
+            type: "cancel",
+            text: "请在app端打开商城",
+            position: "middle",
+            width: "2rem",
+          })
+          return false;
+        }
+        t.bindEvent();
+        let url = {};
+        //console.log("openUrl:"+openUrl+"Bearer " + t.$store.state.Authorization);
+        if (openUrl) {
+          url = {
+            url: openUrl + (openUrl.indexOf("?") != -1 ? "&" + new Date().getTime() : "?" + new Date().getTime())
+          }
+        }
+        window.api.openWin({
+          name: 'mobileShop',
+          url: t.$store.state.phpURL + '/jiaoyouDist/mobileShop.html?' + new Date().getTime(),//'mobileShop.html',
+          //...url,
+          animation: {
+            type: 'push',
+            subType: 'from_right',
+          },
+          slidBackEnabled: false,
+          pageParam: {
+            userId: t.giftUserId,
+            userName: t.giftUserName,
+            ...url,
+            Authorization: "Bearer " + t.$store.state.Authorization,
+          }
+        });
+      },
+      getVerificationCode: function () {
+        if (!this.verificationCodeUse) {
+          return false;
+        }
+        if (!this.$utils.isPhoneNum(this.loginName)) {
+          this.$vux.toast.show({
+            type: "text",
+            text: "请输入正确的手机号",
+            position: "middle",
+            width: "auto",
+          });
+          return false;
+        }
+        this.verificationCodeUse = false
+        this.$vux.loading.show()
+        this.$server.get_code({phoneNumber: this.loginName}).then((result) => {
+          this.$vux.loading.hide()
+          let interval = setInterval(() => {
+            this.verificationCodeTime--;
+            if (this.verificationCodeTime == -1) {
+              clearInterval(interval);
+              this.verificationCodeUse = true
+              this.verificationCodeTime = 60
+              this.colorRed = {'color': '#ff788c', 'border-color': '#ff788c'}
+              this.verificationCodeContent = "发送"
+            } else {
+              this.colorRed = {}
+              this.verificationCodeContent = this.verificationCodeTime + "(s)"
+            }
+          }, 1000)
+          // this.colorRed={'color':'red'}
+          this.colorRed = {}
+          this.verificationCodeContent = this.verificationCodeTime + "(s)"
+        }, (err) => {
+          this.verificationCodeUse = true;
+        })
+        return;
+      },
+      goback() {
+        this.showAgreement = false;
+      },
+      changeLoading(val) {
+        console.log("登录:" + val)
+        this.isloading = val;
+      },
+      selectLanguage: function (key) {
+        console.log(key)
+        this.language = key;
+      },
+      toShow: function () {
+        this.show = !this.show;
+      },
+      toForgetPassword: function () {
+        this.$router.push({
+          path: "/forgetPassword"
+        })
+      },
+      toRegistered: function () {
+        this.$router.push({
+          path: "/registered"
+        })
+      },
+      async login() {
+        const t = this;
+        if (this.loginName == '') {
+          this.$vux.toast.show({
+            type: "text",
+            text: "请填写手机号",
+            position: "middle",
+            width: "auto",
+          });
+          return;
+        }
+        if (this.password == "" && this.loginType == 'password') {
+          this.$vux.toast.show({
+            type: "text",
+            text: "请填写密码",
+            position: "middle",
+            width: "auto",
+          });
+          return;
+        }
+        if (this.verificationCode == "" && this.loginType == 'code') {
+          this.$vux.toast.show({
+            type: "text",
+            text: "请填写验证码",
+            position: "middle",
+            width: "auto",
+          });
+          return;
+        }
+        let location = {};
+        this.$vux.loading.show()
+        try {
+          location = await this.$store.dispatch("getMylocation");
+        } catch (e) {
+          this.$vux.loading.hide()
+          this.$vux.toast.show({
+            type: "text",
+            text: "获取定位失败",
+            position: "middle",
+            width: "auto",
+          });
+          return;
+        }
+        let data = {
+          loginName: this.loginName,
+          password: this.password ? md5(this.password) : null,
+          // source:window.api.systemType=='ios'?4:3,
+          source: 4,
+          longitude: location.lon,
+          latitude: location.lat,
+          unionkey: t.$store.state.otherLogin && t.$store.state.otherLogin.unionkey,
+          code: this.verificationCode,
+          pid: this.qkId,//推荐人
+        }
+        window.$api.setStorage('loginData', data);
+
+        let result = await this.$server.loginAndRegister(data);
+        this.$store.commit("CHANGEACCESSTOKEN", result.data.data);
+        if (t.$store.state.otherLogin.isBind) {
+          try {
+            let bind;
+            if (t.$store.state.otherLogin.type == 'wx') {
+              bind = await t.$server.bindwx({
+                accessToken: t.$store.state.otherLogin.accessToken,
+                openId: t.$store.state.otherLogin.openId,
+              });
+            } else if (t.$store.state.otherLogin.type == 'qq') {
+              bind = await t.$server.bindqq({
+                accessToken: t.$store.state.otherLogin.accessToken,
+              });
+            } else if (t.$store.state.otherLogin.type == 'wxmp') {
+              bind = await t.$server.WxMpbind({
+                unionid: t.$store.state.otherLogin.unionid,
+                openid: t.$store.state.otherLogin.openid,
+              });
+            }
+            /*t.$vux.toast.show({
+              type:"text",
+              text: "绑定账号成功",
+              position:"bottom",
+              width:"2rem",
+            });*/
+
+          } catch (e) {
+            console.log(JSON.stringify(e));
+            // t.$vux.toast.show({
+            // 	type:"text",
+            // 	text: "绑定账号失败",
+            // 	position:"bottom",
+            // 	width:"2rem",
+            // });
+          }
+        }
+        // let result1= await this.$server.login(data);
+        let userInfo = await this.$server.getUserInfo({userId: result.data.data.userId});
+        this.$vux.loading.hide()
+        this.$store.commit("LOGIN", userInfo.data.data);
+        if (this.$store.state.redirectShop) {
+          this.goToShop(this.$store.state.redirectShop);
+        }
+        setTimeout(() => {
+          if (t.$store.state.otherLogin.isBind) {
+            if (t.$store.state.gotoBlindDatepay) {
+              if (t.$store.state.gotoBlindDatepay == 'baoming') {
+                t.$router.replace({
+                  name: "blindDatePay",
+                  query: {id: t.$store.state.otherLogin.params.query.id}
+                });
+              } else if (t.$store.state.gotoBlindDatepay == 'guanzhu') {
+                t.$router.replace({
+                  name: "activityDetailStatic",
+                  query: {id: t.$store.state.otherLogin.params.query.id}
+                });
+              }
+              t.$store.commit("CHANGESTORE", {name: "gotoBlindDatepay", value: false});//
+            } else if (t.$route.query.redirectUrl || (t.$store.state.otherLogin.params.query && t.$store.state.otherLogin.params.query.redirectUrl)) {
+              let params = t.Fn.toWxUrl("#/?state=" + (t.$route.query.redirectUrl || (t.$store.state.otherLogin.params.query && t.$store.state.otherLogin.params.query.redirectUrl)), ":");
+              //alert(JSON.stringify(params));
+              let url = params.name + ".php";
+              if (params.query) {
+                Object.keys(params.query).forEach(attr => {
+                  if (url.indexOf("?") != -1) {
+                    url += '&' + attr + "=" + params.query[attr];
+                  } else {
+                    url += '?' + attr + "=" + params.query[attr];
+                  }
+                });
+              }
+              window.location.href = t.$store.state.phpURL + "/mobile/" + url;
+            } else if (t.$store.state.otherLogin.type == 'wxmp' && t.$store.state.otherLogin.params.name) {
+              if (t.$store.state.otherLogin.params.name == 'login') {
+                t.$router.replace({
+                  path: '/home'
+                })
+              } else {
+                t.$router.replace({
+                  name: t.$store.state.otherLogin.params.name,
+                  query: t.$store.state.otherLogin.params.query
+                });
+              }
+
+            } else if (t.$store.state.redirect) {
+              t.$router.replace(t.$store.state.redirect);
+            } else {
+              t.$router.replace({
+                path: '/home'
+              })
+            }
+            //t.$store.commit("CHANGEOTHERLOGIN",{});//清空第三方临时登录信息
+          } else if (this.$store.state.redirect) {
+            this.$router.replace(t.$store.state.redirect);
+          } else {
+            this.$router.replace({
+              path: '/home'
+            })
+          }
+        }, 10)
+      }
+    },
+    destroyed() {
+    }
+  }
+</script>
+<style scoped lang="scss">
+  @keyframes slideInUp {
+    from {
+      transform: translate3d(0, 100%, 0);
+    }
+    to {
+      transform: translate3d(0, 0, 0);
+    }
+  }
+
+  @keyframes slideOutUp {
+    from {
+      transform: translate3d(0, 0, 0);
+    }
+    to {
+      transform: translate3d(0, 100%, 0);
+    }
+  }
+
+  .slideInUp {
+    animation-name: slideInUp;
+  }
+
+  .slideOutUp {
+    animation-name: slideOutUp;
+  }
+
+  .slideOutUp, .slideInUp {
+    animation-duration: 0.3s;
+  }
+
+  .logo_name {
+    color: #ff788c;
+    text-align: center;
+    font-size: 0.44rem;
+    font-weight: 400;
+    margin-bottom: 0.4rem;
+  }
+
+  .div_input {
+    position: relative;
+    input::-webkit-input-placeholder {
+      color: #c6cad1;
+    }
+    input::-moz-placeholder { /* Mozilla Firefox 19+ */
+      color: #c6cad1;
+    }
+    input:-moz-placeholder { /* Mozilla Firefox 4 to 18 */
+      color: #c6cad1;
+    }
+    input:-ms-input-placeholder { /* Internet Explorer 10-11 */
+      color: #c6cad1;
+    }
+    span {
+      position: absolute;
+      width: 1.58rem;
+      height: 0.8rem;
+      line-height: 0.8rem;
+      text-align: center;
+      top: 0.44rem;
+      right: 0.16rem;
+      color: #aaa8aa;
+      border: 1px solid;
+      border-color: #aaa8aa;
+      border-radius: 0.4rem;
+    }
+    label{
+      position: absolute;
+      width: 0.46rem;
+      height: 0.32rem;
+      top: 0.68rem;
+      right: 0.16rem;
+      i.switching-icon {
+        display: inline-block;
+        width: 0.46rem;
+        height: 0.32rem;
+        background: url("../../images/login_showepwd_icon.png") no-repeat center center/0.35rem;
+        &.on {
+          background: url("../../images/login_hidepwd_icon.png") no-repeat center center/0.35rem;
+        }
+      }
+    }
+  }
+
+  .language_a {
+    position: absolute;
+    right: 0;
+    padding: 0 10px;
+    border: 1px #1dc1a5 solid;
+    border-radius: 5px;
+    color: #1dc1a5;
+    line-height: 150%;
+    i {
+      float: right;
+    }
+    display: inline-block;
+    width: 2.4rem;
+  }
+</style>

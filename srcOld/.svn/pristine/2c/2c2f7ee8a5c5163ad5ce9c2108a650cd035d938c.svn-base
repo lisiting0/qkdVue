@@ -1,0 +1,343 @@
+<template>
+  <div class="main jy_all_top my_blind_date jy_state_top">
+    <Loading v-if="isloading"></Loading>
+    <div class="header">
+      <div class="top">
+        <Back class="left"><i class="iconfont">&#xe613;</i></Back><p>我的相亲 </p>
+      </div>
+    </div>
+    <!--<div class="jy_block_t">-->
+      <!--<ul class="jy_aInfo_line jy_xq">-->
+        <!--<router-link tag="li" :to="{name:'myBlindDate'}"><em class="blue"></em>相亲结果</router-link>-->
+        <!--<router-link tag="li" :to="{name:'myBlindDate'}"><em class="pink"></em>我的奖品</router-link>-->
+      <!--</ul>-->
+    <!--</div>-->
+    <div class="title">
+      <div class="underline" ref="underline" :style="{left:underlineLeft}"></div>
+      <div @click="getList(1,true)" :class="{active:active==1}">{{$store.state.userInfo.identity==1?'全部':'已报名'}}</div>
+      <div @click="getList(2,true)" :class="{active:active==2}">已关注</div>
+    </div>
+    <myScroller :style="$store.state.isBrowser?'padding:3.3rem 0 0;':'padding:4rem 0 0;'" :infinite="infinite" :refresh="refresh" :loadRefresh="loadRefresh" :loadInfinite="loadInfinite" ref="myScroller">
+      <template v-if="listArr">
+        <div class="activity_list" v-for="item,index in listArr">
+          <router-link tag="div" :to="{name:'activityDetail',query:{id:item.id}}" class="activity_img">
+            <i class="jy_bl_img" :style="'background-image:url('+getFullPath(item.coverimgImages)+')'"></i>
+            <div class="jzsj_block" v-if="item.state==3&&item.isCandidate==0">
+              <p v-if="item.state==3&&item.isStartEnroll==0&&item.isStopEnroll==0">报名开始时间<br/>{{item.datingDetailsExt.extDatetime.substring(0,10)}}</p>
+              <p v-if="item.state==3&&item.isStartEnroll==1&&item.isStopEnroll==0">报名截止时间<br/>{{item.datingDetailsExt.extDatetime2.substring(0,10)}}</p>
+              <p style="line-height: 0.8rem" v-if="item.state==3&&item.isCandidate==0&&item.isStopEnroll==1">报名已截止</p>
+            </div>
+          </router-link>
+          <div :class="'activity_info '+((item.state==3&&item.isCandidate==0)?'active':((item.state==3&&item.isCandidate==1)||item.state==6)?'live':'end')">
+            <div class="activity_title"><span v-if="item.datingDetailsExt">[{{lineType[item.datingDetailsExt.extInt]}}·{{specialType[item.datingDetailsExt.extInt5]}}专场]</span><span>{{item.datingDesc}}</span> </div>
+            <div class="activity_desc">
+              <p><i class="iconfont">&#xe62c;</i>{{item.datingLocation}}</p>
+              <p>
+                <i class="iconfont">&#xe642;</i>
+                <span :class="((item.state==3&&item.isCandidate==0)?'active':((item.state==3&&item.isCandidate==1)||item.state==6)?'live':'end')">{{item.followCount?parseInt(item.followCount)+(item.id=='44a8772d3a33475dbf0f9cc67447cde9'?188:(item.id=='333a3f3f6b944b5ca271e72ebd7efdf5'||item.id=='0fe7d9dbc1414c58850e97ccd9d806db'||item.id=='604a7e0fbc12413faf5e98633df0c1a5'||item.id=='b00420d0ed98404994dcd3a94e20299a'||item.id=='15f5b21d72a0476cbae97cdd71273ccd'||item.id=='67cc0fbc61064013a05159a7a13cc5e3'||item.id=='7dcf7c14ec24431298a3d92b266b5f9f'||item.id=='0900644ac0c14f68b436be3a893ecd58'||item.id=='f91e448d364811e9a06f00163e046f71'||item.id=='17ebf78b33f04b9aa9a7252c78e9c640'||item.id=='6fe90619b51541aa8f0c39f853c470df'||item.id=='cfed937dc2cb4ca6aae39fe5680f25cc'||item.id=='c5c380ea93cb4d4b88409fb84b80cc52'||item.id=='562ad9a99da94d3387a24b5d5ecd0331')?180:0):0}}
+				</span>人关注
+                <i class="iconfont" style="margin-left: 1rem">&#xe612;</i>
+                <span :class="((item.state==3&&item.isCandidate==0)?'active':((item.state==3&&item.isCandidate==1)||item.state==6)?'live':'end')">{{item.enrollCount}}</span>人报名
+              </p>
+              <p><i class="yhsj_icon"></i>{{item.activityStarttime}}</p>
+              <router-link v-if="getClassStatus(item).type==2" tag="div" :to="{name:'publishBlindDate',query:{id:item.id}}" class="activity_act_1 activity_act"><i class="edit"><span>编辑</span></i></router-link>
+              <router-link v-if="getClassStatus(item).type==1" tag="div" :to="{name:'publishBlindDate',query:{id:item.id}}" class="activity_act"><i class="edit"><span>编辑</span></i></router-link>
+              <router-link v-else-if="getClassStatus(item).type==2||getClassStatus(item).type==3" tag="div" :to="{name:'blindDateNew',query:{id:item.id}}" class="activity_act"><i class="jrxc"><span>进入现场</span></i></router-link>
+              <router-link v-else-if="getClassStatus(item).type==6" tag="div" :to="{name:'activityDetail',query:{id:item.id}}" class="activity_act">
+                <i class="ljbm"><span v-if="item.enrollFee>0" style="line-height: 0.4rem;text-align: center;">立即报名<br/>{{item.enrollFee}}元</span><span v-else>立即报名</span></i>
+              </router-link>
+              <div class="activity_act" v-else-if="getClassStatus(item).type==4"><i class="yjs"><span>活动结束</span></i></div>
+              <div class="activity_act" v-else-if="getClassStatus(item).type==7"><i class="yjs"><span>即将开始</span></i></div>
+              <div class="activity_act" v-else-if="getClassStatus(item).type==5"><i class="yjs"><span>报名结束</span></i></div>
+            </div>
+          </div>
+        </div>
+      </template>
+    </myScroller>
+  </div>
+</template>
+<script>
+  import Loading from '@other/loading.vue';
+  import Back from '@other/back.vue';
+  import myScroller from '@other/myScroller.vue';
+  export default {
+    name: 'myBlindDate',
+    data () {
+      return {
+        isloading:false,
+        active: 1,
+        underline: 0,
+        listArr: null,
+        lineType: {"1": "线上", "2": "线下"},
+        //分页参数
+        pageNo: 1,
+        isRead: false,
+        isEnd: false,
+        loadRefresh: true,//下拉刷新
+        loadInfinite: true, //上拉加载
+        isRefresh: false,
+      }
+    },
+    components: {
+      Loading,
+      Back,
+      myScroller,
+    },
+    computed: {
+      underlineLeft:function(){
+        if(this.active==1){
+          return document.body.clientWidth*0.5/4 +'px'
+        }else{
+          return document.body.clientWidth*0.63 +'px'
+        }
+      },
+    },
+    destroyed () {
+      $("body").removeClass("gray");
+    },
+    watch:{
+      isEnd(val) {
+        const t = this;
+        if (val) {
+          t.$refs.myScroller.finishInfinite(true);
+        } else {
+          t.$refs.myScroller.finishInfinite(false);
+        }
+      }
+    },
+    mounted () {
+      const t=this;
+      $("body").addClass("gray");
+    },
+    methods :{
+		getIsAdmin(item){
+			const t=this;
+			if(item.adminList&&item.adminList.length>0){
+				let isAdmin=item.adminList.filter((val)=>{
+					return val.userId==t.$store.state.userInfo.id;
+				});
+				if(isAdmin.length>0){
+					return true;
+				}
+			}
+			return false;
+		},
+      getClassStatus(item){
+        let result={
+          text:'',
+          type:null,//1表示主持人编辑2表示主持人进入现场3表示用户进入现场4表示用户活动结束5表示未报名的报名已结束6表示未报名的立即报名7报名未开始
+        }
+        if(this.$store.state.userInfo.identity==1||this.getIsAdmin(item)){//主持人
+          if(item.state==2&&this.$store.state.userInfo.identity==1){
+            result.text='编辑'
+            result.type=1
+          }else{
+            result.text='进入现场'
+            result.type=2
+          }
+        }else{//用户
+          if(item.isCandidate==1){//已报名
+            if(item.state==5){
+              result.text='活动结束'
+              result.type=4
+            }else{
+              result.text='进入现场'
+              result.type=3
+            }
+          }else{//未报名
+            if(item.isStartEnroll==0){//未开始报名
+              result.text='即将开始'
+              result.type=7
+            }else{//开始报名
+              if(item.isStopEnroll==1){
+                result.text='报名结束'
+                result.type=5
+              }else{
+                result.text='立即报名'
+                result.type=6
+              }
+            }
+          }
+        }
+        return result;
+      },
+      getFullPath (path) {
+        return this.$utils.getFullPath(path)
+      },
+      async getSpecialType() {
+        const t = this;
+        try {
+          const apiDict = await this.$server.apiDict({type: "blind_dating_special_type"});
+          let item = apiDict.data.data;
+          for (let i = item.length; i--;) {
+            if (!t.specialType) {
+              t.specialType = {};
+            }
+            t.specialType[item[i].value] = item[i].label;
+          }
+        } catch (e) {
+          console.log(JSON.stringify(e));
+        }
+      },
+      async getList(active,flag) {
+        const t = this;
+        if (t.isRead) {
+          return false;
+        }
+        t.isRead = true;
+        if (!t.specialType) {
+          await t.getSpecialType(); //先获取专场类型
+        }
+        if (t.isRefresh || flag || t.active != active) {
+          t.pageNo = 1;
+          if (flag) {
+            t.$refs.myScroller.scrollTo(1);
+            t.isloading = true;
+          }
+        }
+        try {
+          let isRefresh = {};
+          if (t.isRefresh) {
+            isRefresh = {isRefresh: true};
+          }
+          if (!t.listArr || t.isRefresh || flag || t.active != active) {
+            t.listArr = [];
+            t.active = active;
+          }
+          let result = null;
+          if(t.active == 1){
+            result = await t.$server.blindDatingList({
+              ...isRefresh,
+              isCandidate: t.$store.state.userInfo.identity==1?'':1,
+              page: t.pageNo,
+              rows: t.$store.state.pageSize
+            });
+          }else{
+            result = await t.$server.blindDatingList({
+              ...isRefresh,
+              isFollow:1,
+              page: t.pageNo,
+              rows: t.$store.state.pageSize
+            });
+          }
+          if (result.data.list) {
+            t.listArr.push(...result.data.list);
+          }
+          if (result.data.count <= t.$store.state.pageSize * t.pageNo || result.data.list.length < t.$store.state.pageSize) {//判断是否最后一页
+            t.noDataText = '已加载全部数据';
+            t.isEnd = true;
+          } else {
+            t.isEnd = false;
+          }
+        } catch (e) {
+          t.noDataText = "加载异常,请重试";
+          t.isEnd = true;
+          t.isRefresh = false;
+          console.log(e)
+        }
+        t.pageNo++;
+        t.isRead = false;
+        t.isloading = false;
+        t.isRefresh = false;
+      },
+      async infinite(done) {//上拉加载(防止初始内容不满一屏会无限加载)
+        const t = this;
+        if (t.isEnd) {
+          done(true);
+          return false;
+        }
+        //if(t.isRead){
+        //	return false;
+        //}
+        console.log("加载");
+        t.getList(t.active).then(() => {
+          if (t.isEnd) {
+            done(true);
+          } else {
+            done();
+          }
+        });
+      },
+      refresh(done) {//下拉刷新
+        const t = this;
+        console.log("刷新");
+        t.isRefresh = true;
+        t.getList(t.active).then((res) => {
+          done();
+        });
+      },
+    }
+  }
+</script>
+<style scoped lang="scss">
+  .title{
+    width: 100%;
+    font-size: 0;
+    height: 1.32rem;
+    line-height: 1.32rem;
+    background-color: #f2f2f2;
+    z-index: 11;
+    position: fixed;
+    .underline{
+      position: absolute;
+      width: 25%;
+      top: 0.38rem;
+      height: auto;
+      z-index: 1000;
+      background-color: rgba(0, 0, 0, 0);
+      -webkit-transition: 0.2s all linear;
+      transition: 0.2s all linear;
+      &:before{
+        content: "";
+        margin-top: -6px;
+        width: 25%;
+        height: auto;
+        display: inline-block;
+        border-bottom: 2px solid #ff4300;
+      }
+    }
+    div{
+      position: relative;
+      font-size: 0.44rem;
+      display: inline-block;
+      color: #9a9a9d;
+      box-sizing: border-box;
+      width: 50%;
+      text-align: center;
+      background-color: #fff;
+      overflow: hidden;
+      /*position: relative;*/
+      /*font-size: 0.44rem;*/
+      /*display: inline-block;*/
+      /*color:#9a9a9d;*/
+      /*box-sizing: border-box;*/
+      /*width: 50%;*/
+      /*text-align: center;*/
+      /*background-color: #fff;*/
+      /*overflow: hidden;*/
+      /*&::before {*/
+      /*content: "";*/
+      /*position: absolute;*/
+      /*bottom: 6px;*/
+      /*left: 100%;*/
+      /*width: 15%;*/
+      /*height: 0;*/
+      /*border-bottom: 2px solid #ff4300;*/
+      /*transition: 0.2s all linear;*/
+      /*}*/
+    }
+    div.active{
+      /*&::before {*/
+      /*left: 42.5%;*/
+      /*transition-delay: 0.1s;*/
+      /*}*/
+      color:#000;
+    }
+    /*div.active ~ div{
+      &::before {
+        left: -18%;
+      }
+    }*/
+  }
+</style>
+

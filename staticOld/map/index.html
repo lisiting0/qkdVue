@@ -1,0 +1,441 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport"
+        content="maximum-scale=1.0, minimum-scale=1.0, user-scalable=0, initial-scale=1.0, width=device-width"/>
+  <meta name="format-detection" content="telephone=no, email=no, date=no, address=no">
+  <title></title>
+  <link rel="stylesheet" type="text/css" href="../html/api.css"/>
+  <style type="text/css">
+    #header {
+      width: 100%;
+      padding-top: 20px;
+      background-color: #f2f2f2;
+      display: block;
+    }
+
+    #header #title {
+      color: #000;
+      font-size: 16px;
+    }
+
+    .back {
+      width: 80px;
+      font-size: 16px;
+      padding-left: 5px;
+      color: #000;
+      display: -webkit-box;
+      -webkit-box-pack: center;
+      -webkit-box-align: center;
+    }
+
+    .adpt {
+      width: 64px;
+      height: 28px;
+      margin: 8px 8px;
+      font-size: 16px;
+      padding-left: 5px;
+      color: #fff;
+      background-color: #44c55e;
+      display: -webkit-box;
+      -webkit-box-pack: center;
+      -webkit-box-align: center;
+      border-radius: 3px;
+    }
+
+    .search {
+      padding: 5px 0;
+    }
+
+    .search input {
+      width: 94%;
+      height: 35px;
+      margin: 0 auto;
+      display: block;
+      padding: 0 10px;
+      box-sizing: border-box;
+      font-size: 18px;
+    }
+
+    .content {
+      padding-top: 409px;
+    }
+    .searchContent{
+      padding-top: 109px;
+    }
+
+    #contentul li {
+      padding: 0 40px 0 20px;
+      height: 50px;
+      border-bottom: 1px solid #F2F2F2;
+      background-color: #FFF;
+      position: relative;
+    }
+
+    #contentul li div{
+      height:50px;
+    }
+    #contentul li div p:first-child {
+      font-size: 16px;
+      padding-top:5px;
+    }
+
+    #contentul li div p:last-child {
+      font-size: 12px;
+      color: #CCCCCC;
+    }
+
+    #contentul li img{
+      width: 20px;
+      height: 20px;
+      position: absolute;
+      right: 20px;
+      top:15px;
+      vertical-align: middle;
+      display: none;
+    }
+    #contentul li img.showImg{
+      display:inline-block;
+    }
+  </style>
+</head>
+
+<body>
+<div id='header'>
+  <div style="width: 100%;display: -webkit-box;">
+    <div class="back" tapmode="back-active" onclick="api.closeWin()">取消</div>
+    <h1 id='title'>位置</h1>
+    <div tapmode onclick="send()" class="adpt" >发送</div>
+  </div>
+  <div class="search" style="width: 100%;">
+    <input id="inputid" onkeyup="search(this.value)" placeholder="搜索地点"/>
+  </div>
+</div>
+<div id="locationcontent" class="content">
+  <ul id="contentul">
+
+  </ul>
+</div>
+</body>
+<script src="jquery-1.9.1.min.js"></script>
+<script type="text/javascript">
+  var selectobj={};
+  var getNew=true;
+  var timer=null;
+  function send(){
+    api.sendEvent({
+      name: 'sendLocationMap',
+      extra: {
+        lat: selectobj.lat,
+        lon: selectobj.lon,
+        name: selectobj.name,
+        address: selectobj.address,
+      }
+    });
+    api.closeWin();
+  }
+  function search(value){
+    if(value&&!$("#locationcontent").hasClass("searchContent")){
+      $("#contentul").html("");
+      hideorshow(false)
+      $("#locationcontent").addClass("searchContent");
+    }else if(!value){
+      $("#contentul").html("");
+      $("#locationcontent").removeClass("searchContent");
+      hideorshow(true)
+      map.getNameFromCoords({
+        lon: selectobj.lon,
+        lat: selectobj.lat
+      }, function (ret, err) {
+        if (ret.status) {
+          if (ret.country == "中国") {
+            createHtml(ret)
+          }
+        } else {
+
+        }
+      });
+    }
+    clearTimeout(timer);
+    timer=setTimeout(function(){
+      if(value){
+        api.ajax({
+          url: 'http://api.map.baidu.com/place/v2/suggestion?query='+value+'&region='+selectobj.cityCode+'&city_limit=true&output=json&ak=nYI9lRoVfsFHoA3Xw4iVI5l1nlXXPKDH',
+          method: 'get',
+        }, function(ret, err) {
+          if (ret.status==0) {
+            if(ret.result){
+              var html = "";
+              for (var i = 0; i < ret.result.length; i++) {
+                var obj = ret.result[i];
+                if(obj.uid){
+                  html += '<li onclick="selectSearch(' + obj.location.lat + ',' + obj.location.lng + ');"><div><p>' + obj.name + '</p>';
+                  html += '<p>' + obj.province+ obj.city+ obj.district + '</p></div></li>';
+                }
+              }
+              $("#contentul").html("");
+              $('#contentul').append(html);
+            }
+          }
+        });
+      }
+    },800)
+  }
+  function selectSearch(lat,lon){
+    $("#contentul").html("");
+    $("#inputid").val("");
+    $("#locationcontent").removeClass("searchContent");
+    hideorshow(true)
+    moveMap(lat,lon)
+  }
+  function hideorshow(type){
+    if(type){
+      map.show();
+      api.openFrame({
+        name: 'mapLocation',
+        url: 'location.html',
+        bgColor: 'rgba(0,0,0,0)',
+        rect: {
+          x: api.winWidth - 70,
+          y: 334,
+          w: 52,
+          h: 52
+        }
+      });
+      api.openFrame({
+        name: 'mapMark',
+        url: 'frame.html',
+        bgColor: 'rgba(0,0,0,0)',
+        rect: {
+          x: (api.winWidth / 2) - 20,
+          y: 199,
+          w: 40,
+          h: 60
+        }
+      });
+    }else{
+      map.hide();
+      api.closeFrame({
+        name: 'mapLocation'
+      });
+      api.closeFrame({
+        name: 'mapMark'
+      });
+    }
+  }
+
+  function createHtml(list) {
+    console.log(JSON.stringify(list))
+    var poiList = list.poiList;
+    var html = "";
+    html += '<li id="li_0" onclick="selectAddress(' + list.lat + ',' + list.lon + ',' + 0 + ',\''+list.sematicDescription+'\',\''+list.address+'\');"><div><p>' + list.sematicDescription + '</p>';
+    html += '<p>' + list.address + '</p></div><img class="showImg" src="select.png"></li>';
+    selectobj.id=0;
+    selectobj.lat=list.lat;
+    selectobj.lon=list.lon;
+    selectobj.name=list.sematicDescription;
+    selectobj.address=list.address;
+    selectobj.cityCode=list.cityCode;
+    for (var i = 0; i < poiList.length; i++) {
+      var obj = poiList[i];
+      html += '<li id="' + "li_" + (i + 1) + '" onclick="selectAddress(' + obj.coord.lat + ',' + obj.coord.lon + ',' + (i + 1) + ',\''+obj.name+'\',\''+obj.address+'\');"><div><p>' + obj.name + '</p>';
+      html += '<p>' + obj.address + '</p></div><img src="select.png"></li>';
+    }
+    $("#contentul").html("");
+    $('#contentul').append(html);
+  }
+
+  function selectAddress(lat,lon,id,name,address){
+    if(id==selectobj.id){
+      return false;
+    }
+    var list=$("#contentul").find("li");
+    list.each(function(i,v){
+      $(v).find("img").removeClass("showImg");
+      if(v.id=="li_"+id){
+        $(v).find("img").addClass("showImg");
+        selectobj.id=id;
+        selectobj.lat=lat;
+        selectobj.lon=lon;
+        selectobj.name=name;
+        selectobj.address=address;
+        getNew=false;
+        moveMap(lat,lon)
+      }
+    })
+  }
+  var map;
+  apiready = function () {
+    //使用margin布局，自动适应任何屏幕，适配带虚拟菜单栏的任意Android手机
+    //监听Android back键，回退历史记录
+    api.addEventListener({
+      name: 'scrolltobottom',
+      extra: {
+        threshold: 20
+      } //设置距离底部多少距离时触发，默认值为0，数字类型
+    }, function (ret, err) {
+      console.log("scrolltobottom")
+    });
+    api.addEventListener({
+      name: 'keyback'
+    }, function (ret, err) {
+      console.log("main.html")
+      api.removeEventListener({
+        name: 'userLocation'
+      });
+      api.sendEvent({
+        name: 'closeMapFrame'
+      });
+      api.closeFrame({
+        name: 'mapLocation'
+      });
+      GoToHisBack();
+    });
+    api.addEventListener({
+      name: 'userLocation'
+    }, function (ret, err) {
+      console.log("userLocation")
+      map.getCurrentLocation(
+        function(ret, err) {
+          if (ret.status){
+            moveMap(ret.lat,ret.lon)
+          }
+        });
+    });
+    let area = {
+      marginTop: 62, //标题栏高度44
+      marginBottom: 50 //下导航栏高度50
+    }
+    map = api.require('bMap');
+    if (window.api.systemType == "ios") {
+      map.initMapSDK(function (ret) {
+        if (ret.status) {
+          getLocation();
+        } else {
+          api.toast({
+            msg: '地图初始化失败',
+            duration: 2000,
+            location: 'bottom'
+          });
+        }
+      });
+    } else {
+      getLocation();
+    }
+
+  };
+
+  function moveMap(lat,lon){
+    map.setCenter({
+      coords: {
+        lon: lon,
+        lat: lat
+      }
+    });
+  }
+  function getLocation() {
+    map.getLocation({
+      accuracy: '10m',
+      autoStop: true,
+      filter: 1
+    }, function (ret, err) {
+      if (ret.status) {
+        openMap(ret.lon, ret.lat)
+        map.getNameFromCoords({
+          lon: ret.lon,
+          lat: ret.lat
+        }, function (ret, err) {
+          if (ret.status) {
+            if (ret.country == "中国") {
+              createHtml(ret)
+            }
+          } else {
+
+          }
+        });
+      } else {
+        api.toast({
+          msg: '定位失败',
+          duration: 2000,
+          location: 'bottom'
+        });
+        openMap();
+      }
+    });
+  }
+
+  function openMap(lon, lat) {
+    map.open({
+      rect: {
+        x: 0,
+        y: 109,
+        w: api.winWidth,
+        h: 300
+      },
+      center: {
+        lon: lon,
+        lat: lat
+      },
+      zoomLevel: 17,
+      showUserLocation: true,
+    }, function (ret) {
+      api.openFrame({
+        name: 'mapLocation',
+        url: 'location.html',
+        bgColor: 'rgba(0,0,0,0)',
+        rect: {
+          x: api.winWidth - 70,
+          y: 334,
+          w: 52,
+          h: 52
+        }
+      });
+      api.openFrame({
+        name: 'mapMark',
+        url: 'frame.html',
+        bgColor: 'rgba(0,0,0,0)',
+        rect: {
+          x: (api.winWidth / 2) - 20,
+          y: 199,
+          w: 40,
+          h: 60
+        }
+      });
+      map.addEventListener({
+        name: 'viewChange'
+      }, function (ret) {
+        if (ret.status) {
+          console.log(JSON.stringify(ret));
+          if(!getNew){
+            getNew=true;
+          }else{
+            api.sendEvent({
+              name: 'changeCenter'
+            });
+            map.getNameFromCoords({
+              lon: ret.lon,
+              lat: ret.lat
+            }, function (ret, err) {
+              if (ret.status) {
+                if (ret.country == "中国") {
+                  createHtml(ret)
+                }
+              } else {
+
+              }
+            });
+          }
+        }
+      });
+    });
+  }
+
+  //历史记录后退
+  function GoToHisBack() {
+    api.closeWin();
+  }
+</script>
+
+</html>

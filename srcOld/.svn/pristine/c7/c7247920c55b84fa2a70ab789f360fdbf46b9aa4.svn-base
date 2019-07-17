@@ -1,0 +1,352 @@
+<template>
+  <div class="prize">
+    <div class="circle">
+      <ul class="lottery" :class="{jy_act_zy_gift_three:num%2==1}">
+        <li v-for="n in num" :style="'transform:rotate('+((n-1)*evalNum*-1)+'deg);-webkit-transform:rotate('+((n-1)*evalNum*-1)+'deg);width:'+(width*2)+'px;margin-left:'+(width*-1)+'px'">{{prizeList[n-1].name}}<p><img :onerror="errorImg" :src="prizeList[n-1].icon"/></p></li>
+      </ul>
+      <div class="pointer" @click.shop="startPrize">
+        <p>{{cost}}</p>
+      </div>
+    </div>
+  </div>
+</template>
+<script>
+  import smile from "../../images/prizedraw/smile.png"
+  import qk from "../../images/prizedraw/qk.png"
+  import prize from "../../images/prizedraw/prize.png"
+  import man from "../../images/prizedraw/man.png"
+  import woman from "../../images/prizedraw/woman.png"
+  export default {
+    name: 'jqPrize',
+    props: ["payBion", "rate", "imgPath","groupId"],//活动Id，乾坤币，中奖率
+    data() {
+      return {
+        errorImg:'this.src="' + prize + '"',
+        img:{smile,qk,man,woman},
+        cost:0,//抽奖费用
+        rotate:0,//转盘角度
+        num:0,//奖品个数(>=3个)
+        evalNum:360/5,//每份奖品对应的度数 360/num
+        prize:-1,//抽中的奖品下标
+        round:10,//转盘转动的圈数
+        duration:6000,//转盘转动时间ms
+        running:false,//转盘是否正在转
+        tranEnd:this.transitionEnd("transition"),
+        width:0,
+        height:0,
+        prizeList:["谢谢参与","一等奖","二等奖","三等奖","四等奖","五等奖","六等奖","七等奖","八等奖","九等奖","十等奖","十一等奖"],
+        planid:null,
+        prizeObj:{},
+      }
+    },
+    computed: {},
+    components: {},
+    watch: {
+      running(val) {
+        const t = this;
+        t.$emit("prizeRunning", val);
+      }
+    },
+    async mounted() {
+      const t = this;
+      this.$vux.loading.show();
+      let postdata={};
+      if(this.groupId){
+        postdata={
+          groupId:this.groupId
+        }
+      }
+      let list = await this.$server.prePrize(postdata);
+      this.$vux.loading.hide();
+      let data = list.data.data;
+      t.$emit("rules", data.remarks);
+      // console.log(list)
+      this.cost = data.cost;
+      this.planid = data.id;
+      this.num = data.items.length;
+      this.evalNum = 360/this.num;
+      this.prizeList = data.items.map((v,index)=>{
+        let icon;
+        if((v.type==0||v.type==3)&&this.$store.state.userInfo.sex==1){
+          icon = this.img.man
+        }else if((v.type==0||v.type==3)&&this.$store.state.userInfo.sex==2){
+          icon = this.img.woman
+        }
+        return {
+          name:v.type==1?v.objId+"乾坤币":v.objId,
+          index:index,
+          id:v.id,
+          icon:v.type==0?icon:v.type==3?icon:v.type==1?this.img.qk:v.type==99?this.img.smile:this.$utils.getFullPath(v.icon)
+        };
+      })
+      t.$nextTick(() => {
+        t.obj = $(".lottery");
+        t.height=t.obj.height()/2;
+        t.width=Math.tan(t.evalNum/2*Math.PI/180)*t.height;
+        t.obj.css({
+          transform: 'rotate(0deg)',
+          WebkitTransform: 'rotate(0deg)',
+          transitionDuration: '0ms',
+          WebkitTransitionDuration: '0ms'
+        });
+        t.obj.bind(t.tranEnd, function () {
+          if (t.running) {
+            t.obj.css({
+              transform: 'rotate(' + (t.rotate) + 'deg)',
+              WebkitTransform: 'rotate(' + (t.rotate) + 'deg)',
+              transitionDuration: '0ms',
+              WebkitTransitionDuration: '0ms'
+            });
+            t.running = false;//转盘是否正在转
+            t.$emit("endPrize", t.prize,t.prizeObj.type,t.prizeObj.type==1?t.prizeObj.objId+"乾坤币":t.prizeObj.objId);
+          }
+        });
+      });
+    },
+    destroyed() {
+
+    },
+    methods: {
+      getFullPath (path) {
+        return this.$utils.getFullPath(path)
+      },
+      async startPrize() {
+        const t = this;
+        if(!this.planid){
+          return false;
+        }
+        if (t.running) {
+          console.log("正在抽奖")
+          return false;
+        }
+        t.running = true;
+        console.log("抽奖");
+        t.prize = 4;//Math.round(Math.random()*5);//0-5 模拟抽奖
+        t.rotate = t.evalNum * t.prize;
+        t.obj.css({
+          transform: 'rotate(' + (t.round * 30 * 360 + t.rotate) + 'deg)',
+          WebkitTransform: 'rotate(' + (t.round * 30 * 360 + t.rotate) + 'deg)',
+          transitionDuration: t.duration * 10 + 'ms',
+          WebkitTransitionDuration: t.duration * 10 + 'ms',
+          transitionTimingFunction: 'ease-in',
+          WebkitTransitionTimingFunction: 'ease-in'
+        });
+        //return false;
+        try {
+          const result = await t.$server.prizeNew({
+            id:this.planid
+          })
+          console.log("中奖数据:" + JSON.stringify(result.data));
+          t.prizeObj = result.data.data;
+          t.prizeList.forEach((v)=>{
+            if(v.id==result.data.data.prizeId){
+              t.prize = v.index
+            }
+          })
+          t.rotate = t.evalNum * t.prize;
+          t.obj.css({
+            transform: 'rotate(' + (t.round * 360 + t.rotate) + 'deg)',
+            WebkitTransform: 'rotate(' + (t.round * 360 + t.rotate) + 'deg)',
+            transitionDuration: t.duration + 'ms',
+            WebkitTransitionDuration: t.duration + 'ms',
+            transitionTimingFunction: 'ease-out',
+            WebkitTransitionTimingFunction: 'ease-out'
+          });
+        } catch (e) {
+          t.obj.css({
+            transform: 'rotate(60deg)',
+            WebkitTransform: 'rotate(60deg)',
+            transitionDuration: '0ms',
+            WebkitTtransitionDuration: '0ms'
+          });//转到不中奖
+          console.log(e);
+          t.running = false;
+        }
+      },
+      transitionEnd: function (type) {
+        var style = document.createElement("DIV").style,
+          transitionEnd = (function () {
+            var transEndEventNames
+            if (type == "transition") {
+              transEndEventNames = {
+                WebkitTransition: 'webkitTransitionEnd',
+                MozTransition: 'transitionend',
+                OTransition: 'oTransitionEnd oTransitionend',
+                transition: 'transitionend'
+              }
+            } else if (type == "animation") {
+              transEndEventNames = {
+                WebkitTransition: 'webkitAnimationEnd',
+                MozTransition: 'animationend',
+                OTransition: 'oAnimationEnd oAnimationend',
+                transition: 'animationend'
+              }
+            }
+            for (var name in transEndEventNames) {
+              if (typeof style[name] === "string") {
+                return transEndEventNames[name]
+              }
+            }
+          })();
+        return transitionEnd;
+      },
+    }
+  }
+</script>
+<style scoped lang="scss">
+  .prizeDraw {
+    .circle {
+      background-image: url("../../images/prizedraw/circle3.png");
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      width: 8.1rem;
+      height: 8.1rem;
+      margin: 0.5rem auto 0;
+      padding-top: 0.53rem;
+      box-sizing: border-box;
+      position: relative;
+    }
+    .pointer {
+      position: absolute;
+      top: 0;
+      left: 0;
+      background-image: url("../../images/prizedraw/102.png");
+      background-size: cover;
+      background-position: center;
+      background-repeat: no-repeat;
+      width: 2.44rem;
+      height: 3.16rem;
+      margin: 2.13rem 0 0 2.83rem;
+      overflow: hidden;
+      p {
+        color: #FFF;
+        font-size: 0.3rem;
+        line-height: 1;
+        margin: 2.315rem 0 0 1.205rem;
+      }
+    }
+  }
+  .lottery {
+    width: 7.04rem;
+    height: 7.04rem;
+    margin: 0 auto;
+    border-radius: 50%;
+    overflow: hidden;
+    position: relative;
+    transform: rotate(0deg);
+    -webkit-transform: rotate(0deg);
+    -ms-transform: rotate(0deg);
+    transition: -webkit-transform 0.3s ease 0s;
+    transition: transform 0.3s ease 0s;
+    transition: transform 0.3s ease 0s, -webkit-transform 0.3s ease 0s;
+    -webkit-transition: -webkit-transform 0.3s ease 0s;
+    -ms-transition: -ms-transform 0.3s ease 0s;
+    transform: translateZ(0);
+    -webkit-transform: translateZ(0);
+    -ms-transform: translateZ(0);
+    li{
+      position:absolute;overflow:hidden;z-index:0;width:50%;height:50%;left:50%;margin-left:-25%;top:0;text-align:center;padding:5% 3% 0;line-height:1.3;color:#fff;font-size:0.3rem;transform-origin:center bottom;-webkit-transform-origin:center bottom;box-sizing:border-box;clip-path: polygon(0 0, 100% 0, 50% 100%);-webkit-clip-path: polygon(0% 0, 100% 0, 50% 100%);letter-spacing:1px;
+      &:nth-of-type(2n+1){
+        background-color:#ff8684;
+      }
+      &:nth-of-type(2n){
+        background-color:#fe6869;
+      }
+      p{
+        margin: 0.36rem auto 0;
+        width: 0.7rem;
+        height: 0.7rem;
+        border-radius: 0.35rem;
+        overflow: hidden;
+        img{
+          width: 100%;
+          height: 100%;
+        }
+      }
+    }
+    &.jy_act_zy_gift_three{
+      li{
+        &:nth-of-type(2n+1){
+          background-color:#ff8684;
+        }
+        &:nth-of-type(2n){
+          background-color:#fe6869;
+        }
+        &:last-child{
+          background-color:#ffa555;
+        }
+      }
+    }
+  }
+  .piece {
+    width: 2.26rem;
+    height: 51.5%;
+    position: absolute;
+    left: 50%;
+    margin-left: -1.13rem;
+    transform-origin: center bottom;//中心点
+    -webkit-transform-origin: center bottom;//中心点
+    clip-path:polygon(0% 0, 100% 0, 50% 100%);
+    -webkit-clip-path:polygon(0% 0, 100% 0, 50% 100%);
+  }
+  .piece:nth-child(odd) {
+    background-color: #ffb54c;
+  }
+  .piece:nth-child(even) {
+    background-color: #ff8758;
+  }
+  .piece:nth-child(1) {
+    transform: rotate(0deg);
+  }
+  .piece:nth-child(2) {
+    transform: rotate(36deg);
+  }
+  .piece:nth-child(3) {
+    transform: rotate(72deg);
+  }
+  .piece:nth-child(4) {
+    transform: rotate(108deg);
+  }
+  .piece:nth-child(5) {
+      transform: rotate(144deg);
+    }
+  .piece:nth-child(6) {
+    transform: rotate(180deg);
+  }
+  .piece:nth-child(7) {
+    transform: rotate(216deg);
+  }
+  .piece:nth-child(8) {
+    transform: rotate(252deg);
+  }
+  .piece:nth-child(9) {
+    transform: rotate(288deg);
+  }
+  .piece:nth-child(10) {
+    transform: rotate(324deg);
+  }
+  .content {
+    width: 100%;
+    height: 100%;
+    text-align: center;
+    color: #ffffff;
+    .text {
+      margin: 0.2rem auto 0;
+      text-align: center;
+      font-size: 0.32rem;
+      font-weight: bold;
+    }
+    .text2 {
+      text-align: center;
+      font-size: 0.6rem;
+      font-weight: bold;
+      margin: 0.06rem auto 0;
+      img{
+        width: 0.96rem;
+        height: 0.96rem;
+        border-radius: 50%;
+      }
+    }
+  }
+</style>

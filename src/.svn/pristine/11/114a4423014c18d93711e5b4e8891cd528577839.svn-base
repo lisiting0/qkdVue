@@ -1,0 +1,115 @@
+let hiddenAttr={};
+const routerBack={
+	computed:{
+		handleRoute() {
+			return this.$store.state.handleRoute;
+		},
+	},
+	mounted(){
+		this.addPopstateListener();
+	},
+	beforeDestroy () {
+		this.removePopstateListener();
+    },
+	activated(){//针对keepalive
+		this.addPopstateListener();
+	},
+	deactivated(){//针对keepalive
+		this.removePopstateListener();
+	},
+	watch:{
+		handleRoute(newV) {//返回键触发
+			const t=this;
+			if (!newV) {
+				//console.log("hiddenAttr:"+hiddenAttr[t.$route.name])
+				if(!hiddenAttr[t.$route.name]){
+					console.log("routerBack watch handleRoute "+t.$route.name+" 出错!");
+					return false;
+				}
+				const len=hiddenAttr[t.$route.name].length;
+				for(let i=0;i<len;i++){
+					if(t[hiddenAttr[t.$route.name][i].name]){
+						if(!hiddenAttr[t.$route.name][i].value.fn){
+							t[hiddenAttr[t.$route.name][i].name]=false;
+						}else{
+							t[hiddenAttr[t.$route.name][i].value.fn]&&t[hiddenAttr[t.$route.name][i].value.fn]();
+						}
+						break;
+					}
+				}
+			}
+		},
+	},
+	methods:{
+		removePopstateListener(){
+			const t=this;
+			if(t.$store.state.isBrowser&&t.isListener){
+				t.isListener=false;
+				window.removeEventListener('popstate', t.forbidBack, false);
+			}
+		},
+		addPopstateListener(){
+			const t=this;
+			// 监听手机物理返回键时禁止返回之前的路由
+			if (window.history && window.history.pushState&&t.$store.state.isBrowser&&!t.isListener) {
+				window.addEventListener('popstate', t.forbidBack, false);
+				t.isListener=true;
+				t.forbidBack() 
+			}
+		},
+		forbidBack (e) {
+			const t=this;
+			//console.log(window.history)
+			console.log("forbidBack");
+            window.history.pushState('forward', null, window.location.href);
+			//console.log("加入一个history")
+            //window.history.forward(1);
+			if(e&&e.type=="popstate"){//点击返回
+				if(t.$store.state.handleRoute){
+					t.$store.commit("CHANGEHANDLEROUTE",false);
+				}else{
+					window.removeEventListener('popstate', t.forbidBack, false);
+					window.history.back();
+					t.$router.back();
+				}
+			}
+        },
+	},
+	init(routerName,opt){//每个组件引用的都是共用的所以要删除旧数据
+		if(hiddenAttr[routerName]){
+			return false;
+		}
+		hiddenAttr[routerName]=[];
+		//console.log(this.watch)
+		for(let item in this.watch){
+			if(item!="handleRoute"){
+				delete this.watch[item];
+			}
+		}
+		for(let att in opt){
+			this.watch[att]=function(val){
+				const t=this;
+				if(!hiddenAttr[routerName]){
+					console.log("routerBack watch "+routerName+" 出错!");
+					return false;
+				}
+				const len=hiddenAttr[routerName].length;
+				let flag=val;
+				if(!flag){
+					for(let i=0;i<len;i++){
+						if(t[hiddenAttr[routerName][i].name]){
+							flag=true;
+							break;
+						}
+					}
+				}
+				console.log("handleRoute Change "+att+":"+flag);
+				t.$store.commit("CHANGEHANDLEROUTE", flag);
+			}
+			console.log("handleRoute watch "+att+" : "+JSON.stringify(opt[att]||{}));
+			hiddenAttr[routerName].push({name:att,value:opt[att]||{}});
+		}
+	}
+}
+
+export default routerBack

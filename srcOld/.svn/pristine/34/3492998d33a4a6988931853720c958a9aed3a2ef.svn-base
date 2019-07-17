@@ -1,0 +1,115 @@
+<template>
+  <div class="qrcode">
+    <Loading v-if="isloading"></Loading>
+    <div class="qrcode-header">
+      <div class="top">
+        <Back class="left"><i class="iconfont">&#xe613;</i></Back>邀请好友
+      </div>
+    </div>
+    <div style="text-align:center;" :style="$store.state.isBrowser?'padding-top: 2.8rem;':'padding-top: 3.6rem;'">
+      <div class="qrcode_panel" id="qrcode">
+        <p>告诉小伙伴你在乾坤岛等Ta</p>
+        <vue-qr :logoSrc="imageUrl" :text="qrcodeValue" :size="150" :margin="0" :logoMargin="5" :logoCornerRadius="4"></vue-qr>
+        <p>扫一扫</p>
+        <p>登陆乾坤岛</p>
+      </div>
+      <div class="button" >已邀请了{{$store.state.userInfo.agentNumber}}个好友</div>
+    </div>
+  </div>
+</template>
+<script>
+  import Loading from '@other/loading.vue';
+  import Back from '@other/back.vue';
+  import VueQr from 'vue-qr'
+  import imageUrl from '../../images/logo_240.png'
+
+  export default {
+    name: 'prizeDraw',
+    components: {
+      Loading,
+      Back,
+      VueQr
+    },
+    data() {
+      return {
+        isloading: false,
+        qrcodeValue: this.$store.state.baseURL+'/api/account/publicAddressLoginUrl?&state=user__pid_'+ this.$store.state.userInfo.jyNumber,
+        imageUrl: imageUrl,
+      }
+    },
+    watch: {
+    },
+    created() {
+    },
+    destroyed() {
+    },
+    mounted() {
+    },
+    methods: {
+
+    }
+  }
+</script>
+<style scoped lang="scss">
+  .qrcode {
+    font-weight: normal;
+    background-image: url("../../images/qrcode_bg.jpg");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    overflow: auto;
+    min-height: 100%;
+    .qrcode-header {
+      padding-top: 0.75rem;
+      width: 100%;
+      background-color: #FFFFFF;
+      position: fixed;
+      .top {
+        color: #000000;
+        font-size: 0.52rem;
+        position: relative;
+        i {
+          font-size: 0.52rem;
+        }
+        a {
+          position: absolute;
+          padding: 3px;
+        }
+        .left {
+          left: 0.325rem;
+        }
+      }
+    }
+  }
+  .qrcode_panel{
+    width: 9.16rem;
+    height: 10.86rem;
+    background: url("../../images/code_border.png") no-repeat;
+    background-size: cover;
+    margin: 0 auto 1rem;
+
+    p{
+      &:nth-of-type(1){
+        font-size: 0.48rem;
+        color: #3f3c3f;
+        line-height: 3rem;
+      }
+      &:nth-of-type(2),&:nth-of-type(3){
+        font-size: 0.56rem;
+        color: #3f3c3f;
+        line-height: 1rem;
+      }
+    }
+  }
+  .button{
+    width: 9rem;
+    height: 1.6rem;
+    line-height: 1.6rem;
+    margin:0 auto;
+    background: url("../../images/code_button.png") no-repeat;
+    background-size: cover;
+    font-size: 0.48rem;
+    color: #ffffff;
+  }
+</style>
+

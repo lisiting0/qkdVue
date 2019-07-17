@@ -1,0 +1,496 @@
+<template>
+  <div class="main jy_all_top jy_state_top ">
+    <Loading v-if="isloading"></Loading>
+    <div class="header">
+      <div class="top">
+        <Back class="left"><i class="iconfont">&#xe613;</i></Back>
+        <p>报名人员</p>
+      </div>
+    </div>
+    <div class="fixed search_box">
+      <div class="search_input">
+        <i class="iconfont">&#xe64d;</i>
+        <input type="search" :placeholder="placeholder" disabled="disabled">
+        <span @click="showFilter=true">筛选</span>
+      </div>
+    </div>
+    <staffFilter :showFilter="showFilter" @close="showFilter=false" @filterMakesure="filterMakesure"></staffFilter>
+    <myScroller :style="$store.state.isBrowser?'padding:3.05rem 0 0;':'padding:3.8rem 0 0;'" :infinite="infinite" :refresh="refresh" :loadRefresh="loadRefresh" :loadInfinite="loadInfinite" ref="myScroller">
+      <div class="registration_block clear" v-if="listArr">
+        <ul class="registration_list clear">
+          <li @click="linkTo('userInfo',item.jiaoyouUser.id,item.id)" v-for="(item,index) in listArr" :key="item.id">
+            <a :style="'background-image:url('+getFullPath(item.jiaoyouUser.headimgAttachmentId)+');'">
+              <i class="iconfont heart" v-if="item.jiaoyouUser.isGood==0&&$store.state.userInfo.identity!=1&&$store.state.userInfo.sex!=item.candidateSex" @click.stop="addGood(item.jiaoyouUser.id,index)">&#xe79d;</i>
+              <i class="iconfont heart" style="color: #ff0000;font-size: 0.8rem;top: -0.1rem;" v-if="item.jiaoyouUser.isGood==1&&$store.state.userInfo.identity!=1&&$store.state.userInfo.sex!=item.candidateSex" @click.stop="delGood(item.jiaoyouUser.id,index)">&#xe612;</i>
+              <em class="gift_cicle" v-if="$store.state.userInfo.identity!=1&&$store.state.userInfo.sex!=item.candidateSex" @click.stop="clickShowGift(item.jiaoyouUser.aliasName, item.jiaoyouUser.id)"><i class="iconfont gift">&#xe631;</i></em>
+              <div class="bottom_info">
+                <p><span>{{item.candidateName}}</span><i class="jy_auth_age" :class="{jy_auth_age_man:item.candidateSex==2}">{{item.candidateSex==1?'&#xe64a;':'&#xe605;'}}{{item.jiaoyouUser.age}}</i><span v-if="$store.state.userInfo.identity!=1&&$store.state.userInfo.sex!=item.candidateSex">{{item.jiaoyouUser.matchAgree}}%</span></p>
+                <p>{{item.jiaoyouUser.userExt.height}}cm | {{educationTextArr[item.jiaoyouUser.userExt.education]}}<span v-if="$store.state.userInfo.identity!=1&&$store.state.userInfo.sex!=item.candidateSex">匹配度</span></p>
+              </div>
+            </a>
+          </li>
+        </ul>
+      </div>
+    </myScroller>
+    <div v-transfer-dom>
+      <popup class="dialog-gift" v-model="showGift" height="50%" :hide-on-blur="true" style="background-color: #FFFFFF;border-top-left-radius: 0.4rem;border-top-right-radius: 0.4rem;">
+        <div class="gift_con">
+          <div class="reward_title">送礼：<span>（ID：{{aliasName}}）</span><i @click="showGift=false"></i></div>
+          <div class="gift_list">
+            <div class="gift">
+              <template v-if="giftList">
+                <template v-if="giftList.length>0">
+                  <swiper height="6.2rem" :show-dots="false" @on-index-change="onIndexChange">
+                    <swiper-item class="black" v-for="(item,index) in giftList" :key="index+1000">
+                      <div class="gift_li" v-for="(v,num) in item" :class="{active:giftId==v.id}" @click="clickSelGift(v.id,v.giftName,v.jiaobi)">
+                        <img :src="getFullPath(v.giftImage)" />
+                        <p class="name">{{v.giftName}}</p>
+                        <p class="jiaobi">乾坤币{{v.jiaobi}}</p>
+                      </div>
+                    </swiper-item>
+                  </swiper>
+                </template>
+              </template>
+            </div>
+            <div class="diot" @click.stop="">
+              <span v-for="item,index in giftList" :key="index" :class="{active:activeIndex==index}"></span>
+            </div>
+          </div>
+          <div class="footer"><img src="../../images/coin.png"/><span>{{userMoney}}</span><div class="gift_button" @click="reward">确定送礼<br><span>{{giftName?'（'+giftName+'）':''}}</span> </div><span class="cz" @click="linkTo('recharge')">充值</span> </div>
+        </div>
+      </popup>
+    </div>
+  </div>
+</template>
+
+<script>
+  import Loading from '@other/loading.vue';
+  import Back from '@other/back.vue';
+  import myScroller from '@other/myScroller.vue';
+  import {TransferDom , Popup,Swiper, SwiperItem, PopupPicker, Group} from 'vux'
+  import staffFilter from './staffFilter'
+
+  export default {
+    name: "registrationStaff",
+    directives: {
+      TransferDom
+    },
+    components: {
+      Loading,
+      Back,
+      myScroller,
+      Popup,
+      PopupPicker,
+      Group,
+      staffFilter,
+      Swiper,
+      SwiperItem,
+    },
+    data() {
+      return {
+        isloading: false,
+        id: null,
+        showFilter: false,
+        placeholder: '',
+        ageLVal: null,//联动显示的值
+        ageRVal: null,//联动显示的值
+        educationVal:"",
+        educationTextArr:{0:'大专以下',10:'大专',11:'本科',12:'硕士',13:'博士',14:'出国留学' },
+        listArr: [],
+
+        showGift:false,//打赏礼品弹出层
+        userMoney:0,
+        amount: 0,
+        activeIndex:0,
+        giftList:[],
+        activeId:null,//活动编号
+        candidateId:null,//活动用户id
+        aliasName:null,//活动用户名称
+        giftId:null,//礼物Id
+        giftName:null,//礼物名称
+
+        //分页参数
+		sex:0,
+		minHeight:-1,
+		maxHeight:-1,
+		minIncome:-1,
+		maxIncome:-1,
+        pageNo: 1,
+        isRead: false,
+        isEnd: false,
+        loadRefresh: true,//下拉刷新
+        loadInfinite: true, //上拉加载
+        isRefresh: false,
+        noDataText: '',
+      }
+    },
+    watch: {
+      isEnd(val) {
+        const t = this;
+        if (val) {
+          t.$refs.myScroller.finishInfinite(true);
+        } else {
+          t.$refs.myScroller.finishInfinite(false);
+        }
+      },
+    },
+    mounted() {
+      const t = this;
+      t.id = t.$route.query.id;
+	  if(this.$store.state.userInfo.dataPerfect!=1){
+		/*t.$vux.toast.show({
+			type:"cancel",
+			text: "请先完善资料,才能查看",
+			position:"middle",
+			width:"auto",
+			time:3000,
+		});*/
+		//t.loadRefresh=false,//下拉刷新
+        //t.loadInfinite=false, //上拉加载
+		//t.isEnd=true;
+		return false;
+	  }
+      t.getGiftList();
+      t.userMoney = t.$store.state.userInfo.userMoney;
+      $("body").addClass("gray");
+    },
+    destroyed() {
+      $("body").removeClass("gray");
+    },
+    methods: {
+      getFullPath(path) {
+        return this.$utils.getFullPath(path)
+      },
+      linkTo(link, userId , id) {
+        let query = null;
+        if (userId) {
+          query = {
+            id: userId,
+            activityId:id
+          }
+        }
+        this.$router.push({
+          path: link,
+          query: query
+        })
+      },
+      async getList(ageVal,ageLVal,ageRVal,educationVal,sex,minHeight,maxHeight,minIncome,maxIncome,flag) {
+        const _this = this;
+        if (_this.isRead) {
+          return false;
+        }
+        _this.isRead = true;
+        if (_this.isRefresh || flag || (ageVal!=undefined&&ageVal!=_this.ageVal) || (ageLVal!=undefined&&ageLVal!=_this.ageLVal) || (ageRVal!=undefined&&ageRVal!=_this.ageRVal) || (educationVal!=undefined&&educationVal!=_this.educationVal)||(sex!=undefined&&_this.sex!=sex)||(minHeight!=undefined&&_this.minHeight!=minHeight)||(maxHeight!=undefined&&_this.maxHeight!=maxHeight)||(minIncome!=undefined&&_this.minIncome!=minIncome)||(maxIncome!=undefined&&_this.maxIncome!=maxIncome)) {
+          _this.pageNo = 1;
+          if (flag) {
+            _this.$refs.myScroller.scrollTo(1);//滚动到第一
+            _this.isloading = true;
+          }
+        }
+        try {
+          let isRefresh = {};
+          if (_this.isRefresh) {
+            isRefresh = {isRefresh: true};
+          }
+          if (!_this.listArr || _this.isRefresh || flag || (ageVal!=undefined&&ageVal!=_this.ageVal) || (ageLVal!=undefined&&ageLVal!=_this.ageLVal) || (ageRVal!=undefined&&ageRVal!=_this.ageRVal) || (educationVal!=undefined&&educationVal!=_this.educationVal)||(sex!=undefined&&_this.sex!=sex)||(minHeight!=undefined&&_this.minHeight!=minHeight)||(maxHeight!=undefined&&_this.maxHeight!=maxHeight)||(minIncome!=undefined&&_this.minIncome!=minIncome)||(maxIncome!=undefined&&_this.maxIncome!=maxIncome)) {
+            _this.listArr = [];
+			if(flag){
+				_this.ageVal = ageVal;
+				_this.ageLVal = ageLVal;
+				_this.ageRVal = ageRVal;
+				_this.educationVal = educationVal;
+				_this.sex=sex;
+				_this.minHeight=minHeight;
+				_this.maxHeight=maxHeight;
+				_this.minIncome=minIncome;
+				_this.maxIncome=maxIncome;
+			}
+          }
+          const result = await _this.$server.getDatingCandidateList({
+            ...isRefresh,
+            datingId: _this.id,
+            minAge: _this.ageVal==1?_this.ageLVal:"",
+            maxAge: _this.ageVal==1?_this.ageRVal:"",
+            education: _this.educationVal,
+			minHeight:_this.minHeight,
+			maxHeight:_this.maxHeight,
+			minIncome:_this.minIncome,
+			maxIncome:_this.maxIncome,
+			candidateSex:_this.sex,
+            page: _this.pageNo,
+            rows: _this.$store.state.pageSize,
+		//	candidateSex:    _this.$store.state.userInfo.identity==1?'':_this.$store.state.userInfo.sex==1?2:1,
+          });
+          if (result.data.list) {
+            _this.listArr.push(...result.data.list);
+          }
+          if (result.data.count <= _this.$store.state.pageSize * _this.pageNo || result.data.list.length < _this.$store.state.pageSize) {//判断是否最后一页
+            _this.noDataText = '已加载全部数据';
+            _this.isEnd = true;
+          } else {
+            _this.isEnd = false;
+          }
+        } catch (e) {
+          console.log(e)
+          _this.isEnd = true;
+          _this.isRefresh = false;
+          _this.noDataText = "加载异常,请重试";
+        }
+        _this.pageNo++;
+        _this.isRead = false;
+        _this.isloading = false;
+        _this.isRefresh = false;
+      },
+      infinite(done) {//上拉加载(防止初始内容不满一屏会无限加载)
+        const t = this;
+        if (t.isEnd) {
+          done(true);
+          return false;
+        }
+        console.log("加载");
+        t.getList().then(() => {
+          if (t.isEnd) {
+            done(true);
+          } else {
+            done();
+          }
+        });
+      },
+      refresh(done) {//下拉刷新
+        const t = this;
+        console.log("刷新");
+        t.isRefresh = true;
+        t.getList().then((res) => {
+          done();
+        });
+      },
+      filterMakesure(ageVal,ageLVal,ageRVal,ageText,educationVal,educationText,sexVal,sexText,minHeight,maxHeight,heightText,minIncome,maxIncome,incomeText){
+        if(ageVal == 1){
+          this.placeholder = ageText
+        }
+        if (educationVal!="") {
+          this.placeholder = educationText
+        }
+        if (ageVal == "" && educationVal=="") {
+          this.placeholder = "";
+        }
+        if (ageVal == 1 && educationVal) {
+          this.placeholder = ageText + '·' + educationText
+        }
+		if(sexVal!=0){
+			this.placeholder+=(this.placeholder?'·'+sexText:sexText);
+		}
+		if(minHeight!=-1){
+			this.placeholder+=(this.placeholder?'·'+heightText:heightText);
+		}
+		if(incomeText){
+			this.placeholder+=(this.placeholder?'·'+incomeText:incomeText);
+		}
+        this.getList(ageVal,ageLVal,ageRVal,educationVal,sexVal,minHeight,maxHeight,minIncome,maxIncome,true);
+        this.showFilter = false;
+      },
+      async addGood(userId,index) { //添加好感好友接口
+        this.$vux.loading.show()
+        await this.$server.addGood({
+          likingUserId: userId,
+        });
+        /*this.$vux.toast.show({
+          type: 'text',
+            text: '已好感',
+          position: 'middle',
+          width: 'auto',
+        })*/
+        this.$vux.loading.hide();
+        this.$set(this.listArr[index].jiaoyouUser,"isGood",1)
+      },
+      async delGood(userId,index) { //取消好感好友接口
+        this.$vux.loading.show()
+        await this.$server.deleteGood({
+          likingUserId: userId,
+        });
+        /*this.$vux.toast.show({
+          type: 'text',
+          text: '取消好感',
+          position: 'middle',
+          width: 'auto',
+        })*/
+        this.$vux.loading.hide();
+        this.$set(this.listArr[index].jiaoyouUser,"isGood",0)
+      },
+      async sendFlowers(userId) {
+        this.$vux.loading.show();
+        const _this = this;
+        let data ={
+          "receiverUser.id":userId,
+          "giftId":"a54c058d71de42a88723faff7772c820",
+          "amount":1,//打赏数，默认是1
+        }
+        let result = await _this.$server.giveGift(data);
+        this.$vux.toast.show({
+          type:"text",
+          text: "送花成功",
+          position:"middle",
+          width:"auto",
+        });
+        this.$vux.loading.hide();
+      },
+      async getGiftList() {
+        let listData = await this.$server.getGiftList();
+        if(listData.data.data){
+          this.giftList=[];
+          let data = listData.data.data;
+          let page = Math.ceil(data.length/8)
+          for(let i=0;i<page;i++){
+            let arr=[];
+            for(let j=0;j<8;j++){
+              if(8*i+j==data.length){
+                break;
+              }
+              arr.push(data[8*i+j])
+            }
+            this.giftList.push(arr);
+          }
+        }
+      },
+      clickShowGift(aliasName,candidateId){
+        if(this.$store.state.userInfo.id==candidateId){
+          this.$vux.toast.show({
+            type: 'text',
+            text: '不能给自已打赏',
+            position: 'middle',
+            width: 'auto',
+          })
+          return false;
+        }
+        this.showGift = !this.showGift;
+        this.aliasName = aliasName;
+        this.candidateId = candidateId;
+      },
+      onIndexChange(index){
+        this.activeIndex = index
+      },
+      clickSelGift(id,name,jiaobi){
+        this.giftId=id;
+        this.giftName = name;
+        this.amount = jiaobi;
+      },
+      async reward() {
+        this.$vux.loading.show();
+        const _this = this;
+        let data ={
+          "receiverUser.id":_this.candidateId,
+          "objectId": '',
+          "giftId":_this.giftId,
+          "amount":1,//打赏数，默认是1
+        }
+        let result = await _this.$server.giveGift(data);
+        _this.showGift=false;
+        _this.userMoney = parseInt(_this.$store.state.userInfo.userMoney - _this.amount)
+        _this.$store.commit('EDITUSERINFO',{key:"userMoney" ,value:_this.userMoney});
+        this.$vux.toast.show({
+          type:"text",
+          text: "送礼成功",
+          position:"middle",
+          width:"auto",
+        });
+        this.$vux.loading.hide();
+      },
+    }
+  }
+</script>
+
+<style scoped lang="scss">
+.search_box .search_input input{
+	font-size:0.36rem;
+}
+  .shade {
+    width: 100%;
+    height: 100%;
+    position: absolute;
+    top: 1.4rem;
+    left: 0;
+    z-index: 100;
+    overflow: hidden;
+    & > div {
+      position: relative;
+      height: 100%;
+      background-color: #efefef;
+      overflow: hidden;
+    }
+  }
+
+  .filterPopover {
+    padding: 0 0.5rem;
+    & > div {
+      color: #908f92;
+      padding: 0.1rem 0;
+      border-bottom: 1px solid #b9b9b9;
+      &:last-of-type {
+        border-bottom: none;
+      }
+      p {
+        height: 1.4rem;
+        line-height: 1.4rem;
+        font-size: 0.36rem;
+        font-weight: 500;
+        i {
+          display: inline-block;
+          width: 0.26rem;
+          height: 0.36rem;
+          background-repeat: no-repeat;
+          background-size: 100% 100%;
+          margin-right: 0.2rem;
+        }
+      }
+      div {
+        display: flex;
+        justify-content: space-between;
+        flex-wrap: wrap;
+        &:after {
+          content: "";
+          width: 46%;
+        }
+        span {
+          font-size: 0.34rem;
+          width: 23%;
+          height: 0.76rem;
+          line-height: 0.76rem;
+          text-align: center;
+          margin-bottom: 0.34rem;
+          box-sizing: border-box;
+          &.active {
+            background-color: #fff;
+            border-radius: 5px;
+            border: 1px solid #70c466;
+            color: #70c466;
+          }
+        }
+      }
+    }
+    .age {
+      display: inline-table;
+      width: 66%;
+      height: 0.76rem;
+      line-height: 0.76rem;
+      box-sizing: border-box;
+      white-space: nowrap;
+      padding: 0 0 0 0.4rem;
+      text-align: center;
+      &.active {
+        background-color: #fff;
+        border-radius: 5px;
+        border: 1px solid #70c466;
+        color: #70c466 !important;
+      }
+    }
+    button {
+      height: 1.13rem;
+      line-height: 1.13rem;
+      width: 100%;
+      margin-bottom: 0.54rem;
+      border: 1px solid #d4d4d4;
+      color: #70c466;
+      background-color: #fff;
+    }
+  }
+</style>

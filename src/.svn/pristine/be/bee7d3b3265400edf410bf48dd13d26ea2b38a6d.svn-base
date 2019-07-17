@@ -1,0 +1,371 @@
+<template>
+  <div class="main jy_state_pop">
+    <Loading v-if="isloading"></Loading>
+    <div class="header">
+      <div class="top">
+        <Back class="left"><i class="iconfont">&#xe613;</i></Back><a class="right"></a>{{title[titleIndex]}}
+      </div>
+    </div>
+
+    <dl class="tabs tabs_love">
+      <dt>
+        <div class="scroll" ref="scroll" :style="{width:parentwidth+'px'}">
+          <div :style="{width:scrollwidth+'px'}">
+            <a :class="datingThemes==''?'cur':''" @click="getList('')">全部</a>
+            <a :class="datingThemes==1?'cur':''" @click="getList(1)">旅行</a>
+            <a :class="datingThemes==2?'cur':''" @click="getList(2)">吃饭</a>
+            <a :class="datingThemes==3?'cur':''" @click="getList(3)">电影</a>
+            <a :class="datingThemes==4?'cur':''" @click="getList(4)">唱歌</a>
+            <a :class="datingThemes==5?'cur':''" @click="getList(5)">运动</a>
+            <a :class="datingThemes==99?'cur':''" @click="getList(99)">其他</a>
+          </div>
+        </div>
+        <a class="filter" @click="showFilter"><i class="iconfont">&#xe64d;</i></a></dt>
+        <jyfilter :showPopover="showPopover" @close="closePopover" @makesure="makesure"></jyfilter>
+      <dd>
+        <scroll ref="scroll" :pullDownRefresh="pullDownRefreshObj" :pullUpLoad="pullUpLoadObj" @pullingDown="onPullingDown" @pullingUp="onPullingUp" :ifinit="ifinit" :style="{height:myScrollerHeight+'px'}" :probeType="3" :listenScroll="true" @scroll="myscroll" :click="true">
+          <div>
+            <ul class="tabs_list cur">
+              <template v-if="listArr">
+                <template v-if="listArr.length>0">
+                  <li v-for="item in listArr"  @click="toListItem(item.id)">
+                    <div class="tabs_image" >
+                      <div :style="'background-image:url('+getFullPath(item.coverimgImages?item.coverimgImages:item.jiaoyouUser.headimgAttachmentId)+');'"><p class="red" v-if="item.toTop==1">顶</p></div>
+                    </div>
+                    <div class="tabs_desc" >
+                      <p class="tabs_p">
+                        {{item.datingDesc.length>10?item.datingDesc.substr(0,10)+'...':item.datingDesc}}
+                      </p>
+                      <div>
+                        <p>{{activity[item.datingThemes]}}{{item.onlyTheme==0?'(不仅限)':'(仅限)'}}</p>
+                        <p>{{item.activityStarttime}}</p>
+                        <p v-if="item.datingLocation">{{item.datingLocation}}</p>
+                        <p v-if="item.datingChoseShopName">{{item.datingChoseShopName}}</p>
+                      </div>
+                    </div>
+                    <a class="share_a" @click.stop="clickShare"><i class="iconfont">&#xe67a;</i></a>
+                    </li>
+                </template>
+                <template v-else>
+                  <div class="no-data">暂无数据</div>
+                </template>
+              </template>
+            </ul>
+          </div>
+        </scroll>
+      </dd>
+    </dl>
+    <div v-transfer-dom>
+      <popup v-model="showShare" height="35%" :hide-on-blur="true" style="background-color: #FFFFFF;border-top-left-radius: 0.4rem;border-top-right-radius: 0.4rem;">
+        <div class="sharePopup">
+          <ul>
+            <li class="friends-icon"><router-link :to="{name:'home'}">好友/群组</router-link></li>
+            <li class="circle-icon"><router-link :to="{name:'home'}">朋友圈</router-link></li>
+            <li class="wxFriends-icon"><router-link :to="{name:'home'}">微信好友</router-link></li>
+            <li class="qq-icon"><router-link :to="{name:'home'}">QQ好友</router-link></li>
+            <li class="qqSpace-icon"><router-link :to="{name:'home'}">QQ空间</router-link></li>
+            <li class="report-icon"><router-link :to="{name:'home'}">举报</router-link></li>
+            <li class="notInterested-icon"><router-link :to="{name:'home'}">不感兴趣</router-link></li>
+          </ul>
+        </div>
+      </popup>
+    </div>
+  </div>
+</template>
+<script>
+  import Loading from '@other/loading.vue';
+  import Back from '@other/back.vue';
+  import Scroll from '@/components/betterscroll/scroll/scroll.vue'
+  import { TransferDom, Popup } from 'vux';
+  import Jyfilter from './jyfilter'
+  export default {
+    name: 'loveList',
+    directives: {
+      TransferDom
+    },
+    components: {
+      Loading,
+      Scroll,
+      Back,
+      Popup,
+      Jyfilter
+    },
+    data () {
+      return {
+        pullDownRefresh: true,
+        pullDownRefreshThreshold: 60,
+        pullDownRefreshStop: 40,
+        pullUpLoad: true,
+        pullUpLoadThreshold: 0,
+        ifinit:false,
+        myScrollerHeight:0,
+        scrollwidth:0,
+        parentwidth:0,
+        // imgs:{w1:w1,w2:w2,w3:w3,w4:w4},
+        isloading:false,
+        title:["","选缘","抢缘","竞缘","中缘","配缘","寻觅对象"],
+        activity:{1:'旅行',2:'吃饭',3:'电影',4:'唱歌',5:'运动',99:'其他' },
+        titleIndex:0,
+        // loadRefresh:true,//下拉刷新
+        // loadInfinite:true, //上拉加载
+        // myScrollerHeight:0,
+        showShare:false,
+        listArr:[],
+        datingThemes: '',
+        showPopover:false,
+        //分页参数
+        page:1,
+        rows:20,
+      }
+    },
+    computed: {
+      pullDownRefreshObj: function () {
+        return this.pullDownRefresh ? {
+          threshold: parseInt(this.pullDownRefreshThreshold),
+          stop: parseInt(this.pullDownRefreshStop)
+        } : false
+      },
+      pullUpLoadObj: function () {
+        return this.pullUpLoad ? {
+          threshold: parseInt(this.pullUpLoadThreshold)
+        } : false
+      },
+      handleRoute(){
+        return this.$store.state.handleRoute;
+      },
+    },
+    watch:{
+      handleRoute(newV){
+        if(!newV){
+          this.showPopover=false;
+          this.showShare=false;
+        }
+      },
+      showPopover(newV){
+        let status = this.showPopover||this.showShare
+        this.$store.commit("CHANGEHANDLEROUTE",status)
+      },
+      showShare(newV){
+        let status = this.showPopover||this.showShare
+        this.$store.commit("CHANGEHANDLEROUTE",status)
+      },
+    },
+    mounted () {
+      this.titleIndex=this.$route.query.listIndex
+      this.parentwidth = document.body.clientWidth-2.4*parseInt(document.documentElement.style.fontSize)-2;
+      this.scrollwidth = (9*1.29)*(parseInt(document.documentElement.style.fontSize));
+      this.myScrollerHeight = document.body.clientHeight-$(".header").height()-$(".tabs.tabs_love dt").height()-(0.75+0.6)*parseInt(document.documentElement.style.fontSize)-1;
+      // this.indexListFixedHeight = $(".indexListFixedHeight").height()
+      this.getList('');
+      this.$nextTick(function () {
+        this.ifinit = true;
+      })
+    },
+    methods: {
+      showFilter(){
+        this.showPopover = !this.showPopover;
+      },
+      closePopover(){
+        this.showPopover = false;
+      },
+      makesure(sex,authentication,areaId,datingTime,startDate,endDate){
+        console.log(JSON.stringify("性别："+sex+"；约会开始时间："+startDate+"；结束时间："+endDate))
+        console.log(JSON.stringify(authentication))
+        this.getList(this.datingThemes,null,true,sex,authentication,areaId,datingTime,startDate,endDate);
+        this.showPopover = false;
+      },
+      getFullPath (path) {
+        return this.$utils.getFullPath(path)
+      },
+      myscroll(pos){
+
+      },
+      onPullingDown() {
+        // 模拟更新数据
+        this.$refs.scroll.openPullUp()
+        this.getList(this.datingThemes,null,true)
+      },
+      onPullingUp() {
+        // 更新数据
+        this.getList(this.datingThemes)
+      },
+      refresh(done) {//下拉刷新
+        console.log("刷新 ");
+        setTimeout(()=>{
+          console.log("刷新完成");
+          done();
+        },1000);
+      },
+      infinite(done){
+        console.log("加载 ");
+        setTimeout(()=>{
+          console.log("加载完成");
+          done(true);
+        },1000);
+      },
+      toListItem(id){
+        this.$router.push({
+          path: "/act",
+          query: {
+            id: id
+          }
+        })
+      },
+      clickShare() {
+        this.showShare = !this.showShare;
+      },
+      async getList(datingThemes,search,PullingDown,sex,authentication,areaId,datingTime,startDate,endDate){
+        try{
+          const _this = this;
+          if(_this.datingThemes!=datingThemes){
+            this.page = 1;
+            _this.listArr=[];
+            this.$refs.scroll.openPullUp()
+            console.log("打开上拉加载")
+          }
+          if(PullingDown){
+            this.page = 1;
+          }
+          _this.datingThemes = datingThemes;
+          let data = Object.assign({
+            datingThemes:_this.datingThemes,
+            sex:sex,
+            idStatus:authentication&&authentication.idcard,
+            houseStatus:authentication&&authentication.house,
+            carStatus:authentication&&authentication.car,
+            healthyStatus:authentication&&authentication.health,
+            videoStatus:authentication&&authentication.video,
+            areaId:areaId&&areaId[areaId.length - 1],
+            beginDatingStarttime:datingTime==1?startDate+" 00:00:00":"",
+            endDatingStarttime:datingTime==1?endDate+" 00:00:00":"",
+            activityMethod:this.titleIndex,
+            page:this.page,
+            rows:this.rows
+          },search)
+          this.$vux.loading.show()
+          let result = await _this.$server.searchDatingList(data);
+          this.page++
+          if(PullingDown){
+            _this.listArr=[];
+          }
+          if(result.data.list){
+            _this.listArr.push(...result.data.list);
+          }
+          this.$vux.loading.hide()
+          this.$refs.scroll.forceUpdate()
+          if(this.page>result.data.totalPage){
+            console.log("关闭上拉加载")
+            this.$refs.scroll.closePullUp()
+          }
+
+          return Promise.resolve(result.data.totalPage)
+        }catch (e) {
+          console.log(e)
+          return Promise.reject("error")
+        }
+      },
+    }
+  }
+</script>
+<style scoped lang="scss">
+  .main{
+    padding-bottom:0;
+    &:before{
+      background-color:#3a3845 ;
+    }
+    .header{
+      .top{
+        background-color:#3a3845 ;
+        color:#FFF;
+        font-size: 0.6rem;
+        position: relative;
+        i{
+          font-size: 0.52rem;
+        }
+        a{
+          position:absolute;
+          padding:3px;
+        }
+        .left{
+          left:0.325rem;
+        }
+        .right{
+          right:0.325rem;
+        }
+      }
+      .yuan{
+        padding: 0.5rem 0.12rem 0;
+      }
+    }
+    .tabs_love{
+      dt{
+        height: 0.635rem;
+        line-height: 0.635rem;
+        padding:0.3rem 0.4rem;
+        display: -webkit-flex; /* Safari */
+        display: flex;
+        justify-content:space-around;
+        &>div{
+          flex-grow: 1;
+          overflow-x: auto;
+          overflow-y: hidden;
+          a{
+            font-size:0.32rem;color:#b4b4b4;
+            margin-right: 0.55rem;
+            display: inline-block;
+            width:0.7rem;
+            &.cur{color:#333;}
+          }
+        }
+        a{
+          i{
+            vertical-align: middle;
+          }
+          padding: 0 ;
+          font-size:0.32rem;color:#b4b4b4;
+          display: inline-block;
+          width:0.8rem;
+          text-align: right;
+          &.cur{color:#333;}
+          &.filter{
+            border-left:1px solid #b4b4b4;
+          }
+        }
+      }
+      dd{
+        li{
+          &>div{
+            display: inline-block;
+          }
+          .tabs_image{
+            vertical-align: top;
+            width: 2.39rem;
+            height:2.39rem;
+            &>div{
+              width:100%;
+              height:100%;
+              background-size: cover;
+			  background-position:center top;
+              border-radius: 3px;
+              p{
+                background-color: #ff5a00;
+                border-radius: 3px 0;
+                color:#FFF;
+                width:0.44rem;
+                height:0.26rem;
+                line-height: 0.26rem;
+                text-align: center;
+                font-size: 0.2rem;
+              }
+            }
+          }
+          .tabs_desc{
+            padding:0 0 0 0.27rem;
+            width: 7rem;
+            height:2.39rem;
+          }
+        }
+      }
+    }
+  }
+</style>

@@ -1,0 +1,58 @@
+<!DOCTYPE HTML>
+<html>
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="maximum-scale=1.0, minimum-scale=1.0, user-scalable=0, initial-scale=1.0, width=device-width" />
+  <meta name="format-detection" content="telephone=no, email=no, date=no, address=no">
+  <title></title>
+  <style type="text/css">
+    html,body{
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      padding: 0;
+      font-size: 0;
+    }
+    #mark{
+      margin-top: 20px;
+      width: 40px;
+      height: 40px;
+    }
+    .bodong{
+      animation: bodong 0.7s ease;
+    }
+    @keyframes bodong{
+      0%{margin-top: 20px;height: 40px;}
+      50%{margin-top: 0;height: 40px}
+      100%{margin-top: 20px;height: 40px;}
+    }
+  </style>
+</head>
+
+<body>
+  <img id="mark" src="mark.png">
+</body>
+<script type="text/javascript">
+  apiready = function(){
+    api.addEventListener({
+      name: 'changeCenter'
+    }, function(ret, err) {
+      console.log("changeCenter")
+      document.getElementById("mark").classList.add("bodong");
+      setTimeout(function(){
+        document.getElementById("mark").classList.remove("bodong");
+      },700)
+    });
+    api.addEventListener({
+      name: 'closeMapFrame'
+    }, function(ret, err) {
+      api.removeEventListener({
+        name: 'changeCenter'
+      });
+      api.closeFrame();
+    });
+  }
+</script>
+
+</html>

@@ -1,0 +1,556 @@
+<template>
+  <div class="main jy_all_top jy_state_top">
+    <Loading v-if="isloading"></Loading>
+    <div class="header">
+      <div class="top">
+        <Back class="left"><i class="iconfont">&#xe613;</i></Back>
+        <a class="right"></a>
+        <p>乾坤金屋</p>
+      </div>
+    </div>
+    <div class="main-content">
+      <div class="money">
+        <div>
+          <div>
+            <img src="../../images/earnCoin/rmb.png">
+            <p>现金账户</p>
+          </div>
+          <div>
+            <p>余额</p>
+            <p>￥{{Fn.toFixed(purse.income||0)}}</p>
+          </div>
+        </div>
+        <div class="tubiao">
+          <i class="iconfont">
+            &#xe6c0;
+          </i>
+          <router-link tag="span" :to="{name:'putforward'}">提现</router-link>
+          <i class="iconfont">
+            &#xe702;
+          </i>
+          <span></span>
+        </div>
+        <div>
+          <router-link tag="div" :to="{name:'bill'}">
+            <p>今日收入</p>
+            <p>￥{{Fn.toFixed((purse.consumption&&purse.consumption.incomeAmountCountDay)||0)}}</p>
+          </router-link>
+          <router-link tag="div" :to="{name:'bill'}">
+            <p>今日支出</p>
+            <p>￥{{Fn.toFixed((purse.consumption&&purse.consumption.consumeAmountCountDay||0))}}</p>
+           </router-link>
+        </div>
+      </div>
+      <div class="qkb">
+        <div>
+          <div>
+            <img src="../../images/earnCoin/qkb.png">
+            <p>乾坤币账户</p>
+          </div>
+          <div>
+            <p>余额</p>
+            <p>{{(purse.userMoney||0)}}</p>
+          </div>
+        </div>
+        <div class="tubiao">
+          <i class="iconfont">
+            &#xe6d7;
+          </i>
+          <router-link tag="span" :to="{name:'recharge'}">充值</router-link>
+          <i class="iconfont">
+            &#xe702;
+          </i>
+          <span></span>
+        </div>
+        <div>
+          <router-link tag="div" :to="{name:'bill',query:{type:1}}">
+            <p>今日收入</p>
+            <p>{{((purse.consumption&&purse.consumption.incomeJiaobiCountDay)||0)}}</p>
+          </router-link>
+         <router-link tag="div" :to="{name:'bill',query:{type:1}}">
+            <p>今日支出</p>
+            <p>{{((purse.consumption&&purse.consumption.consumeJiaobiCountDay||0))}}</p>
+          </router-link>
+        </div>
+      </div>
+    </div>
+    <div class="tuiguang">
+      <shop :tag="'div'">
+        <i class="jysc iconfont" style="display: block;color:#ff688b;">&#xe6bd;</i>
+        <p>乾坤商城</p>
+      </shop>
+      <router-link :to="{path:'/sendGift/main'}" tag="div" >
+        <i class="iconfont" style="display: block;color:#3ccbb5;">&#xe6be;</i>送礼
+      </router-link>
+      <router-link :to="{name:'prizeDraw',params:{ pagerouter:'main'}}" tag="div">
+        <i class="iconfont" style="display: block;color:#ff9f2d;">&#xe64f;</i>幸运乾坤轮
+      </router-link>
+      <router-link :to="{path:'bill'}" tag="div">
+        <i class="iconfont" style="display: block;color:#269fde;">&#xe6bf;</i>账单
+      </router-link>
+    </div>
+    <div class="earncoin">
+        <div>
+          <div><img src="../../images/earnCoin/tj.png"></div>
+          <div>
+            <p>赚乾坤币</p>
+
+          </div>
+          <p @click="linkTo('earnCoin')">更多<i class="iconfont">
+            &#xe702;
+          </i></p>
+        </div>
+        <div>
+          <p>完成相应任务，可领取巨额乾坤币，Come on...</p>
+        </div>
+        <div>
+          <ul class="jy_earn_tlist">
+            <li v-for="item in eventList" :key="item.id">
+              <i class="jy_earn_timg" :bgImg="$utils.getFullPath(item.icon)"></i>
+              <div>
+                <p><span>{{item.name}}</span><span>+{{item.amount}}</span></p>
+                <p>{{item.remark}}</p>
+              </div>
+              <shop v-if="item.classId==16" :tag="'a'">{{item.btnName}}</shop>
+              <a v-else @click="toLink(item.linkUrl)">{{item.btnName}}</a>
+            </li>
+          </ul>
+        </div>
+    </div>
+  </div>
+</template>
+<script>
+  import a6 from '../../images/message/6.png';
+  import a3 from '../../images/message/3.png';
+  import Loading from '@other/loading.vue';
+  import Back from '@other/back.vue';
+  import shop from '@other/shop.vue';
+  import safeHouse from './safeHouse.data'
+
+  export default {
+    name: 'safeHouse',
+    data() {
+      return {
+        imgs: {a6: a6, a3: a3},
+        isloading: false,
+        safeHouse: safeHouse.user,
+        dayCount: 0,
+        userIncome: 0,
+        nearArr: [],
+        purse:{
+
+        },
+        eventList:[],
+      }
+    },
+    async mounted() {
+      const t = this;
+      $("body").addClass("gray");
+      t.$nextTick(() => {
+        t.setBgImg();
+      })
+      t.$store.dispatch("CHECKMONEY");//查询用户当前的乾坤币
+      let result = await this.$server.lowerAgent();
+      this.purse = result.data;
+      let result1 = await this.$server.getRewardEventList({
+        enable:1,
+        finished:0,
+      })
+      let arr=[]
+      let list1=result1.data.list
+      if(list1&&list1.length>0){
+        if(list1.length>4){
+          list1.length=4;
+        }
+        list1.forEach(v=>{
+          if(v.finished!=1){
+            arr.push(v)
+          }
+        })
+      }
+      this.eventList = arr;
+      console.log( this.eventList)
+      t.$nextTick(()=>{
+        t.setBgImg();
+      })
+      // t.getDayCount();
+      // t.getUserIncome();
+      // t.getList();
+    },
+    destroyed() {
+      $("body").removeClass("gray");
+    },
+    components: {
+      Loading,
+      Back,
+      shop,
+    },
+    methods: {
+      linkTo(link, active) {
+        let query = null
+        if (active) {
+          query = {
+            active: active
+          }
+        }
+        this.$router.push({
+          path: link,
+          query: query
+        })
+      },
+      toLink(url){
+        if(url){
+          let query = {
+            showBack:true
+          }
+          if(url.indexOf('?')!=-1){
+            let querystr = url.split("?")[1]
+            let queryArr = querystr.split("&");
+            queryArr.map(v=>{
+              query[v.split("=")[0]] = v.split("=")[1]
+            })
+          }
+          this.$router.push({
+            path: "/"+url,
+            query:query
+          })
+        }
+      },
+      async getDayCount() {
+        const t = this;
+        try {
+          const result = await t.$server.getDayCount();
+          t.dayCount = result.data.data;
+        } catch (e) {
+          console.log(e);
+        }
+      },
+      async getUserIncome() {
+        const t = this;
+        try {
+          const result = await t.$server.getUserIncome();
+          console.log(result.data.data)
+          t.userIncome = result.data.data;
+        } catch (e) {
+          console.log(e);
+        }
+      },
+      setBgImg() {
+        $("a,i,em,li,div").each(function () {//加载背景图片
+          const bgimg = $(this).attr("bgImg");
+          if (bgimg) {
+            $(this).css({"background-image": "url(" + bgimg + ")"});
+            $(this).attr("bgImg", "");
+          }
+        });
+      },
+      async getList() {
+        // let location = await this.$store.dispatch("getMylocation");
+        let data = {
+          // latitude:location.lat==0?null:location.lat,
+          // longitude: location.lon==0?null:location.lon,
+          page: 1,
+          rows: 4,
+          orderBy: '1'
+        }
+        let result1 = await this.$server.searchDatingList(data);
+        if (result1.data.list) {
+          this.nearArr = []
+          this.nearArr.push(...result1.data.list);
+        }
+      },
+      toListItem(id) {
+        this.$router.push({
+          path: "/act",
+          query: {
+            id: id
+          }
+        })
+      },
+    }
+  }
+</script>
+<style lang="scss" scoped>
+  .more {
+    font-size: 0.36rem;
+    i {
+      font-size: 0.36rem !important;
+    }
+  }
+  .main{
+    .main-content{
+      background-color: #FFF;
+      padding:0.45rem 0.3rem 0.55rem;
+      color: #FFF;
+      .money{
+        background-size: cover;
+        background-position: center;
+        background-image: url("../../images/earnCoin/mbg.jpg");
+        height: 3.4rem;
+        border-radius:8px;
+      }
+      .qkb{
+        margin-top: 0.5rem;
+        background-size: cover;
+        background-position: center;
+        background-image: url("../../images/earnCoin/qbg.jpg");
+        height: 3.4rem;
+        border-radius:8px;
+      }
+      .money ,.qkb{
+        box-shadow:0 5px 10px  #CCC;
+        position: relative;
+        &>div:first-child{
+          padding: 0.24rem 0 0 0.27rem;
+          display: flex;
+          justify-content: space-between;
+          div:first-child{
+            display: inline-flex;
+            align-items: center;
+            img{
+              width: 0.8rem;
+              height: 0.8rem;
+            }
+            p{
+              margin-left: 0.3rem;
+              font-weight: 500;
+              font-size:0.36rem;
+            }
+          }
+          div:last-child{
+            display: inline-flex;
+            align-items: center;
+            p{
+              font-size:0.36rem;
+            }
+            p:last-child{
+              width: 2rem;
+              margin-left: 0.3rem;
+              font-weight: 500;
+              font-size:0.36rem;
+            }
+          }
+        }
+        &>div:last-child{
+          margin: 0.5rem 0 0;
+          display: flex;
+          div:first-child{
+            width: 35%;
+            text-align:center;border-radius:0.1rem;
+			&:active{
+				background-color:rgba(0,0,0,0.2);
+			}
+            p:first-child{
+              padding-left: 0.1rem;
+              font-size:0.36rem;
+            }
+            p:last-child{
+              font-weight: 500;
+              font-size:0.54rem;
+            }
+          }
+          div:last-child{
+		   text-align:center;border-radius:0.1rem;
+            width: 35%;
+			&:active{
+				background-color:rgba(0,0,0,0.2);
+			}
+            p:first-child{
+              padding-left: 0.1rem;
+              font-size:0.36rem;
+            }
+            p:last-child{
+              font-weight: 500;
+              font-size:0.54rem;
+            }
+          }
+        }
+        &>div.tubiao{
+          position: absolute;
+          height: 0.8rem;
+          width: 2.23rem;
+          right: -0.15rem;
+          top:1.65rem;
+          line-height: 0.8rem;
+          background-color: #0b628a;
+          border-radius: 0.4rem 0 0 0.4rem;
+          display: flex;
+          justify-content: space-between;
+          padding-left: 0.4rem;
+          i.iconfont{
+            font-size: 0.35rem;
+          }
+          span{
+            font-size: 0.35rem;
+          }
+          span:last-child{
+            background-color: #0b628a;
+            display: inline-block;
+            height: 1rem;
+            width: 0.15rem;
+          }
+        }
+      }
+      .qkb{
+        &>div.tubiao{
+          background-color: #745734;
+          span:last-child{
+            background-color: #745734;
+          }
+        }
+      }
+    }
+    .tuiguang{
+      display: flex;
+      justify-content: space-between;
+      margin:0.3rem;
+      align-items: center;
+    //  height: 2.59rem;
+      background-color: #FFF;
+      border-radius: 5px;
+      box-shadow:0 0 10px  #CCC;
+	 
+      div{
+        flex-grow: 1;
+		padding:0.3rem 0 0.4rem;
+        text-align: center;
+        font-size: 0.4rem;
+        i.iconfont{
+          font-size: 0.8rem;
+        }
+		 &:active{
+			background-color:#f4f4f4;
+		  }
+      }
+    }
+    .earncoin{
+      margin:0.3rem;
+      background-color: #FFF;
+      border-radius: 5px;
+      box-shadow:0 0 10px  #CCC;
+      &>div:first-child{
+        display: flex;
+        justify-content: space-between;
+        padding: 0.35rem 0.27rem 0.1rem;
+        font-size: 0.36rem;
+        div:first-child{
+          width: 0.3rem;
+          height: 0.3rem;
+          padding: 0.1rem;
+          font-size: 0;
+          background-color: #be8d52;
+          margin-right: 0.1rem;
+          border-radius: 3px;
+          img{
+            width: 0.3rem;
+            height:0.3rem;
+          }
+        }
+        div:nth-of-type(2){
+          padding-left: 0.1rem;
+          flex-grow: 1;
+          p:first-child{
+            line-height: 1;
+            height: 0.4rem;
+            font-size: 0.44rem;
+            font-weight: 500;
+          }
+        }
+        &>p{
+          color:#cacaca;
+          i.iconfont{
+            color:#cacaca;
+            font-size: 0.36rem;
+          }
+        }
+      }
+      &>div:nth-of-type(2){
+        padding-left: 0.95rem;
+        p{
+          height: 0.36rem;
+          font-size: 0.36rem;
+          color:#cacaca;
+        }
+      }
+      &>div:last-child{
+        padding: 0 0.27rem 0.3rem;
+      }
+    }
+  }
+  .content {
+    background-color: #FFF;
+    padding: 0 0.3rem;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    & > div {
+      margin: 0.35rem 0 0.13rem;
+      width: 4.8rem;
+      height: 4.56rem;
+      & > div {
+        width: 100%;
+        height: 3.37rem;
+        border-radius: 5px;
+        background-size: cover;
+        background-position: center;
+        position: relative;
+        p {
+          color: #FFF;
+          position: absolute;
+          bottom: 0;
+          padding: 0.4rem 0 4px;
+          border-radius: 0 0 5px 5px;
+          background: -webkit-linear-gradient(top, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.5)); /* Safari 5.1 - 6.0 */
+          background: -o-linear-gradient(bottom, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.5)); /* Opera 11.1 - 12.0 */
+          background: -moz-linear-gradient(bottom, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.5)); /* Firefox 3.6 - 15 */
+          background: linear-gradient(to bottom, rgba(0, 0, 0, 0), rgba(0, 0, 0, 0.5)); /* 标准的语法 */
+          font-weight: 500;
+          width: 100%;
+          display: flex;
+          justify-content: space-between;
+          span:first-child {
+            margin-left: 10px;
+            font-size: 0.32rem;
+            i {
+              font-size: 0.32rem !important;
+            }
+          }
+          span:last-child {
+            width: 40%;
+            margin-right: 10px;
+            font-size: 0.32rem;
+            text-align: right;
+            overflow: hidden;
+            text-overflow: ellipsis; //文本溢出显示省略号
+            white-space: nowrap; //文本不会换行（单行文本溢出）
+            i {
+              font-size: 0.32rem !important;
+            }
+          }
+        }
+      }
+      & > p:nth-of-type(1) {
+        overflow: hidden;
+        text-overflow: ellipsis; //文本溢出显示省略号
+        white-space: nowrap; //文本不会换行（单行文本溢出）
+        color: #000;
+        font-size: 0.36rem;
+        font-weight: 400;
+        height: 0.7rem;
+        line-height: 0.7rem;
+      }
+      & > p:last-child {
+        color: #b3b3b3;
+        font-size: 0.32rem;
+        i {
+          width: 0.44rem;
+          height: 0.44rem;
+          display: inline-block;
+          background-size: cover;
+          background-position: center;
+          vertical-align: top;
+        }
+      }
+    }
+  }
+</style>

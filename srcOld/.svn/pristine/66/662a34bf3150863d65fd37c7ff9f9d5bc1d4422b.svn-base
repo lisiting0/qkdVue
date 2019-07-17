@@ -1,0 +1,673 @@
+<template>
+  <div class="main jy_state_pop jy_nearby" :class="{jy_opa_bg:layoutType==4}">
+    <Loading v-if="isloading"></Loading>
+	<template v-if="showTop">
+		<div class="header">
+		  <div class="top">
+			<Back class="left"><i class="iconfont">&#xe613;</i></Back><a class="right"></a>{{title}}
+		  </div>
+		</div>
+		<div class="title">
+		  <div>{{place}}</div>
+		  <div><span @click="showFilter" :class="{active:showPopover}">筛选</span><i class="iconfont" @click="changeLayout">&#xe615;</i></div>
+		</div>
+	</template>
+    <filtercpt :showPopover="showPopover" @close="showPopover=false" @makesure="makesure"></filtercpt>
+	<div class="jy_nearby_scroll" v-if="layoutType==4">
+		<div class="jy_scroll_content">
+			<div class="jy_nearPeople_scroll">
+				<template v-if="nearArr.length>0">
+					<div class="page_1" v-for="item,index in nearArr" :class="{['page'+(index+1)]:true,on:index==curPage-1||index==curPage+1||index==curPage,sAni:aniPage==index,cur:aniPage==index}">
+						<div class="horizontalScroll_1" :class="{marT:index==curPage-1}">
+							<div class="page_2 s1">
+							<template v-if="!showTop&&index==curPage">
+								<div class="header">
+								  <div class="top">
+									<Back class="left"><i class="iconfont">&#xe613;</i></Back><a class="right"></a>{{title}}
+								  </div>
+								</div>
+								<div class="title">
+								  <div>{{place}}</div>
+								  <div><span @click="showFilter" :class="{active:showPopover}">筛选</span><i class="iconfont" @click="changeLayout">&#xe615;</i></div>
+								</div>
+							</template>
+							<div class="jy_nearby_img" :style="{'background-image':'url('+$utils.getFullPath(item.coverimgAttachementId?item.coverimgAttachementId.split(',')[0]:item.headimgAttachmentId,720)+')'}">
+								<i :style="{'background-image':'url('+$utils.getFullPath(item.coverimgAttachementId?item.coverimgAttachementId.split(',')[0]:item.headimgAttachmentId,720)+')'}"></i>
+							</div>
+							<p>{{item.aliasName}}：{{item.selfLabel?item.selfLabel:'愿得一人心,白首不相离'}}</p>
+							</div>
+							<div class="page_2 s2" v-if="$store.state.isLogin&&$store.state.userInfo.idStatus==1&&$store.state.userInfo.silentState==0&&item.silentState==0&&index==curPage">
+								<div class="contentScroll_1">
+									<userInfo v-if="index==curPage" :userId="item.id" :from="'nearbyPeople'"></userInfo>
+								</div>
+							</div>
+						</div>
+					</div>
+				</template>
+				<div v-else class="page_1 page0 on">
+					暂无数据
+				</div>
+			</div>
+		</div>
+	</div>
+    <div class="myscoll" v-else>
+      <scroll ref="scroll" :pullDownRefresh="pullDownRefreshObj" :pullUpLoad="pullUpLoadObj" @pullingDown="onPullingDown" @pullingUp="onPullingUp" :ifinit="ifinit" :style="{height:myScrollerHeight+'px'}" :click="true" >
+        <template v-if="nearArr">
+          <template v-if="nearArr.length>0">
+            <div v-if="layoutType===1" class="content">
+              <div v-for="item in nearArr" :key="item.id" v-if="item.id!=$store.state.userInfo.id">
+                <p @click="toUserInfo(item.id)" :style="{'background-image':'url('+getFullPath(item.headimgAttachmentId)+')'}"></p>
+                <div><img @touchend.stop="openVideo(getFullPath(item.videoUrl))" v-if="item.videoStatus==1" src="../../../images/video.png"/></div>
+                <p><span>{{item.aliasName}}</span><span><i v-if="item.distance">{{item.distance<1000?Fn.toFixed(item.distance)+'m':Fn.toFixed(item.distance/1000)+'km'}}</i></span></p>
+              </div>
+            </div>
+            <div v-if="layoutType===2" class="content1">
+              <div>
+                <div v-for="item ,index in nearArr" v-if="index%2==0&&item.id!=$store.state.userInfo.id" :key="item.id">
+                    <img @click="toUserInfo(item.id)" :src="getFullPath(item.headimgAttachmentId)"/>
+                  <div><img @touchend.stop="openVideo(getFullPath(item.videoUrl))" v-if="item.videoStatus==1" src="../../../images/video.png"/></div>
+                    <p><span>{{item.aliasName}}</span><span><i v-if="item.distance">{{item.distance<1000?Fn.toFixed(item.distance)+'m':Fn.toFixed(item.distance/1000)+'km'}}</i></span></p>
+                </div>
+              </div>
+              <div>
+                <div v-for="item ,index in nearArr" v-if="index%2==1&&item.id!=$store.state.userInfo.id" :key="item.id">
+                    <img @click="toUserInfo(item.id)" :src="getFullPath(item.headimgAttachmentId)"/>
+                  <div><img @touchend.stop="openVideo(getFullPath(item.videoUrl))" v-if="item.videoStatus==1" src="../../../images/video.png"/></div>
+                    <p><span>{{item.aliasName}}</span><span><i v-if="item.distance">{{item.distance<1000?Fn.toFixed(item.distance)+'m':Fn.toFixed(item.distance/1000)+'km'}}</i></span></p>
+                </div>
+              </div>
+            </div>
+            <div v-if="layoutType===3" class="content2">
+          <div>
+            <div v-for="item ,index in nearArr" v-if="index%3==0&&item.id!=$store.state.userInfo.id" :key="item.id" @click="toUserInfo(item.id)">
+              <div :style="{'background-image':'url('+getFullPath(item.headimgAttachmentId)+')'}"><img @touchend.stop="openVideo(getFullPath(item.videoUrl))" v-if="item.videoStatus==1" src="../../../images/video.png"/></div>
+              <p><span>{{item.aliasName}}</span><span><i v-if="item.distance">{{item.distance<1000?Fn.toFixed(item.distance)+'m':Fn.toFixed(item.distance/1000)+'km'}}</i></span></p>
+            </div>
+          </div>
+          <div>
+            <div v-for="item ,index in nearArr" v-if="index%3==1&&item.id!=$store.state.userInfo.id" :key="item.id" @click="toUserInfo(item.id)">
+              <div :style="{'background-image':'url('+getFullPath(item.headimgAttachmentId)+')'}"><img @touchend.stop="openVideo(getFullPath(item.videoUrl))" v-if="item.videoStatus==1" src="../../../images/video.png"/></div>
+              <p><span>{{item.aliasName}}</span><span><i v-if="item.distance">{{item.distance<1000?Fn.toFixed(item.distance)+'m':Fn.toFixed(item.distance/1000)+'km'}}</i></span></p>
+            </div>
+          </div>
+          <div>
+            <div v-for="item ,index in nearArr" v-if="index%3==2&&item.id!=$store.state.userInfo.id" :key="item.id" @click="toUserInfo(item.id)">
+              <div :style="{'background-image':'url('+getFullPath(item.headimgAttachmentId)+')'}"><img @touchend.stop="openVideo(getFullPath(item.videoUrl))" v-if="item.videoStatus==1" src="../../../images/video.png"/></div>
+              <p><span>{{item.aliasName}}</span><span><i v-if="item.distance">{{item.distance<1000?Fn.toFixed(item.distance)+'m':Fn.toFixed(item.distance/1000)+'km'}}</i></span></p>
+            </div>
+          </div>
+        </div>
+          </template>
+          <template v-else>
+            <div class="no-data">暂无数据</div>
+          </template>
+        </template>
+      </scroll>
+    </div>
+  </div>
+</template>
+<script>
+  import Loading from '@other/loading.vue';
+	import Back from '@other/back.vue';
+  import Scroll from '@/components/betterscroll/scroll/scroll.vue'
+  import Filtercpt from './filtercpt'
+	import myTouch from '@js/scrollpage.2.0.1.js';
+	import userInfo from '../../user/userInfo.vue';
+  let fontsize = parseInt(document.documentElement.style.fontSize);
+  export default {
+    name: 'nearbyPeople',
+    data () {
+      return {
+        isloading:false,
+        layoutType:1,
+        pullDownRefresh: true,
+        pullDownRefreshThreshold: 60,
+        pullDownRefreshStop: 40,
+        pullUpLoad: true,
+        pullUpLoadThreshold: 0,
+        ifinit:false,
+        myScrollerHeight:0,
+        showPopover:false,
+        title:'',
+        place: '',
+        searchData: {},
+        nearArr:[],
+        //分页参数
+        page:1,
+        rows:20,
+		curPage:-1,
+		aniPage:-1,
+		curUser:null,
+		isEnd:false,
+		isRead:false,
+		showTop:true,
+      }
+    },
+    computed: {
+      pullDownRefreshObj: function () {
+        return this.pullDownRefresh ? {
+          threshold: parseInt(this.pullDownRefreshThreshold),
+          stop: parseInt(this.pullDownRefreshStop)
+        } : false
+      },
+      pullUpLoadObj: function () {
+        return this.pullUpLoad ? {
+          threshold: parseInt(this.pullUpLoadThreshold)
+        } : false
+      },
+      handleRoute(){
+        return this.$store.state.handleRoute;
+      },
+    },
+    watch:{
+      handleRoute(newV){
+        if(!newV){
+          this.showPopover=false;
+        }
+      },
+      showPopover(newV){
+        let status = this.showPopover
+        this.$store.commit("CHANGEHANDLEROUTE",status)
+      },
+	  curPage(val){
+			const t=this;
+			t.curUser=null;
+			if(!t.nearArr[val]){
+				return;
+			}
+			let length=t.nearArr.length;
+			const id=t.nearArr[val].id;
+			if(!t.isEnd&&val>=length-2){
+				t.getList(t.layoutType);
+			}	
+		},
+		nearArr(val){
+			const t=this;
+			if(this.layoutType==4){
+				//t.myClickTouch&&t.myClickTouch.gotoPageY(0);
+				t.$nextTick(()=>{
+					//console.log(t.page);
+					if(t.page==2&&t.curPage>0){
+						t.curPage=0;
+						t.myClickTouch&&t.myClickTouch.gotoPageY(0);
+					}
+					t.myClickTouch&&t.myClickTouch.refresh();
+				})
+			}
+			
+		},
+		layoutType(val){
+			const t=this;
+			t.$nextTick(()=>{
+				if(val==4){
+					t.showTop=false;
+					if(t.nearArr.length>0){
+						t.curPage=0;//读取第一个个人信息
+					}
+					t.myClickTouch=new myTouch({//滑屏
+						wrapper:".jy_nearPeople_scroll",
+						durationTime:0.3,
+						loop:false,//横屏是否循环滚动
+						mouse:false,//竖屏是否支持鼠标滚轮滚动
+						disRadio:0,//触发翻屏所需要的最小拖动距离比例
+						lock:true,
+						preventDefault:true,
+						horizontalClassName:".horizontalScroll_1",//水平页面顶级容器 (必须是 verticalPageName 的一代子元素)
+						contentClassName:".contentScroll_1",//滚动内容的容器(必须是 verticalPageName 的一代子元素)
+						verticalPageName:".page_1",//垂直页面容器 (必须是 wrapper 的一代子元素)
+						horizontalPageName:".page_2",//水平页面容器(必须是 horizontalClassName 的一代子元素)
+						curClassName:"cur",//当前页面
+						horizontalToVertical:true,//横屏滚动后能否垂直滚动
+						start:function(){
+							//console.log("start");
+						},
+						moveY:function(d){
+							console.log("moveY"+this.changeY);
+							const _t=this;
+							t.showTop=true;
+						},
+						endY:function(){
+							const _t=this;
+							//_t.gotoPageY(0);
+							console.log("endY:"+_t.index)
+							t.curPage=_t.index;
+							if(_t.index_x==0){
+								t.showTop=true;
+							}else{
+								t.showTop=false;
+							}
+						},
+						moveX:function(d){
+							console.log("moveX"+this.changeX);
+							t.showTop=false;
+						},
+						endX:function(){
+							//console.log("endX");
+							const _t=this;
+							if(_t.index_x==0){
+								t.showTop=true;
+							}else{
+								t.showTop=false;
+							}
+						},
+						beforeEndY:function(){
+							const _t=this;
+							t.aniPage=_t.index;
+						},
+						moveTopOrBottom:function(changeY){
+							const _t=this;
+							if(_t.mY>0&&t.isEnd){
+								t.$vux.toast.show({
+									type:"text",
+									text: "没有了",
+									position:"bottom",
+									width:"2rem",
+								});
+							}else if(_t.mY<0){
+								console.log("第一页")
+							}
+							if(t.isRead){
+								t.$vux.toast.show({
+									type:"text",
+									text: "努力加载中,请稍后!",
+									position:"bottom",
+									width:"2rem",
+								});
+							}
+						}
+					});
+				}else{
+					t.myClickTouch=null;
+					t.showTop=true;
+					t.$refs.scroll&&t.$refs.scroll.refresh();
+				}
+			  
+			  t.isloading=false;
+			})
+		}
+    },
+    components: {
+      Loading,
+      Scroll,
+      Filtercpt,
+	    Back,
+		userInfo,
+    },
+    created (){
+
+    },
+    destroyed () {
+    },
+    mounted () {
+      this.title=this.$route.query.title;
+      this.getList(4);
+      this.myScrollerHeight = document.body.clientHeight-$(".header").height()-$(".title").height()-(0.75)*parseInt(document.documentElement.style.fontSize)-3;
+      this.$nextTick(function () {
+          this.ifinit = true;
+      })
+    },
+    methods :{
+      openVideo(path){
+        if(path){
+          this.$utils.moviePlay(path)
+        }
+      },
+      getFullPath (path) {
+        return this.$utils.getFullPath(path)
+      },
+      toUserInfo(id){
+        this.$router.push({
+          path: "userInfo",
+          query: {
+            id: id
+          }
+        })
+      },
+      changeLayout(){
+		const t=this;
+        t.isloading=true;
+        t.layoutType++;
+        if(t.layoutType>4){
+          t.layoutType=1;
+        }
+      },
+      routerTo(link){
+        console.log(link)
+      },
+      showFilter(){
+        this.showPopover = !this.showPopover;
+      },
+      makesure(sex,authentication){
+        //console.log(JSON.stringify(sex))
+        //console.log(JSON.stringify(authentication))
+        this.searchData = {
+          sex:sex,
+          idStatus:authentication&&authentication.idcard,
+          houseStatus:authentication&&authentication.house,
+          carStatus:authentication&&authentication.car,
+          healthyStatus:authentication&&authentication.health,
+          videoStatus:authentication&&authentication.video,
+        }
+		/*if(this.layoutType==4){
+			this.myClickTouch&&this.myClickTouch.gotoPageY(0);
+		}*/
+        this.getList(this.layoutType,this.searchData,true);
+        this.showPopover = false;
+      },
+      async onPullingDown() {
+        // 模拟更新数据
+        console.log('下拉刷新')
+        this.$refs.scroll&&this.$refs.scroll.openPullUp()
+        let totalPage = await this.getList(this.layoutType,this.searchData,true)
+      },
+      async onPullingUp() {
+        // 更新数据
+        console.log('上拉加载')
+        let totalPage = await this.getList(this.layoutType,this.searchData)
+      },
+      refresh(done) {//下拉刷新
+        console.log("刷新 ");
+        setTimeout(()=>{
+          console.log("刷新完成");
+          done();
+        },1000);
+      },
+      infinite(done){
+        console.log("加载 ");
+        setTimeout(()=>{
+          console.log("加载完成");
+          done(true);
+        },1000);
+      },
+      clickShare() {
+        this.showShare = !this.showShare;
+      },
+      async getList(layoutType,search,PullingDown) {
+		const t=this;
+		if(t.isRead){
+			return false;
+		}
+		t.isRead=true;
+        try{
+          if(t.layoutType!=layoutType){
+            t.page = 1;
+            t.nearArr=[];
+			if(layoutType!=4){
+				t.$refs.scroll&&t.$refs.scroll.openPullUp()
+			}
+            console.log("打开上拉加载")
+          }
+          if(PullingDown){
+            t.page = 1;
+          }
+          
+          t.$vux.loading.show();
+          let loc = await t.$store.dispatch("getMylocation");
+          if(location!=1){
+            if(loc.province&&loc.city){
+              t.place= loc.province.substring(0,2) + ' ' + loc.city.substring(0,2)
+            }
+          }
+          let data = Object.assign({
+            latitude:loc.lat||'',
+            longitude: loc.lon||'',
+            page:t.page,
+            rows:t.rows
+          },search)
+          let result = await t.$server.nearUser(data);
+          t.page++
+          if(PullingDown){
+            t.nearArr=[];
+          }
+          if(result.data.list){
+            t.nearArr.push(...result.data.list);
+          }
+		  t.layoutType = layoutType;
+          t.$vux.loading.hide()
+          t.$refs.scroll&&t.$refs.scroll.forceUpdate()
+		  if(result.data.count<=t.rows*t.page||result.data.list.length<t.rows){//判断是否最后一页						
+				t.isEnd=true;
+			}else{
+				t.isEnd=false;
+			}
+          if(t.page>result.data.totalPage){
+         //   console.log("关闭上拉加载")
+            t.$refs.scroll&&t.$refs.scroll.closePullUp()
+          }
+         // return Promise.resolve(result.data.totalPage)
+        }catch (e) {
+          console.log(e)
+         // return Promise.reject("error")
+        }
+		t.isRead=false;
+      },
+    }
+  }
+</script>
+<style scoped lang="scss">
+  .main{
+    padding-bottom:0;
+    &:before{
+      background-color:#3a3845 ;
+    }
+    .header{
+      position: fixed;
+      width: 100%;
+      z-index: 10;
+      .top{
+        background-color:#3a3845 ;
+        color:#FFF;
+        font-size: 0.52rem;
+        position: relative;
+        i{
+          font-size: 0.52rem;
+        }
+        a{
+          position:absolute;
+          padding:3px;
+        }
+        .left{
+          left:0.325rem;
+        }
+        .right{
+          right:0.325rem;
+        }
+      }
+    }
+    .title{
+      font-size: 0.4rem;
+      margin-top: 1.39rem;
+      padding:0 0.4rem;
+      height: 1rem;
+      line-height: 1rem;
+      background-color: #fff;
+      position: relative;
+      border-bottom: 1px solid #f2f2f2;
+      div{
+        display: inline-block;
+        color:#9a9a9d;
+        i{
+          position: relative;
+          font-size: 0.35rem;
+          padding:0 0.4rem;
+          margin-left: 0.3rem;
+          display: inline-block;
+          height: 100%;
+          &::before{
+            position: absolute;
+            content:"";
+            display:inline-block;
+            z-index:99;
+            left:0;
+            top:0.2rem;
+            width:1px;
+            height:0.6rem;
+            background-color:#eaeaea;
+          }
+        }
+      }
+      div:last-child{
+        position: absolute;
+        right: 0;
+        span{
+          display: inline-block;
+          height: 100%;
+          padding:0 0.2rem;
+        }
+        span.active{
+          color:#4c7ffe;
+        }
+      }
+    }
+    .myscoll{
+      background-color: #f8f8fc;
+      .content{
+        display: flex;
+        flex-wrap:wrap;
+        &>div{
+          width: 20%;
+          margin:0.2rem 2.45% 0;
+          position:relative;
+          p:first-child{
+            border-radius: 4px;
+            width: 100%;
+            padding-bottom: 100%;
+            background-size: cover;
+            background-position:center;
+            background-repeat:no-repeat;
+          }
+          img{
+            position: absolute;
+            width: 0.75rem;
+            height: 0.75rem;
+            right:0rem;
+            bottom: 0.7rem;
+          }
+          p:last-child{
+            position: relative;
+            height: 0.7rem;
+            line-height: 0.7rem;
+            span:first-child{
+              display: inline-block;
+              width: 50%;
+              font-size: 0.28rem;
+              overflow: hidden;
+              white-space: nowrap;/*不换行*/
+              text-overflow:ellipsis;/*超出部分文字以...显示*/
+            }
+            span:last-child{
+              position: absolute;
+              right: 0;
+              font-size: 0.24rem;
+              color:#FFF;
+              i{
+                width: auto;
+                height: 0.3rem;
+                line-height: 0.3rem;
+                background-color: #ff84ac;
+                border-radius: 3px;
+                vertical-align: middle;
+                padding: 0.05rem;
+              }
+            }
+          }
+        }
+      }
+      .content1{
+        padding:0.3rem 0.175rem 0;
+        display: flex;
+        justify-content: space-between;
+        &>div{
+          width: 5.1rem;
+          &>div{
+            background-color: #f2f2f2;
+            border-radius: 5px;
+            margin-bottom: 0.2rem;
+            overflow: hidden;
+            position: relative;
+            &>img:first-child{
+              width: 100%;
+            }
+            div{
+              img{
+                position: absolute;
+                width: 0.75rem;
+                height: 0.75rem;
+                right:0rem;
+                bottom: 1.6rem;
+              }
+            }
+            p{
+              padding:0 0.15rem;
+              height: 1.4rem;
+              line-height: 1.4rem;
+              display: flex;
+              justify-content: space-between;
+              span{
+                overflow: hidden;
+                white-space: nowrap;/*不换行*/
+                text-overflow:ellipsis;/*超出部分文字以...显示*/
+                font-size: 0.36rem;
+              }
+              span:first-child{
+                width: 50%;
+              }
+              i{
+                color:#ff03a9;
+              }
+            }
+          }
+        }
+      }
+      .content2{
+        padding:0.32rem 0.33rem 0;
+        display: flex;
+        justify-content: space-between;
+        &>div{
+          width: 2.92rem;
+          &:first-child,&:last-child{
+            margin-top: 1.62rem;
+          }
+          &>div{
+            margin-bottom: 0.2rem;
+            overflow: hidden;
+            div{
+              position: relative;
+              width: 2.92rem;
+              height: 2.92rem;
+              border-radius: 50%;
+              background-size: cover;
+              background-position: center;
+              img{
+                width: 0.75rem;
+                position:absolute;
+                bottom:0;
+                right: 0;
+              }
+            }
+            p{
+              padding:0 0.15rem;
+              height: 1.4rem;
+              line-height: 1.4rem;
+              display: flex;
+              justify-content: space-between;
+              span{
+                overflow: hidden;
+                white-space: nowrap;/*不换行*/
+                text-overflow:ellipsis;/*超出部分文字以...显示*/
+                font-size: 0.36rem;
+              }
+              span:first-child{
+                width: 50%;
+              }
+              i{
+                color:#ff03a9;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+</style>
+

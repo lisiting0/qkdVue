@@ -1,0 +1,544 @@
+<template>
+  <div class="main jy_state_pop">
+    <Loading v-if="isloading"></Loading>
+    <div class="header">
+      <div class="top">
+        <Back class="left"><i class="iconfont">&#xe613;</i></Back><a @click="sure" class="right"><i class="iconfont">确定</i></a>选择奖池活动人选
+      </div>
+    </div>
+    <div class="titleSelect fixed">
+      <div>{{place}}</div>
+      <div><span @click="showFilter" :class="{active:showPopover}">筛选</span><i class="iconfont" @click="changeLayout">&#xe615;</i></div>
+    </div>
+    <myScroller :style="$store.state.isBrowser?'padding:2.65rem 0 0;':'padding:3.55rem 0 0;'" :infinite="infinite" :refresh="refresh" :loadRefresh="loadRefresh" :loadInfinite="loadInfinite" ref="myScroller" >
+      <div class="myscoll">
+        <div v-if="layoutType===1" class="content">
+          <div @click="activeItem=item" v-for="item in people" :key="item.id">
+            <img class="selectImg" :src="activeItem.id==item.id?imgs.s2:imgs.s1"/>
+            <p :style="{'background-image':'url('+getFullPath(item.jiaoyouUser.headimgAttachmentId)+')'}" @click.stop="getInfo(item.id)"></p>
+            <p><span>{{item.jiaoyouUser.aliasName}}</span><span><i>{{item.jiaoyouUser.age}}</i></span></p>
+          </div>
+        </div>
+        <div v-if="layoutType===2" class="content1">
+          <div>
+            <div @click="activeItem=item" v-for="item ,index in people" v-if="index%2==0" :key="item.id">
+              <img class="selectImg" :src="activeItem.id==item.id?imgs.s2:imgs.s1"/>
+              <img :src="getFullPath(item.jiaoyouUser.headimgAttachmentId)" @click.stop="getInfo(item.id)"/>
+              <p><span>{{item.jiaoyouUser.aliasName}}</span><span><i>{{item.jiaoyouUser.age}}</i></span></p>
+            </div>
+          </div>
+          <div>
+            <div @click="activeItem=item" v-for="item ,index in people" v-if="index%2==1" :key="item.id">
+              <img class="selectImg" :src="activeItem.id==item.id?imgs.s2:imgs.s1"/>
+              <img :src="getFullPath(item.jiaoyouUser.headimgAttachmentId)" @click.stop="getInfo(item.id)"/>
+              <p><span>{{item.jiaoyouUser.aliasName}}</span><span><i>{{item.jiaoyouUser.age}}</i></span></p>
+            </div>
+          </div>
+        </div>
+        <div v-if="layoutType===3" class="content2">
+          <div>
+            <div @click="activeItem=item" v-for="item ,index in people" v-if="index%3==0" :key="item.id">
+              <img class="selectImg" :src="activeItem.id==item.id?imgs.s2:imgs.s1"/>
+              <div :style="{'background-image':'url('+getFullPath(item.jiaoyouUser.headimgAttachmentId)+')'}"></div>
+              <p><span>{{item.aliasName}}</span><span><i>{{item.jiaoyouUser.age}}</i></span></p>
+            </div>
+          </div>
+          <div>
+            <div @click="activeItem=item" v-for="item ,index in people" v-if="index%3==1" :key="item.id">
+              <img class="selectImg" :src="activeItem.id==item.id?imgs.s2:imgs.s1"/>
+              <div :style="{'background-image':'url('+getFullPath(item.jiaoyouUser.headimgAttachmentId)+')'}" @click.stop="getInfo(item.id)"></div>
+              <p><span>{{item.aliasName}}</span><span><i>{{item.jiaoyouUser.age}}</i></span></p>
+            </div>
+          </div>
+          <div>
+            <div @click="activeItem=item" v-for="item ,index in people" v-if="index%3==2" :key="item.id">
+              <img class="selectImg" :src="activeItem.id==item.id?imgs.s2:imgs.s1"/>
+              <div :style="{'background-image':'url('+getFullPath(item.jiaoyouUser.headimgAttachmentId)+')'}" @click.stop="getInfo(item.id)"></div>
+              <p><span>{{item.aliasName}}</span><span><i>{{item.jiaoyouUser.age}}</i></span></p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </myScroller>
+    <prizeFilter :showPopover="showPopover" @close="closePopover" @makesure="makesure"></prizeFilter>
+    <div v-transfer-dom>
+      <popup v-model="showAct" height="100%" :hide-on-blur=false position="bottom" :popup-style="{zIndex:596}" :should-scroll-top-on-show="true">
+        <div v-if="showInfo">
+          <act :actDatingId="actDatingId" @openInfo="openInfo" @hiddenInfo="hiddenInfo"></act>
+        </div>
+      </popup>
+    </div>
+  </div>
+</template>
+<script>
+  import s1 from '../../images/prizedraw/seclet.png';
+  import s2 from '../../images/prizedraw/sure.png';
+  import Loading from '@other/loading.vue';
+  import Back from '@other/back.vue';
+  import PrizeFilter from './prizeFilter.vue'
+  import myScroller from '@other/myScroller.vue';
+  import act from '../affinity/act.vue';
+  import {TransferDom,Popup} from 'vux'
+
+  let fontsize = parseInt(document.documentElement.style.fontSize);
+  export default {
+    name: 'prizeSelect',
+    components: {
+      Loading,
+      Back,
+      PrizeFilter,
+      myScroller,
+      Popup,
+      act,
+    },
+    directives: {
+      TransferDom
+    },
+    data () {
+      return {
+        isloading:false,
+        layoutType:1,
+        showPopover:false,
+        title:'',
+        imgs:{s1:s1,s2:s2},
+        people:[],
+        activeItem:{
+          id:0,
+        },
+        showAct:false,
+        showInfo:false,
+        actDatingId:null,//用户Id
+        userId:null,//用户Id
+        select:false,//选缘查看用户信息可以选择用户
+        place: '',
+        sex: "",
+        location:"",
+        selectArea:[],
+        datingTime: "",//1选择""不限
+        startDate: "",
+        endDate: "",
+        datingThemes:"",
+        //分页参数
+        pageNo: 1,
+        isRead: false,
+        isEnd: false,
+        loadRefresh:true,//下拉刷新
+        loadInfinite:true, //上拉加载
+      }
+    },
+    computed: {
+      handleRoute(){
+        return this.$store.state.handleRoute;
+      },
+    },
+    watch:{
+      isEnd(val) {
+        const t = this;
+        if (val) {
+          t.$refs.myScroller.finishInfinite(true);
+        } else {
+          t.$refs.myScroller.finishInfinite(false);
+        }
+      },
+      handleRoute(newV){
+        if(!newV){
+          this.showPopover=false;
+        }
+      },
+      showPopover(newV){
+        let status = this.showPopover
+        this.$store.commit("CHANGEHANDLEROUTE",status)
+      },
+    },
+    created (){
+
+    },
+    destroyed () {
+    },
+    mounted () {
+    },
+    methods :{
+      goback(){
+        this.$router.go(-1);
+      },
+      getFullPath (path) {
+        return this.$utils.getFullPath(path)
+      },
+      changeLayout(){
+        this.isloading=true;
+        this.layoutType++;
+        if(this.layoutType>3){
+          this.layoutType=1;
+        }
+        this.$nextTick(()=>{
+          this.$refs.myScroller.scrollTo(1);
+          this.isloading=false;
+        })
+      },
+      sure(){
+        if(this.activeItem.id!=0){
+          this.$emit('childMethod',this.activeItem);
+        }else{
+          this.$vux.toast.show({
+            type: "text",
+            text: "请选择好感的约会对象",
+            position: "middle",
+            width: "2rem",
+          });
+        }
+      },
+      showFilter(){
+        this.showPopover = !this.showPopover;
+      },
+      closePopover(val){
+        this.showPopover = val;
+      },
+      makesure(sex,location,selectArea,datingTime,startDate,endDate,datingThemes,place){
+        if(location===""){
+          this.place = "地区不限";
+        }else{
+          this.place = place;
+        }
+        this.sex = sex;
+        this.location = location;
+        this.selectArea = selectArea;
+        this.datingTime = datingTime;
+        this.startDate = startDate;
+        this.endDate = endDate;
+        this.datingThemes = datingThemes;
+        this.getList(this.layoutType,true,null);
+        this.showPopover = false;
+      },
+      async getList(layoutType, reload, flag) {
+        const _this = this;
+        if (_this.isRead) {
+          return false;
+        }
+        _this.isRead = true;
+        if (_this.isRefresh || flag || _this.layoutType!=layoutType || reload) {
+          _this.pageNo = 1;
+          if (flag) {
+            _this.isloading = true;
+          }
+        }
+        try {
+          let loc = await _this.$store.dispatch("getMylocation");
+ 		      if(loc.province || loc.city){
+           this.place= loc.province.substring(0,2) + ' ' + loc.city.substring(0,2)
+          }
+          let data = {
+            sysDistribution:1,    //系统分配：1是0否
+            returnMyPublisher:0,  //是否返回我发布的活动：1是0否，默认是
+            filtNotQuali:1,       //是否过滤我不符合条件的活动：1是0否，默认否
+            latitude: _this.location==1?"":loc.lat,
+            longitude: _this.location==1?"":loc.lon,
+            state: 3,
+            expectSex: _this.sex,
+            areaId: _this.location==1?_this.selectArea&&_this.selectArea[_this.selectArea.length - 1]:'',
+            beginDatingStarttime: _this.datingTime==1 ? _this.startDate+" 00:00:00":"",
+            endDatingStarttime: _this.datingTime==1 ? _this.endDate+" 00:00:00":"",
+            datingThemes: _this.datingThemes,
+            page: _this.pageNo,
+            rows: _this.$store.state.pageSize
+          };
+          if (!_this.people || _this.isRefresh || flag || _this.layoutType != layoutType || reload) {
+            _this.$refs.myScroller.scrollTo(1);
+            _this.people = [];
+            _this.layoutType = layoutType;
+          }
+          let result = await _this.$server.searchDatingList(data);
+          if(result.data.list){
+            _this.people.push(...result.data.list);
+          }
+          if (result.data.count <= _this.$store.state.pageSize * _this.pageNo || result.data.list.length < _this.$store.state.pageSize) {//判断是否最后一页
+            _this.isEnd = true;
+          } else {
+            _this.isEnd = false;
+            _this.$refs.myScroller.finishInfinite(false);
+          }
+        } catch (e) {
+          console.log(e)
+        }
+        _this.isRead = false;
+        _this.isloading = false;
+        _this.isRefresh = false;
+        _this.pageNo++;
+      },
+      async infinite(done) {//上拉加载(防止初始内容不满一屏会无限加载)
+        const t=this;
+        if(t.isEnd){
+          done(true);
+          return false;
+        }
+        console.log("加载");
+        t.getList().then(()=>{
+          if(t.isEnd){
+            done(true);
+          }else{
+            done();
+          }
+        });
+      },
+      refresh(done) {//下拉刷新
+        const t=this;
+        console.log("刷新");
+        t.isRefresh=true;
+        t.getList().then((res)=>{
+          done();
+        });
+      },
+      getInfo(actDatingId){
+        const t=this;
+        t.showInfo=true;
+        t.actDatingId = actDatingId;
+      },
+      openInfo(){
+        this.showAct=true;
+      },
+      hiddenInfo(){
+        this.showAct=false;
+        setTimeout(()=>{
+          this.showInfo=false;
+        },800)
+      },
+    }
+  }
+</script>
+<style scoped lang="scss">
+  .main{
+    padding-bottom:0;
+    &:before{
+      background-color:#3a3845 ;
+    }
+    .header{
+      position: fixed;
+      width: 100%;
+      z-index: 10;
+      .top{
+        background-color:#3a3845 ;
+        color:#FFF;
+        font-size: 0.52rem;
+        position: relative;
+        i{
+          font-size: 0.52rem;
+        }
+        a{
+          position:absolute;
+          padding:3px;
+        }
+        .left{
+          left:0.325rem;
+        }
+        .right{
+          right:0.325rem;
+        }
+      }
+    }
+    .titleSelect{
+      font-size: 0.4rem;
+      margin-top: 1.39rem;
+      padding:0 0.4rem;
+      height: 1rem;
+      line-height: 1rem;
+      background-color: #fff;
+      position: relative;
+      border-bottom: 1px solid #f2f2f2;
+      div{
+        display: inline-block;
+        color:#9a9a9d;
+        i{
+          position: relative;
+          font-size: 0.35rem;
+          padding:0 0.4rem;
+          margin-left: 0.3rem;
+          display: inline-block;
+          height: 100%;
+          &::before{
+            position: absolute;
+            content:"";
+            display:inline-block;
+            z-index:99;
+            left:0;
+            top:0.2rem;
+            width:1px;
+            height:0.6rem;
+            background-color:#eaeaea;
+          }
+        }
+      }
+      div:last-child{
+        position: absolute;
+        right: 1rem;
+        span{
+          display: inline-block;
+          height: 100%;
+          padding:0 0.2rem;
+        }
+        span.active{
+          color:#4c7ffe;
+        }
+      }
+    }
+    .myscoll{
+      background-color: #ffffff;
+      .content,.content1,.content2{
+        &>div{
+          position: relative;
+          .selectImg{
+            position:absolute;
+            width: 0.64rem;
+            top:0.1rem;
+            right: 0.1rem;
+            z-index: 10;
+          }
+        }
+      }
+      .content{
+        display: flex;
+        flex-wrap:wrap;
+        div{
+          width: 20%;
+          margin:0.2rem 2.45% 0;
+          p:nth-of-type(1){
+            position:relative;
+            border-radius: 4px;
+            width: 100%;
+            padding-bottom: 100%;
+            background-size: cover;
+            background-position:center;
+            background-repeat:no-repeat;
+            img{
+              position: absolute;
+              width: 0.75rem;
+              height: 0.75rem;
+              right:-0.37rem;
+              bottom: -0.37rem;
+            }
+          }
+          p:last-child{
+            position: relative;
+            height: 0.7rem;
+            line-height: 0.7rem;
+            span:nth-of-type(1){
+              display: inline-block;
+              width: 50%;
+              font-size: 0.28rem;
+              overflow: hidden;
+              white-space: nowrap;/*不换行*/
+              text-overflow:ellipsis;/*超出部分文字以...显示*/
+              vertical-align: middle;
+            }
+            span:last-child{
+              position: absolute;
+              bottom: 0.05rem;
+              right: 0;
+              font-size: 0.24rem;
+              color:#FFF;
+              i{
+                height: 0.1rem;
+                line-height: 0.1rem;
+                padding: 0 0.1rem;
+                background-color: #ff84ac;
+                border-radius: 3px;
+              }
+            }
+          }
+        }
+      }
+      .content1{
+        padding:0.3rem 0.175rem 0;
+        display: flex;
+        justify-content: space-between;
+        &>div{
+          width: 5.1rem;
+          &>div{
+            background-color: #f2f2f2;
+            border-radius: 5px;
+            margin-bottom: 0.2rem;
+            overflow: hidden;
+            &>img:nth-of-type(2){
+              width: 100%;
+            }
+            div{
+              position: relative;
+              img{
+                width: 0.75rem;
+                position:absolute;
+                top:-0.5rem;
+                right: 0.1rem;
+              }
+            }
+            p{
+              padding:0 0.15rem;
+              height: 1.4rem;
+              line-height: 1.4rem;
+              display: flex;
+              justify-content: space-between;
+              span{
+                overflow: hidden;
+                white-space: nowrap;/*不换行*/
+                text-overflow:ellipsis;/*超出部分文字以...显示*/
+                font-size: 0.36rem;
+              }
+              span:first-child{
+                width: 50%;
+              }
+              i{
+                color:#ff03a9;
+              }
+            }
+          }
+        }
+      }
+      .content2{
+        padding:0.32rem 0.33rem 0;
+        display: flex;
+        justify-content: space-between;
+        &>div{
+          width: 2.92rem;
+          &:nth-of-type(1),&:last-child{
+            margin-top: 1.62rem;
+          }
+          &>div{
+            margin-bottom: 0.2rem;
+            overflow: hidden;
+            div{
+              position: relative;
+              width: 2.92rem;
+              height: 2.92rem;
+              border-radius: 50%;
+              background-size: cover;
+              background-position: center;
+              img{
+                width: 0.75rem;
+                position:absolute;
+                bottom:0;
+                right: 0;
+              }
+            }
+            p{
+              padding:0 0.15rem;
+              height: 1.4rem;
+              line-height: 1.4rem;
+              display: flex;
+              justify-content: space-between;
+              span{
+                overflow: hidden;
+                white-space: nowrap;/*不换行*/
+                text-overflow:ellipsis;/*超出部分文字以...显示*/
+                font-size: 0.36rem;
+              }
+              span:first-child{
+                width: 50%;
+              }
+              i{
+                color:#ff03a9;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+</style>
+

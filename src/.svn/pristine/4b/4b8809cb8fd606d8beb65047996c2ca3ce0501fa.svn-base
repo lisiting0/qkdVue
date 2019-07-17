@@ -1,0 +1,85 @@
+let hiddenAttr=[];
+const routerBack={
+/*	data(){
+		return {
+			hiddenAttr:[]
+		}
+	},*/
+	computed:{
+		handleRoute() {
+			return this.$store.state.handleRoute;
+		},
+	},
+	mounted(){
+		const t=this;
+		// 监听手机物理返回键时禁止返回之前的路由
+		if (window.history && window.history.pushState&&t.$store.state.isBrowser) {
+            window.addEventListener('popstate', t.forbidBack, false);
+            t.forbidBack() 
+        }
+	},
+	beforeDestroy () {
+		const t=this;
+		if(t.$store.state.isBrowser){
+			window.removeEventListener('popstate', t.forbidBack, false);
+		}
+    },
+	watch:{
+		handleRoute(newV) {//返回键触发
+			const t=this;
+			if (!newV) {
+				const len=hiddenAttr.length;
+				for(let i=0;i<len;i++){
+					if(t[hiddenAttr[i].name]){
+						if(!hiddenAttr[i].value.fn){
+							t[hiddenAttr[i].name]=false;
+						}else{
+							t[hiddenAttr[i].value.fn]&&t[hiddenAttr[i].value.fn]();
+						}
+						break;
+					}
+				}
+			}
+		},
+	},
+	methods:{
+		forbidBack (e) {
+			const t=this;
+			//console.log(window.history)
+			console.log("forbidBack");
+            window.history.pushState('forward', null, window.location.href);
+			//console.log("加入一个history")
+            //window.history.forward(1);
+			if(e&&e.type=="popstate"){//点击返回
+				if(t.$store.state.handleRoute){
+					t.$store.commit("CHANGEHANDLEROUTE",false);
+				}else{
+					window.removeEventListener('popstate', t.forbidBack, false);
+					window.history.back();
+					t.$router.back();
+				}
+			}
+        },
+	},
+	init(opt){
+		for(let att in opt){
+			this.watch[att]=function(val){
+				const t=this;
+				const len=hiddenAttr.length;
+				let flag=val;
+				if(!flag){
+					for(let i=0;i<len;i++){
+						if(t[hiddenAttr[i].name]){
+							flag=true;
+							break;
+						}
+					}
+				}
+				t.$store.commit("CHANGEHANDLEROUTE", flag);
+			}
+			hiddenAttr.push({name:att,value:opt[att]||{}});
+		}
+	}
+}
+
+export default routerBack

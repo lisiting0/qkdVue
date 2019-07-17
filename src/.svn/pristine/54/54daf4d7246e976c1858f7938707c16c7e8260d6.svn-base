@@ -1,0 +1,1686 @@
+<template>
+	<div :class="'main jy_all_top jy_act jy_act_new'+(' jy_act_'+tmp)">
+		<Loading v-if="isloading"></Loading>
+		<div class="header">
+			<div class="top">
+				<Back class="left"><i class="iconfont">&#xe613;</i></Back><div class="right">
+					<router-link :to="{name:'actInfo',query:{id:datingId}}"><i class="iconfont">&#xe92f;</i></router-link><a @click.stop="exit"><i class="iconfont">&#xe7de;</i></a>
+				</div><p v-if="owner"><span :class="'jy_act_ico jy_act_ico_'+tmp">{{tmpName[tmp]}}</span>一起{{owner.datingThemes==1?'去旅行':owner.datingThemes==2?'吃饭':owner.datingThemes==3?'看电影':owner.datingThemes==4?'唱歌':owner.datingThemes==5?'运动':''}}-{{owner.jiaoyouUser.aliasName}}<!--{{chatRoomInfo&&(chatRoomInfo.state==5?'（已结束）':(chatRoomInfo.status==1||chatRoomInfo.state==6)?'(进行中)':chatRoomInfo.state==3?'(待开始)':'')}}--></p>
+			</div>
+		</div>
+		<div :class="'jy_act_top'+(!prizeRun&&isActEnd&&chatRoomInfo&&chatRoomInfo.headimgAttachmentId?' jy_act_end':'')">
+			<div class="jy_act_tx jy_act_tx_l">
+				<i class="jy_act_tx_img" :style="owner?'background-image:url('+$utils.getFullPath(owner.jiaoyouUser.headimgAttachmentId)+')':''"></i>
+				<p class="jy_act_tx_tit"><span><!--<em bgImg="@images/f4.jpg"></em>-->约主</span></p>
+				<!--<span v-else-if="tmp=='xy'||tmp=='zy'" class="jy_act_tx_tit"><i>320<em class="iconfont">&#xe60a;</em></i><i>410<em class="iconfont">&#xe62d;</em></i></span>-->
+			</div>
+			<div :class="'jy_act_tx jy_act_tx_r'+(!prizeRun&&isActEnd&&chatRoomInfo&&chatRoomInfo.headimgAttachmentId?'':' jy_act_nobody')">
+				<i v-if="tmp=='zy'" class="jy_act_tx_img" :style="!prizeRun&&chatRoomInfo&&chatRoomInfo.headimgAttachmentId?'background-image:url('+$utils.getFullPath(chatRoomInfo.headimgAttachmentId)+')':''"></i>
+				<i v-else class="jy_act_tx_img" :style="chatRoomInfo&&chatRoomInfo.headimgAttachmentId?'background-image:url('+$utils.getFullPath(chatRoomInfo.headimgAttachmentId)+')':''"></i>
+				<p class="jy_act_tx_tit"><span><!--<em bgImg="@images/f3.jpg"></em>-->幸运儿</span></p>
+			</div>
+			<div class="jy_act_t_mid " :data-status="(isActEnd?tmpName[tmp]+'结束':chatRoomInfo?(chatRoomInfo.state==6?tmpName[tmp]+'中...':chatRoomInfo.state==3?'待开始':''):'')">
+				<template v-if="chatRoomInfo">
+					<p class="jy_act_price" v-if="tmp=='jy'"><i>{{isActEnd?'最终竞价':'当前竞价'}}</i><em data-t="乾坤币">{{chatRoomInfo.currentBidding||0}}</em></p>
+					<template v-if="tmp=='jy'"><!--竞缘-->
+						<p class="jy_act_time" v-if="(chatRoomInfo&&chatRoomInfo.status==1)||isActEnd">{{isActEnd?'':'倒计时 '+actTime}}</p>
+						<p class="jy_act_time" v-else-if="showTime&&!isActEnd">{{'活动开始 '+reverseTime}}</p>
+					</template>
+					<p class="jy_act_qy_btn" v-else-if="tmp=='qy'&&!isActEnd"><!--抢缘-->
+						<i class="jy_act_qy_q">{{actStart?totalCount+qynum:totalCount}}</i>
+						<!--<i class="jy_act_qy_p">0</i>-->
+						<i class="jy_act_qy_time" v-if="showTime">{{chatRoomInfo&&chatRoomInfo.nextSession?'第'+chatRoomInfo.nextSession+'轮 '+reverseTime:'活动开始 '+reverseTime}}</i>
+					</p>
+					<!--其他-->
+					<p class="jy_act_time" v-else>{{showResult&&chatRoomInfo&&chatRoomInfo.headimgAttachmentId?'':showResult?'':showTime?(chatRoomInfo.state==3?'活动开始 '+reverseTime:tmpName[tmp]+'倒计时 '+reverseTime):''}}</p>
+				</template>
+			</div>
+			<!--<ul class="jy_act_num" v-if="chatRoomInfo">
+				<li>现场<i>{{chatRoomInfo.onlineCount}}人</i></li>
+				<li>报名<i>{{chatRoomInfo.baoMingCount}}人</i></li>
+				<li>旁观<i>{{chatRoomInfo.lookOnCount}}人</i></li>
+			</ul>-->
+			<!--<p class="jy_act_sm" @click.shop="showSm=!showSm">{{tmpName[tmp]}}说明</p>-->
+			<p class="jy_act_people">{{(onlineUser.length)||0}}</p>
+			<!--<p class="jy_act_ph" @click.shop="showPh=!showPh">
+				<em>排行</em>
+				<i v-if="(tmp=='qy'||tmp=='xy'||tmp=='zy')&&owner&&(owner.jiaoyouUser.id!=$store.state.userInfo.id)">{{tmp=='qy'?'累抢':'活跃'}}：{{tmp=='qy'?(chatRoomInfo&&totalCount)||0:activeDegree}}{{tmp=='qy'?'次':''}}</i>
+			</p>-->
+		</div>
+		<div class="jy_act_user">
+			<div>
+				<ul v-if="onlineUser&&onlineUser.length>0">
+					<li v-for="item,index in onlineUser" :style="'background-image:url('+$utils.getFullPath(item.headimg)+')'" @click.stop="item.userId==$store.state.userInfo.id?'':getUserInfo(item.userId)" ></li>
+				</ul>
+			</div>
+			<a @click.shop="showPh=!showPh"></a>
+		</div>
+		<div class="jy_act_mid">
+			<div class="jy_act_mid_con">
+				<!--<div v-if="tmp=='jy'&&chatRoomInfo&&chatRoomInfo.status==1&&owner&&(owner.jiaoyouUser.id!=$store.state.userInfo.id)&&chatRoomInfo.state!=5" :class="'jy_act_jp'+(showJp?' cur':'')+(showJpPrice?' show':'')" >
+					<i class="jy_act_jp_bj" @click.stop="showJp=true"></i>
+					<div class="jy_act_jp_p">
+						<em class="jy_act_jp_s" @click.shop="showJpPrice=!showJpPrice">{{jpPrice}}</em><i class="jy_act_add" @click.shop="addPrice">加价</i>
+					</div>
+					<i class="jy_act_jp_close" @click.stop="showJp=false,showJpPrice=false">&#xe622;</i>
+					<ul class="jy_act_jp_list">
+						<li v-for="item in [50,100,150,200]" @click.shop="jpPrice=item,showJpPrice=false">{{item}}</li>
+					</ul>
+				</div>-->
+				<!-- 活动右下角倒计 -->
+				<!--<div v-else-if="showTime&&!isActEnd" class="jy_act_py_time" :data-num="chatRoomInfo&&chatRoomInfo.nextSession||0">
+					<i v-if="reverseTime">{{reverseTime}}</i>
+				</div>
+				<div v-else-if="tmp=='qy'&&actStart" class="jy_act_qy_num" :data-num="chatRoomInfo&&chatRoomInfo.nextSession||0"  @click.shop="owner&&(owner.jiaoyouUser.id!=$store.state.userInfo.id)?showQy=true:''">
+					<i>抢缘中</i>
+				</div>
+				<div v-else-if="tmp=='zy'&&showCj" class="jy_act_zy_ing"  @click.shop="showZy=true">
+					<i>抽奖中</i>
+				</div>-->
+				<dl class="jy_act_lt">
+					<!--<dt>2018-08-29 16:20:34</dt>-->
+					<dd>
+						<myScroller  :refreshText="refreshText" :infinite="infinite" :refresh="refresh"  :loadRefresh="loadRefresh" :loadInfinite="loadInfinite" ref="myScroller" :showbg="showbg">
+						<ul class="jy_act_lt_list" v-if="chatList">
+							<template v-for="item,index in chatList">
+								<li v-if="item.giftId&&item.message" class="jy_lt_center">
+									<p>{{item.name}} 送给 {{JSON.parse(item.message).acceptUser.aliasName}} <em :style="'background-image:url('+$utils.getFullPath(item.giftImage)+')'"></em> X {{JSON.parse(item.message).giftNum}}</p>
+								</li>
+								<li v-else :class="{jy_lt_right:item.userId==$store.state.userInfo.id,jy_lt_left:item.userId!=$store.state.userInfo.id,isFirst:item.messageId==firstMessageId}">
+									<i @click.stop="item.userId==$store.state.userInfo.id?'':getUserInfo(item.userId)" class="jy_lt_img" :style="'background-image:url('+$utils.getFullPath(item.bicon)+')'"><em  v-if="item.videoStatus==1" class="jy_lt_video"></em></i>
+									<!--<i v-else class="jy_lt_img" :style="'background-image:url('+$utils.getFullPath(item.bicon)+')'"><em  v-if="item.videoStatus==1" class="jy_lt_video"></em></i>-->
+									<!--<div class="jy_lt_ico" v-if="owner&&(owner.jiaoyouUser.id==item.userId)">
+										<em class="jy_icon_vip" v-if="owner.jiaoyouUser.cashDepositLevel"></em><em class="jy_icon_car" v-if="owner.jiaoyouUser.carStatus"></em><em class="jy_icon_identity" v-if="owner.jiaoyouUser.idStatus"></em><em class="jy_icon_healthy" v-if="owner.jiaoyouUser.healthyStatus"></em><em class="jy_icon_house" v-if="owner.jiaoyouUser.houseStatus"></em>
+									</div>-->
+									<h4>{{item.bname}}<!--<i class="jy_h_img_xin"></i><i class="jy_h_img_xin2"></i><i class=" jy_h_img_q"></i><i class=" jy_h_img_v3"></i>--><i v-if="item.userId==owner.jiaoyouUser.id" class=" jy_h_text">约主</i></h4>
+									<div v-if="item.message" class="jy_lt_msg" v-html="getExpContent(item.message)"></div>
+								  <div v-else-if="item.audio" class="jy_lt_msg" @click.stop="setActiveItem(item)">
+									<voice-playback @listenChildMethod="listenChildMethod" :animation="activeItem.id==item.id" :path="item.audio" :rotateType="item.userId==$store.state.userInfo.id?'1':null"></voice-playback>
+									<div class="remark">{{item.remark}}</div>
+								  </div>
+								</li>
+							</template>
+						</ul>
+						</myScroller>
+					</dd>
+				</dl>
+				<dl class="jy_act_ph_list" v-if="showPh">
+					<dt><i>活跃度排名</i></dt>
+					<dd>
+						<ul class="jy_ph_list">
+							<li v-for="item,index in phList" :data-sort="index+1">
+							
+								<i class="jy_lt_img" :style="'background-image:url('+$utils.getFullPath(item.jiaoyouUser.headimgAttachmentId)+')'"><em v-if="item.jiaoyouUser.videoStatus==1" class="jy_lt_video"></em></i>
+								<h4>{{item.jiaoyouUser.aliasName}}</h4>
+								<div class="jy_ph_ico">
+									<em class="jy_auth_age" :class="{jy_auth_age_man:item.jiaoyouUser.sex==2}">{{item.jiaoyouUser.sex==1?'&#xe64a;':'&#xe605;'}}{{item.jiaoyouUser.age}}</em>
+								</div>
+								<em class="jy_ph_num">{{item.activeDegree}}</em>
+							</li>
+							
+						</ul>
+					</dd>
+				</dl>
+				<ul v-if="showResultWin" class="jy_act_py_success" @click.stop="actStatusRes=true">
+					<li>
+						<i :style="owner?'background-image:url('+$utils.getFullPath(owner.jiaoyouUser.headimgAttachmentId)+')':''"></i>
+						{{owner&&owner.jiaoyouUser.aliasName}}
+					</li>
+					<li>
+						<i :style="chatRoomInfo?'background-image:url('+$utils.getFullPath(chatRoomInfo.headimgAttachmentId)+')':''"></i>
+						{{chatRoomInfo&&chatRoomInfo.userName}}
+					</li>
+				</ul>
+				<div v-if="tmp=='qy'&&showQy&&owner&&$store.state.userInfo.id!=owner.jiaoyouUser.id" class="jy_act_qy_start">
+					<p class="jy_act_qy_t">
+						<i v-if="actEndTime>=0">00:00:{{actEndTime<10?"0"+actEndTime:actEndTime}}</i>
+						<em class="jy_act_qy_close" @click.shop="showQy=false">&#xe622;</em>
+					</p>
+					<i :class="'jy_act_qy_btn'+(qyClick?' cur':'')" @touchstart="touchStart($event)" @touchend="touchEnd($event)"></i>
+					<p class="jy_act_qy_b">
+						<i>抢缘次数：{{qynum}}</i>
+						<!--<i>实时抢缘排名：2</i>-->
+					</p>
+				</div>
+				<div v-if="tmp=='zy'&&showZy" class="jy_act_zy_prize">
+					<p class="jy_act_qy_t">
+						<!--<i>00:00:15</i>-->
+						<em class="jy_act_qy_close" @click.shop="showZy=false">&#xe622;</em>
+					</p>
+					<Prize @endPrize="endPrize" @prizeRunning="prizeRunning" :datingId="datingId" :isActEnd="isActEnd"></Prize>
+					<!--<p class="jy_act_zy_b"><i><em bgImg="@images/e4.jpg"></em>看天不美   正在抽奖.....</i></p>-->
+				</div>
+			</div>
+		</div>
+		<!--<div class="jy_act_comment"></div>-->
+		<div v-transfer-dom>
+			<popup v-model="showWin" height="100%" :hide-on-blur=false position="bottom" :popup-style="{zIndex:596}" :should-scroll-top-on-show="true">
+			<div class="top_userInfo" v-if="showInfo">
+				<userInfo :actDatingId="datingId" :select="select" @openWin="openWin" @hiddenInfo="hiddenInfo" :userId="userId"></userInfo>
+			</div>
+			</popup>
+		</div>
+		<transition enter-active-class="slideInUp" leave-active-class="slideOutUp">
+		  <gift v-show="showGift" :showAnimate="false"  @sendGift="sendGift" :name="acceptUser.aliasName" @close="sendGift" :list="giftList" :selectUser="true" @chooseUser="chooseUser"></gift>
+		</transition>
+		<div v-transfer-dom>
+		  <x-dialog v-model="showSm" :hide-on-blur=true>
+			<div class="jy_act_smDesc">
+				<h4>{{tmp=='jy'?'竞缘':tmp=='py'?'配缘':tmp=='qy'?'抢缘':tmp=='xy'?'选缘':tmp=='zy'?'中缘':''}}说明</h4>
+				<p v-if="tmp=='xy'">入场选缘开始后，发起人版主选择约会对象（可以通过聊天、送礼等来博取缘主的关注和好感哦），活动持续30分钟</p>
+				<p v-if="tmp=='qy'"> 入场抢缘开始后，会有3轮抢点的机会，每轮间隔2分钟，三轮累计抢点次数最高者胜出，为了女神，施展你的弹指神通吧！活动持续30分钟</p>
+				<p v-if="tmp=='py'">入场配缘开始后，系统会有30分钟内匹配一位伙伴与缘主进行约会，通过聊天、送礼等会增加自己的匹配率哦！</p>
+				<p v-if="tmp=='zy'">入场中缘开始后，通过聊天、送礼等会增加自己的活跃度，每消耗120活跃度可以进行一次抽奖，快来抽走你的女神吧！活动持续30分钟</p>
+				<p v-if="tmp=='jy'">入场竞缘开始后，通过竞价的方式来竞得本次的邀约，竞价开始后30秒内如果没有加价，则当前竞价者胜出，活动持续到竞价完成为止。</p>
+			</div>
+		  </x-dialog>
+		</div>
+		<div class="ds_flower">
+			<!--<div class="flower"></div>-->
+			<ul>
+				<!--<li><div><i style="background-image:url(images/p2.jpg);"></i>琪琪zara<div class="flower"><em>8</em></div></div></li>-->
+				<!--<li data-uid="10000" fid="0" class="cur"><div><i style="background-image:url(http://192.168.0.250/userfiles/20181027/7qQ77ChT2HQJO3D79fitdQyp35DVaY.jpg);"></i><p>小明 送出</p><div class="flower" style="background-image:url(http://192.168.0.250/userfiles/20181027/7qQ77ChT2HQJO3D79fitdQyp35DVaY.jpg);background-size:100%;"><em class="cur">4</em></div></div></li>-->
+			</ul>
+		</div>
+		<div class="jy_act_bottom" v-if="!showBoard">
+			<div class="jy_act_b_btn" v-if="owner&&$store.state.userInfo.id!=owner.jiaoyouUser.id">
+				<template v-if="tmp=='jy'">
+					<a v-if="chatRoomInfo&&chatRoomInfo.status==1&&chatRoomInfo.state!=5" class="jy_act_b_addPrice cur" @click.stop="showJp=!showJp">加价</a>
+					<a v-else class="jy_act_b_addPrice">加价</a>
+				</template>
+				<template v-else-if="tmp=='zy'">
+					<a :class="'jy_act_b_zy_btn'+(showCj&&chatRoomInfo.state==6?' cur':'')" @click.stop="canIPrize">中缘<i>{{activeDegree}}</i></a>
+				</template>
+				<template v-if="tmp=='qy'&&!showQy&&actStart">
+					<a class="jy_act_b_qy_btn" @click.stop="showQy=true">抢缘</a>
+				</template>
+				<a class="jy_act_b_gift" @click.stop="showGift=true">&#xe6be;</a>
+			</div>
+			<p  v-if="!$store.state.isBrowser">
+				<img @click.stop="beginRecord" v-show="!voice" src="../../images/message/voice.png"/>
+				<img @click.stop="voice=!voice" v-show="voice" src="../../images/message/keyboard.png"/>
+				<span @click.stop="showKeyBoard" v-show="!voice">说点什么吧...</span>
+				<span :style="{'text-align': 'center',backgroundColor:record?'#999':'#c6c6c6','border-radius':'3px',color:'#FFF'}" @touchmove.stop="touchmove($event)" @touchstart.stop="touchstart($event)" @touchend.stop="touchend($event)" @touchcancel.stop="touchcancel($event)" v-show="voice">
+				  {{record?'松开 结束':'按住 说话'}}
+				</span>
+			  </p>
+			  <chatinput v-else v-show="!showGift"  :onlyText="true" @sendText="sendText"></chatinput>
+			<div class="jy_act_addPrice" v-if="showJp">
+				<span><a @click.stop="jpPrice-=50,jpPrice<50?jpPrice=50:''">&#xe66e;</a><em>{{jpPrice}}</em><a @click.stop="jpPrice+=50">&#xe61f;</a></span>
+				<i @click.shop="addPrice">提交</i>
+			</div>
+		</div>
+		<div v-show="showVedio" class="vedio-cls">
+		  <div>
+			<span></span>
+			<span></span>
+			<span></span>
+			<span></span>
+			<span></span>
+		  </div>
+		  <div>松开发送，上滑取消</div>
+		</div>
+		<div v-transfer-dom>
+			<popup v-model="showGiftUser"  height="50%" position="bottom" :popup-style="{zIndex:596}" :should-scroll-top-on-show="true" @on-hide="hiddenFilter">
+				<div class="actScene_giftUser">
+					<ul class="actScene_giftUserList" v-if="candidateUser&&candidateUser.length>0">
+						<li v-for="item in candidateUser" v-if="item.jiaoyouUser.id!=$store.state.userInfo.id" @click.stop="showGiftUser=false;acceptUser=item.jiaoyouUser;"><i :style="'background-image:url('+$utils.getFullPath(item.jiaoyouUser.headimgAttachmentId)+')'"></i><h3>{{item.jiaoyouUser.aliasName}}<em v-if="item.jiaoyouUser.id==owner.jiaoyouUser.id">约主</em></h3></li>
+					</ul>
+				</div>
+			</popup>
+		</div>
+	</div>
+</template>
+<script>
+  import Loading from '@other/loading.vue';
+  import Back from '@other/back.vue';
+  import Prize from './prize.vue';
+  import userInfo from '../user/userInfo.vue';
+  import emotion from '@/assets/emotion/emotion';
+  import gift from '../plugs/gift';
+  import myApi from '@js/flower.js';
+  import {Popup,TransferDom,XDialog} from 'vux'
+  import chatinput from '../plugs/chatinput';
+  import VoicePlayback from '@/components/plugs/voicePlayback'
+  import myScroller from '@other/myScroller.vue';
+  import routerBack from '@/plus/routerBack.js';
+	routerBack.init("actSceneNew",{
+		showWin:{
+			fn:'hiddenInfo',
+			change:'showWinChange',
+		},
+		showGift:{
+			change:'showGiftChange',
+		}
+	})
+  let fontsize = parseInt(document.documentElement.style.fontSize);
+  export default {
+    name: 'actSceneNew',
+	mixins:[routerBack],
+    data () {
+		return {
+			activeItem:{},
+			showVedio:false,
+			touchY:0,
+			touchOffset:0,
+			voice:false,
+			record:false,
+			showInfo:false,
+			showWin:false,
+			datingId:null,
+			userId:null,
+			showJp:false,//展开竞拍按钮
+			showJpPrice:false,//显示竞拍价格列表
+			jpPrice:50,//竞拍价
+			isloading:false,
+			isActEnd:false,//竞价是否结束
+			showPh:false,//显示排行榜
+			showSm:false,//显示活动说明
+			showQy:false,//显示抢缘倒计
+			showZy:false,//显示中缘抽奖
+			showCj:false,//显示抽奖按钮
+			showResult:false,//显示活动结果弹窗
+			tmp:'',//模版 竞缘 :'jy',配缘 :'py',抢缘 :'qy',选缘 :'xy',中缘 :'zy'
+			tmpName:{
+				jy:"竞缘",
+				py:"配缘",
+				qy:"抢缘",
+				xy:"选缘",
+				zy:"中缘",
+			},
+			dataChats:[],
+			UIChatBox:null,
+			chatRoomInfo:null,//活动信息
+			inputBarHeight:0,
+			limit:1000,//读取的聊天条数
+			chatList:null,//聊天信息
+			jytimeout:null,//竞缘活动倒计
+			timeout:null,//定时器
+			actTime:"00:00",//竞缘活动剩余时间
+			phList:[],//排行榜列表
+			owner:null,
+			qynum:0,//抢缘次数
+			actStart:false,//活动是否开始
+			showTime:false,//显示倒计
+			reverseTime:"00:00",
+			actEndTime:0,//活动结束倒计
+			totalCount:0,//抢缘累抢次数
+			qyClick:false,//抢缘时按钮点击动画
+			showGift:false,
+			giftList:[],
+			giftEndlist:[],
+			//title:'',
+			flower:{},
+			activeDegree:0,//活跃度
+			prizeRun:false,//抽奖转盘是否在转动
+			select:false,//选缘查看用户信息可以选择用户
+			showBoard:false,//是否显示聊天框
+			actStatusRes:false,//活动结束后进入不显示结果弹窗的
+			onlineUser:[],//在线用户
+			isExit:false,
+			chatTimeout:'',
+			loadRefresh:true,//下拉刷新
+			loadInfinite:false, //上拉加载
+			refreshText:"加载更多",
+			isEnd:false,
+			pageNo:1,
+			firstMessageId:'',
+			acceptUser:{},
+			candidateUser:[],//送礼人员列表
+			showGiftUser:false,//选人列表
+			showbg:true,
+		}
+    },
+    components: {
+      Loading,
+	  Prize,
+	  Back,
+	  userInfo,
+	  Popup,
+	  gift,
+	  XDialog,
+      VoicePlayback,
+	  chatinput,
+	  myScroller,
+    },
+	directives: {
+      TransferDom
+    },
+	computed: {
+		listenChatRoomMessageList() {
+		  console.log("变化了")
+			return this.$store.state.chatRoomMessageList;
+		},
+		listenChatRoomFlower(){
+			return this.$store.state.giftObj;
+		},
+		chatRoomInfoMsg() {
+			return this.$store.state.chatRoomInfo;
+		},
+		showResultWin(){
+			return this.showResult&&this.chatRoomInfo&&this.chatRoomInfo.headimgAttachmentId&&!this.actStatusRes;
+		},
+		intoUser(){
+			return this.chatRoomInfo&&this.chatRoomInfo.intoUser;
+		},
+		leaveUser(){
+			return this.chatRoomInfo&&this.chatRoomInfo.leaveUser;
+		},
+		doMessage(){
+		  return this.$store.state.doMessage;
+		}
+    },
+    watch:{
+		showResultWin(val){
+			const t=this;
+			if(val){
+				t.isActEnd=true;
+			}
+		},
+      doMessage(newV,oldV){
+        console.log('打印')
+        if(oldV==false&&newV==true){
+          this.getNewMessageList();
+        }
+      },
+		listenChatRoomFlower(gift){
+			console.log("收到花:"+JSON.stringify(gift));
+			const t=this;
+			t.flower.putFlower(gift.userName,1,gift.userImage,gift.giftId,gift.giftImage);
+		},
+		listenChatRoomMessageList(newList){
+
+			//消息列表，用于展示
+			const t=this;
+			console.log('聊天室新消息：'+JSON.stringify(newList))
+			// this.$db.resetCount(this.datingId,this.$store.state.userId);
+
+			if(!newList||newList.length<=0){
+				return false;
+			}
+			let chatList=t.$utils.deepCopy(newList);
+			/*if(t.chatList){
+				chatList=t.$utils.deepCopy(t.chatList);
+				chatList.push(...newList);
+			}
+			chatList.sort((a,b)=>{
+				return new Date(a.time.replace(/\-/g, "/")).getTime()-new Date(b.time.replace(/\-/g, "/")).getTime();
+			})
+			let length=chatList.length;
+			let has={};
+			let noRepeatList=[];
+	
+			for(let i=0;i<length;i++){
+				if(!has[chatList[i].messageId]){
+					noRepeatList.push(chatList[i]);
+					has[chatList[i].messageId]=true;
+				}else{
+					console.log("聊天重复了，messageId："+chatList[i].messageId+",message:"+chatList[i].message);
+				}
+			}*/
+			t.showbg=false;
+			t.chatList=chatList;
+			//this.$nextTick(()=>{//滚动到底部
+				//$(".jy_act_lt")[0].scrollTop=$(".jy_act_lt_list").outerHeight(true);
+				//$(".jy_act_lt").animate({"scrollTop":$(".jy_act_lt_list").outerHeight(true)},500);
+			//})
+		},
+		onlineUser(val){
+			const t=this;
+			console.log("在线用户:"+JSON.stringify(val));
+		},
+		leaveUser(val){
+			const t=this;
+			if(val){
+				let onlineUser=t.onlineUser.filter((item,index)=>{
+					return item.userId!=val.userId;
+				});
+				t.onlineUser=onlineUser;
+				console.log(t.$store.state.userInfo.aliasName+":"+val.userId+"离开了");
+			}
+		},
+		intoUser(val){
+			const t=this;
+			if(val){
+				const has=t.onlineUser.filter((item,index)=>{
+					return item.userId==val.userId;
+				});
+				//console.log(JSON.stringify(has));
+				if(has.length>0){
+					console.log(t.$store.state.userInfo.aliasName+":"+val.userId+"重复了");
+				}else{
+					console.log(t.$store.state.userInfo.aliasName+":"+val.userId+"进来了");
+					t.onlineUser.unshift(val);
+					
+				}
+			}
+		},
+		chatRoomInfoMsg(val){//活动信息更新
+			const t=this;
+			t.chatRoomInfo=val;
+			if(t.tmp=='jy'){
+				if(t.chatRoomInfo.remainingTime){//竞价倒计时
+					clearInterval(t.jytimeout);
+					t.jytimeout=setInterval(()=>{
+						t.chatRoomInfo.remainingTime--;
+						if(t.chatRoomInfo.remainingTime>0){
+							let min =Math.floor(t.chatRoomInfo.remainingTime/60);
+							let sec=t.chatRoomInfo.remainingTime%60;
+							t.actTime=(min<10?"0"+min:min+"")+":"+(sec<10?"0"+sec:sec+"");
+						}else{
+							t.actTime="00:00";
+							clearInterval(t.jytimeout);
+						}	
+					},1000);
+				}
+				if(t.chatRoomInfo.activityStarttime){//活动开始倒计时
+					clearInterval(t.timeout);
+					t.showTime=true
+					let startTime=Math.round((t.chatRoomInfo.activityStarttime-t.chatRoomInfo.systemTime)/1000);
+					if(startTime>0){
+						t.timeout=setInterval(()=>{
+							startTime--;
+							if(startTime>0){
+								let hour=Math.floor(startTime/60/60);
+								let min =Math.floor(startTime/60)%60;
+								let sec=startTime%60;
+								t.reverseTime=(hour>0?(hour<10?'0'+hour:hour+''):'')+":"+(min<10?"0"+min:min+"")+":"+(sec<10?"0"+sec:sec+"");
+							}else{
+								t.reverseTime="00:00";
+								t.showTime=false;
+								clearInterval(t.timeout);
+							}	
+						},1000);
+					}
+				}
+			}else if(t.tmp=='qy'){
+				if(t.chatRoomInfo.status==1){//抢缘活动开始
+					t.actStart=true;
+					t.actEndTime=t.chatRoomInfo.remainingTime;//离抢缘结束时间
+					clearInterval(t.timeout);
+					t.timeout=setInterval(()=>{
+						t.actEndTime--;
+						if(t.actEndTime<0){//倒计结束
+							clearInterval(t.timeout);
+							t.actStart=false;
+							t.actEndTime=0;
+						}
+					},1000);
+				}
+				if(t.chatRoomInfo.activityStarttime&&t.chatRoomInfo.activityStarttime>=0&&!t.actStart&&!t.chatRoomInfo.nextStartTime&&t.chatRoomInfo.state==3){//活动开始前倒计
+					clearInterval(t.timeout);
+					t.showTime=true
+					let startTime=Math.round((t.chatRoomInfo.activityStarttime-t.chatRoomInfo.systemTime)/1000);
+					if(startTime>0){
+						t.timeout=setInterval(()=>{
+							startTime--;
+							if(startTime>0){
+								let hour=Math.floor(startTime/60/60);
+								let min =Math.floor(startTime/60)%60;
+								let sec=startTime%60;
+								t.reverseTime=(hour>0?(hour<10?'0'+hour:hour+''):'')+":"+(min<10?"0"+min:min+"")+":"+(sec<10?"0"+sec:sec+"");
+							}else{
+								t.reverseTime="00:00";
+								t.showTime=false;
+								clearInterval(t.timeout);
+							}	
+						},1000);
+					}
+				}else if(t.chatRoomInfo.nextStartTime&&t.chatRoomInfo.nextStartTime>=0&&!t.actStart){//下一轮倒计
+					t.showTime=true
+					let endTime=t.chatRoomInfo.nextStartTime;
+					clearInterval(t.timeout);
+					t.timeout=setInterval(()=>{
+						endTime--;
+						if(endTime>0){
+							let hour=Math.floor(endTime/60/60);
+							let min =Math.floor(endTime/60)%60;
+							let sec=endTime%60;
+							t.reverseTime=(hour>0?(hour<10?'0'+hour:hour+''):'')+":"+(min<10?"0"+min:min+"")+":"+(sec<10?"0"+sec:sec+"");
+						}else{
+							t.reverseTime="00:00";
+							clearInterval(t.timeout);
+							t.showTime=false;
+						}	
+					},1000);
+				}
+			}else if(t.tmp=='xy'||t.tmp=='zy'||t.tmp=='py'){
+				if(t.chatRoomInfo.activityEndtime&&t.chatRoomInfo.state==6){//活动结束倒计时
+					clearInterval(t.timeout);
+					t.showTime=true
+					let endTime=Math.round((t.chatRoomInfo.activityEndtime-t.chatRoomInfo.systemTime)/1000);//活动结束时间
+					//console.log("结束时间:"+endTime);
+					if(endTime>0){
+						t.timeout=setInterval(()=>{
+							endTime--;
+							if(endTime>0){
+								let hour=Math.floor(endTime/60/60);
+								let min =Math.floor(endTime/60)%60;
+								let sec=endTime%60;
+								t.reverseTime=(hour>0?(hour<10?'0'+hour:hour+''):'')+":"+(min<10?"0"+min:min+"")+":"+(sec<10?"0"+sec:sec+"");
+							}else{
+								t.reverseTime="00:00";
+								clearInterval(t.timeout);
+							}	
+						},1000);
+					}
+				}else if(t.chatRoomInfo.activityStarttime&&t.chatRoomInfo.state==3){//活动开始倒计时
+					clearInterval(t.timeout);
+					t.showTime=true
+					let startTime=Math.round((t.chatRoomInfo.activityStarttime-t.chatRoomInfo.systemTime)/1000);
+					if(startTime>0){
+						t.timeout=setInterval(()=>{
+							startTime--;
+							if(startTime>0){
+								let hour=Math.floor(startTime/60/60);
+								let min =Math.floor(startTime/60)%60;
+								let sec=startTime%60;
+								t.reverseTime=(hour>0?(hour<10?'0'+hour:hour+''):'')+":"+(min<10?"0"+min:min+"")+":"+(sec<10?"0"+sec:sec+"");
+							}else{
+								t.reverseTime="00:00";
+								t.showTime=false;
+								clearInterval(t.timeout);
+							}	
+						},1000);
+					}
+				}		
+				
+			}
+			//console.log("活跃度:"+JSON.stringify(t.chatRoomInfo.activeDegreeList));
+			if(t.chatRoomInfo.activeDegreeList){
+				for(let i=t.chatRoomInfo.activeDegreeList.length||0;i--;){
+					if(t.chatRoomInfo.activeDegreeList[i].userId==t.$store.state.userInfo.id){
+						t.activeDegree=t.chatRoomInfo.activeDegreeList[i].activeDegree;
+						if(t.tmp=="zy"){//中缘
+							if(t.chatRoomInfo.activeDegreeList[i].status==1&&!t.isActEnd){
+								t.showCj=true;
+							}else{
+								t.showCj=false;
+							}
+						}
+						break;
+					}
+				}
+			}
+			if(t.chatRoomInfo.state==5){//活动结束
+				t.isActEnd=true;
+			}
+		},
+		isActEnd(val){
+			const t=this;
+			if(val){//活动结束
+				if(t.tmp=='zy'){//中缘要等转盘完了后才显示结果
+					t.showCj=false;//中缘抽奖
+					if(!t.prizeRun){
+						t.showResult=true;//活动结果弹窗
+						t.showZy=false;//隐藏抽奖奖盘
+					}
+				}else{
+					t.showResult=true;//活动结果弹窗
+				}	
+			}
+		},
+		actStart(val){//活动是否开始
+			const t=this;
+			if(val){
+				if(t.tmp=='qy'){//抢缘
+					t.showQy=true;//显示抢缘按钮
+					t.showTime=false;//隐藏开始时间倒计
+				}
+			}else{
+				if(t.tmp=='qy'){//抢缘结束
+					t.showQy=false;//隐藏抢缘按钮
+					let time=5;
+					
+					;(async function updata(){
+						if(t.owner.jiaoyouUser.id==t.$store.state.userInfo.id){//自己的活动不更新次数
+							return false;
+						}
+						try{
+							time--;
+							const result=await t.$server.robbingTime({
+								datingActivityId:t.datingId,
+								clickCount:t.qynum
+							});
+							t.qynum=0;
+							t.totalCount=result.data.data.totalCount;
+							console.log("更新次数成功:"+JSON.stringify(result));
+						}catch(e){
+							if(time>0){
+								setTimeout(()=>{
+									updata();
+								},1000);
+							}	
+						}
+					}())
+				}
+			}
+		},
+		async showPh(val){
+			const t=this;
+			if(val){
+				try{
+					const result= await t.$server.getDatingCandidateList({
+						datingId:t.datingId,
+						page:1,
+						rows:t.$store.state.pageSize
+					});
+					console.log("排行:"+JSON.stringify(result.data.list));
+					t.phList=result.data.list;
+				}catch(e){
+				
+				}
+			}
+		},
+		showZy(val){
+			const t=this;
+			if(!val){
+				t.prizeRun=false;
+			}
+		},
+		/*showGift(val){
+			const t=this;
+			if(val){
+				t.showPh=false;
+			}
+		},*/
+		chatList:{
+			handler(newVal, oldVal) {
+				const t=this;
+				if((oldVal&&oldVal.length==newVal.length)){
+					return false;
+				}
+				if(newVal.length==0){
+					t.isEnd=true;
+					t.refreshText="没有更多";
+				}
+				if(t.firstMessageId){//下拉获取聊天
+					t.$nextTick(()=>{
+						t.$refs.myScroller.scrollTo($(".jy_act_lt_list li.isFirst").offset().top-$(".myscroller>div").eq(0).offset().top-70);
+						t.firstMessageId='';
+					})
+				}else{
+					t.$nextTick(()=>{
+						t.chatToBottom();//滚动到底部
+					})
+				}
+			},
+			
+		}
+    },
+	 beforeRouteLeave (to, from, next) {
+		const t=this;
+		clearInterval(t.jytimeout)
+		clearInterval(t.timeout)
+		this.UIChatBox&&this.UIChatBox.close();
+		if(!t.isExit){
+			this.$utils.openSuspensionWindow(this.datingId,'一起'+(t.owner.datingThemes==1?'去旅行':t.owner.datingThemes==2?'吃饭':t.owner.datingThemes==3?'看电影':t.owner.datingThemes==4?'唱歌':t.owner.datingThemes==5?'运动':'')+"-"+this.owner.jiaoyouUser.aliasName,this.owner.coverimgImages||this.owner.jiaoyouUser.headimgAttachmentId,this.$route.query.id)
+		}
+      next();
+    },
+    async mounted () {
+		const t=this;
+		const id=t.$route.query.id;
+		t.$utils.closeSuspensionWindow();
+		t.datingId = t.$route.query.datingId;
+		t.tmp=id==1?'xy':id==2?'qy':id==3?'jy':id==4?'zy':id==5?'py':'';
+		console.log("活动ID:"+t.datingId);
+		t.flower=new myApi(function(gift){
+			t.giftAniEnd(gift)
+		});
+		t.getGift();//获取礼物列表
+		await t.getSingle();//获取活动详情
+		t.$store.commit('CHANGECURRENTCHATROOMID',t.datingId)
+		await t.actStatus();//获取活动状态
+		t.openBoard();
+		t.getCandidateList();
+		if(t.$store.state.isBrowser){
+			await t.gethistroy(true);
+			t.$nextTick(()=>{//滚动到底部
+				//$(".jy_act_lt").animate({"scrollTop":$(".jy_act_lt_list").outerHeight(true)},0);
+				t.chatToBottom();
+			});
+		}else{
+			t.refreshText="没有更多";
+			t.getNewMessageList();
+		}
+		//this.joinChatRoom();
+		
+	},
+    beforeDestroy () {
+      this.quitChatRoom();
+    },
+    methods :{
+		hiddenFilter(){
+			const t=this;
+			
+		},
+		showWinChange(val){
+			const t=this;
+			if(val){
+				t.closeKeyBoard();
+			}
+		},
+		showGiftChange(val){
+			const t=this;
+			if(val){
+				t.showPh=false;
+			}
+		},
+		chooseUser(val){
+			this.showGiftUser=val===true?true:false;
+		},
+		async getCandidateList(){
+			const t=this;
+			try{
+				const result= await t.$server.getDatingCandidateList({
+					datingId:t.datingId,
+					page:1,
+					rows:1000
+				});
+				t.candidateUser.push(...result.data.list);
+			}catch(e){
+			
+			}
+		},
+		chatToBottom(flag){//聊天滚动到底部 flag : 只滚动到底部
+			const t=this;
+			if(!t.chatList||t.chatList.length==0||!t.$refs.myScroller){
+				return false;
+			}
+			//console.log(t.$refs.myScroller)
+			let scrollHeight=$(".jy_act_lt_list").outerHeight(true)+60-$(".myscroller>div").outerHeight(true);
+			let scrollPosHeight=t.$refs.myScroller.getPosition().top;
+			let lastUserId=t.chatList[t.chatList.length-1].userId;
+			console.log(scrollHeight,scrollPosHeight)
+			if(flag){
+				if(scrollPosHeight>scrollHeight){
+					t.$refs.myScroller&&t.$refs.myScroller.scrollTo(scrollHeight);
+				}
+			}else if(scrollHeight-scrollPosHeight<200||scrollPosHeight==0||lastUserId==t.$store.state.userInfo.id){//滚动到底部
+				t.$refs.myScroller&&t.$refs.myScroller.scrollTo(scrollHeight);
+				
+			}else{
+				
+				/*t.$vux.toast.show({
+					type:"text",
+					text: "有新消息",
+					position:"bottom",
+					width:"2rem",
+				});*/
+			}
+		},
+		infinite(done) {//上拉加载(防止初始内容不满一屏会无限加载)
+			
+		},
+		async refresh(done) {//下拉刷新
+			const t=this;
+			console.log("刷新");
+			if(t.isEnd||!t.chatList||t.chatList.length==0||!t.$store.state.isBrowser){
+				t.refreshText="没有更多";
+				done();
+				return false;
+			}
+			t.firstMessageId=t.chatList[0].messageId;
+			await t.gethistroy(true);
+			done();
+		},
+		async gethistroy(flag){
+			const t=this;
+			let time = t.$utils.format(new Date(),"yyyy-MM-dd hh:mm:ss")
+			let msgId=null;
+			if(t.chatList&&t.chatList.length>0){
+			  time=t.chatList[0].time;
+				msgId=t.chatList[0].messageId;
+			}
+			let result =await t.$store.dispatch('getHistroyMessage',{
+			  chatType:2,
+			  groupId:t.datingId,
+			  pageNum:1,
+			  pageSize:t.$store.state.pageSize,
+			  createDate:time,
+				msgId:msgId
+			});
+			if(result.list.length<t.$store.state.pageSize){
+				t.refreshText="没有更多";
+				t.isEnd=true;
+			}
+			/*if(!flag){
+				t.$nextTick(()=>{//滚动到底部
+					//$(".jy_act_lt").animate({"scrollTop":$(".jy_act_lt_list").outerHeight(true)},500);
+					t.$refs.myScroller.scrollTo($(".jy_act_lt_list").outerHeight(true)-$(".myscroller").outerHeight(true));
+				})
+			}*/	
+		},
+		async sendText(text){
+			if(!text.trim()){
+			  return false;
+			}
+			const t=this;
+			t.setMessage(2,text,null,null,null)
+		  },
+		openBoard(){
+			const t=this;
+			if(t.$store.state.isBrowser){
+				return false;
+			}
+			t.UIChatBox = window.api.require('UIChatBox');
+			let extras={},extrasBtn={};
+			t.UIChatBox.open({
+				placeholder: '',
+				maxRows: 4,
+				emotionPath: 'widget://image/emotion',
+				texts: {
+					/* recordBtn: {
+						normalTitle: '按住 说话',
+						activeTitle: '松开 结束'
+					},*/
+					sendBtn: {
+						title: '发送'
+					}
+				},
+				styles: {
+					inputBar: {
+						borderColor: '#d9d9d9',
+						bgColor: '#f2f2f2'
+					},
+					inputBox: {
+						borderColor: '#B3B3B3',
+						bgColor: '#FFFFFF'
+					},
+					emotionBtn: {
+						normalImg: 'widget://image/face.png',
+					},
+					...extrasBtn,
+					keyboardBtn: {                      //JSON对象；键盘按钮样式
+						normalImg: 'widget://image/keyboard.png'
+					},
+					indicator: {
+						target: 'both',
+						color: '#c4c4c4',
+						activeColor: '#9e9e9e'
+					},
+					sendBtn: {
+						titleColor: '#4cc518',
+						bg: '#f2f2f2',
+						activeBg: '#46a91e',
+						titleSize: 14
+					}
+				},
+				...extras,
+			}, function(ret, err) {
+				if(ret.eventType=="send"){
+					if(!ret.msg.trim()){
+						return false;
+					}
+					t.setMessage(2,ret.msg,null,null,null)
+				}else if(ret.eventType=='clickExtras'){
+					if(ret.index==0){
+						t.closeKeyBoard();
+						t.showGift=true;
+					}
+				}
+			});
+			/*监听事件*/
+			t.UIChatBox.addEventListener({
+				target: 'inputBar',
+				name: 'move'
+			}, (ret, err)=> {
+				if (ret) {
+					const height=ret.panelHeight;
+					clearTimeout(t.boardTimeout);
+					if(height==0){
+						t.boardTimeout=setTimeout(()=>{
+							t.closeKeyBoard();
+						},200);
+					}
+				}
+			});
+			if(t.$store.state.userInfo.id!=t.owner.jiaoyouUser.id){
+				t.UIChatBox.addEventListener({
+					target: 'inputBar',
+					name: 'showExtras'
+				}, (ret, err)=> {
+					if (ret) {
+						t.closeKeyBoard();
+						t.showGift=true;
+					}
+				});
+			}
+			t.UIChatBox.addEventListener({
+				target: 'inputBar',
+				name: 'change'
+			}, (ret, err)=> {
+				if (ret) {
+					t.inputBarHeight = parseInt(ret.inputBarHeight);
+				}
+			});
+			t.closeKeyBoard();
+		},
+		exit(){
+			const t=this;
+			t.isExit=true;
+			t.$router.push({name:'love'});
+		},
+      setActiveItem(item){
+        this.activeItem = this.activeItem.id==item.id?{}:item;
+      },
+      listenChildMethod(){
+        this.activeItem={};
+      },
+      touchstart(event){
+        if(event.touches.length>1){
+          return;
+        }
+        this.record=true
+        this.showVedio=true
+        this.touchY = event.touches[0].clientY;
+        this.touchOffset=0;
+        window.api.startRecord({
+          path: api.cacheDir+"/"+new Date().getTime()+"-"+this.$store.state.userId+".amr"
+        });
+        setTimeout(()=>{
+          if(this.showVedio){
+            window.api.stopRecord((ret, err)=> {
+              if (ret) {
+                let path = ret.path;
+                let duration = ret.duration;
+                this.setAudio(path,duration)
+              }
+            });
+            this.record=false
+            this.showVedio=false;
+          }
+        },30000)
+        event.preventDefault();
+      },
+      touchmove(event){
+        let offsetY = Math.abs(event.touches[0].clientY-this.touchY)
+        let offset = offsetY;
+        if(offset>this.touchOffset)this.touchOffset=offset;
+      },
+      touchend(event){
+        if(event.touches.length>1){
+          return;
+        }
+        if(this.touchOffset<30){
+          if(this.showVedio){
+            window.api.stopRecord((ret, err)=> {
+              if (ret) {
+                let path = ret.path;
+                let duration = ret.duration;
+                this.setAudio(path,duration)
+              }
+            });
+            this.showVedio=false
+            this.record=false
+          }
+        }else{
+          //
+          if(this.showVedio){
+            window.api.stopRecord(function(ret, err) {
+            });
+            this.showVedio=false;
+            this.record=false
+          }
+        }
+      },
+      touchcancel(){
+        console.log("touchcancel")
+        if(this.showVedio){
+          window.api.stopRecord(function(ret, err) {
+          });
+          this.showVedio=false;
+          this.record=false
+        }
+      },
+      setAudio(path,duration){
+        if(duration<1){
+          this.$vux.toast.show({
+            type:"text",
+            text: '语音时长太短',
+            position:"middle",
+            width:"auto",
+          });
+          return;
+        }
+        this.setMessage(2,null,null,path,null,duration)
+      },
+      beginRecord(){
+        this.voice=!this.voice;
+        let allowRecording=false;
+        let resultList = window.api.hasPermission({
+          list:['microphone']
+        });
+        if(!resultList[0].granted){
+          window.api.requestPermission({
+            list:['microphone']
+          }, function(ret, err){
+            if(ret&&ret.list[0].granted){
+              allowRecording=true;
+            }else{
+              window.api.toast({
+                msg: '请在手机设置中授权应用访问麦克风',
+                duration: 2000,
+                location: 'bottom'
+              });
+              this.voice=!this.voice;
+            }
+          });
+        }
+      },
+		canIPrize(){
+			const t=this;
+			if(t.showCj&&t.chatRoomInfo.state==6){
+				t.showZy=true;
+			}else{
+				if(t.isActEnd){
+					t.$vux.toast.show({
+						type:"text",
+						text: "活动已结束",
+						position:"bottom",
+						width:"2rem",
+					});
+				}else if(t.chatRoomInfo.state==3){
+					t.$vux.toast.show({
+						type:"text",
+						text: "活动准备中...",
+						position:"bottom",
+						width:"2rem",
+					});
+				}else{
+					t.$vux.toast.show({
+						type:"text",
+						text: "活跃度不足",
+						position:"bottom",
+						width:"2rem",
+					});
+				}
+			}
+		},
+		showKeyBoard(){
+			const t=this;
+			if(!t.UIChatBox){
+				return false;
+			}
+			t.showBoard=true;
+			t.showPh=false;
+			t.UIChatBox.show();
+			t.UIChatBox.popupKeyboard();
+		},
+		closeKeyBoard(){
+			const t=this;
+			if(!t.UIChatBox){
+				return false;
+			}
+			t.showBoard=false;
+			t.UIChatBox.hide();
+			t.UIChatBox.closeBoard();
+			t.UIChatBox.closeKeyboard();
+		},
+		getUserInfo(userId){
+			const t=this;
+			if(t.$store.state.userInfo.idStatus==1&&t.$store.state.userInfo.silentState==0){//实名认证,关闭'不允许别人看我'
+				if(t.tmp=='xy'&&t.$store.state.userInfo.id==t.owner.jiaoyouUser.id&&!t.isActEnd){
+					t.select=true;
+				}else{
+					t.select=false;
+				}
+				t.showInfo=true;
+				t.userId=userId;
+			}else{
+				if(t.$store.state.userInfo.silentState!=0&&t.$store.state.userInfo.idStatus!=1){
+					t.$vux.confirm.show({
+						title: '温馨提示',
+						theme: 'android',
+						hideOnBlur:true,
+						content: t.$store.state.custom_config.actSeeInfoNeedAuth||'只有关闭"不允许别人看我"以及通过"实名认证"之后，才能查看其他嘉宾的详细资料。',
+						confirmText: '去实名认证',
+						cancelText:'去关闭',
+						onCancel () {
+						  t.$router.push({name:'setting'});
+						},
+						onConfirm () {
+						  t.$router.push({name:'identityAuth'});
+						}
+					  })
+				}else if(t.$store.state.userInfo.silentState!=0){
+					t.$vux.confirm.show({
+						title: '温馨提示',
+						theme: 'android',
+						hideOnBlur:true,
+						content: t.$store.state.custom_config.actSeeInfoNeedCloseCanSeeMe||'只有关闭"不允许别人看我"之后，才能查看其他嘉宾的详细资料。',
+						confirmText: '去关闭',
+						onCancel () {
+						  
+						},
+						onConfirm () {
+						  t.$router.push({name:'setting'});
+						}
+					  })
+				}else if(t.$store.state.userInfo.idStatus!=1){
+					t.$vux.confirm.show({
+						title: '温馨提示',
+						theme: 'android',
+						hideOnBlur:true,
+						content: t.$store.state.custom_config.actSeeInfoNeedIdAuth||'只有通过"实名认证"之后，才能查看其他嘉宾的详细资料。',
+						confirmText: '去实名认证',
+						cancelText:'再想一想',
+						onCancel () {
+						  
+						},
+						onConfirm () {
+						  t.$router.push({name:'identityAuth'});
+						}
+					  })
+				}
+			}
+		},
+		prizeRunning(val){//抽奖转盘是否在转动
+			const t=this;
+			t.prizeRun=val;
+		},
+		endPrize(index){//抽奖结束
+			const t=this;
+			const msg=index==0?'美丽约会':(index==1||index==4)?'谢谢参与':index==2?'150 乾坤币':index==3?'100 乾坤币':index==5?'50 乾坤币':'';
+			t.$vux.toast.show({
+				type:"text",
+				text: msg,
+				position:"bottom",
+				width:"2rem",
+			});
+			if(!t.showCj){
+				t.showZy=false;//隐藏抽奖奖盘
+			}
+			t.prizeRun=false;
+			//if(!t.showCj||t.isActEnd){
+			if(t.isActEnd){
+				//setTimeout(()=>{
+					t.showResult=true;//活动结果弹窗
+					t.showZy=false;//隐藏抽奖奖盘
+					t.showCj=false;
+				//},1000);
+			}
+		},
+		giftAniEnd(gift){//把礼物发到服务器
+			const t=this;
+			if(gift){
+				console.log("连点结束:"+JSON.stringify(gift));
+				if(gift.sendobj){//自己发的
+					//gift.sendobj.giftMsg=true;
+					//gift.sendobj.giftNum=gift.num;
+					//t.sendGift(gift.sendobj);
+					try{
+						if(t.acceptUser.id==t.owner.jiaoyouUser.id){//送给约主的
+							t.$server.chartroomGift({
+								"objectId":t.datingId,
+								giftId:gift.sendobj.giftId,
+								amount:gift.num
+							}).then((res)=>{
+								console.log("送花结果:"+JSON.stringify(res));
+								t.activeDegree=res.data.data.activeDegree;
+								if(t.tmp=="zy"){//中缘
+									if(res.data.data.status==1&&!t.isActEnd){
+										t.showCj=true;
+									}else{
+										t.showCj=false;
+									}
+								}
+								t.postText(gift);
+							}).catch(e=>{
+								console.log(e);
+							});
+						}else{
+							t.$server.giveGift({
+								"receiverUser.id":t.acceptUser.id,
+								  // "objectId":_this.activeId,
+								  "giftId":gift.sendobj.giftId,
+								  "amount":gift.num
+							}).then((res)=>{
+								console.log("送花结果:"+JSON.stringify(res));
+								//t.activeDegree=res.data.data.activeDegree;
+								t.postText(gift);
+							}).catch(e=>{
+								console.log(e);
+							});
+							
+							
+						}
+					}catch(e){
+						console.log(e);
+					}	
+				}
+			}	
+		},
+		postText(gift){
+			const t=this;
+			//发命令信息显示送花结果
+			let acceptUser={
+				giftNum:gift.num,
+				acceptUser:t.acceptUser
+			}
+			gift.sendobj.text=acceptUser;
+			gift.sendobj.actType=t.$route.query.id;
+			let sendObj={
+				groupId: t.datingId,
+				chatType:2,
+				msgType: 7,
+				msgContent: 'smess_sendGift',
+				extras:gift.sendobj
+			}
+			t.$util.sendSocket(sendObj,function(data,err,per){
+				if(t.$store.state.isBrowser){		
+					if(data){			 
+					  t.$util.handleWebMessageList(t.datingId,2,'','',0,'[送出礼物]',data.data.createDate,data.data.msgId,t.$store.state.userId,t.$store.state.userId)
+					  t.$util.handleWebGift(t.datingId,2,'','',t.$store.state.userId,data.data.createDate,'',t.$store.state.userId,data.data.msgId,gift.sendobj.giftId,gift.sendobj.giftImage,gift.sendobj.giftName,gift.sendobj.giftJiaobi,JSON.stringify(acceptUser))
+					}
+					if(err){
+					  t.$util.handleWebMessageList(t.datingId,2,'','',0,'[送出礼物]',new Date().getTime(),new Date().getTime(),t.$store.state.userId,t.$store.state.userId)
+					  t.$util.handleWebGift(t.datingId,2,'','',t.$store.state.userId,new Date().getTime(),err.message,t.$store.state.userId,new Date().getTime(),gift.sendobj.giftId,gift.sendobj.giftImage,gift.sendobj.giftName,gift.sendobj.giftJiaobi,JSON.stringify(acceptUser))
+					}
+					t.getNewMessageList();
+				}else{
+					if(data){
+					  t.saveMessage(2,'',null,null,null,'','[送出礼物]',data.data.msgId,null,null,gift.sendobj)
+					}
+					if(err){
+					   t.saveMessage(2,'',null,null,null,err.message,'[送出礼物]',new Date().getTime(),null,null,gift.sendobj)
+					}
+				}
+			});
+		},
+		async sendGift(giftObj){
+			const t=this;
+			if(giftObj){
+			console.log("花朵信息:"+giftObj)
+				let extras={};
+				extras.giftId = giftObj.id
+				extras.giftImage = t.$utils.getFullPath(giftObj.giftImage)
+				extras.giftName = giftObj.giftName
+				extras.giftJiaobi = giftObj.jiaobi
+				extras.userName=t.$store.state.userInfo.aliasName;
+				extras.userId=t.$store.state.userInfo.id;
+				extras.userImage=t.$utils.getFullPath(t.$store.state.userInfo.headimgAttachmentId);
+				//if(!giftObj.giftMsg){
+					t.giftEndlist.push(giftObj);
+					t.flower.putFlower(extras.userName,1,extras.userImage,extras.giftId,extras.giftImage,extras);
+				/*}else{
+					extras.giftMsg=true;
+					extras.giftNum=giftObj.giftNum;
+				}*/
+				let sendObj={
+					groupId: t.datingId,
+					chatType:2,
+					msgType: 7,
+					msgContent: 'gift',
+					extras:extras
+				}
+				t.$util.sendSocket(sendObj,function(data,err,per){
+					if(data){
+						console.log("送花成功:"+JSON.stringify(data));
+					}
+					if(err){
+						console.log("送花失败:"+JSON.stringify(err));
+					}
+				}) 
+			}else{
+				t.showGift=false;
+			}
+		},
+		async getGift(){
+			let list = await this.$server.getGiftList()
+			this.giftList = list.data.data||[];
+		},
+		touchStart(e){
+			const t=this;
+			t.qyClick=true;
+			console.log("t.actStart:"+t.actStart);
+			if(t.actStart){
+				t.qynum++;
+			}else{
+				t.$vux.toast.show({
+					type:"text",
+					text: "活动没开始",
+					position:"bottom",
+					width:"auto",
+				});
+			}
+		},
+		touchEnd(e){
+			this.qyClick=false;
+		},
+		openWin(){
+			this.showWin=true;
+		},
+		hiddenInfo(){
+			this.showWin=false;
+			setTimeout(()=>{
+				this.showInfo=false;
+			},800)
+		},
+		async getSingle(){//获取活动详情
+			const t=this;
+			try{
+				const result =await t.$server.getSingle({
+					datingDetailsId:t.datingId
+				});
+				t.owner=result.data.data;
+				if(t.owner.isCandidate==0&&t.owner.jiaoyouUser.id != t.$store.state.userId){//没报名(不是群主)
+					t.$router.replace({name:"act",query:{id:t.datingId}});
+					return false;
+				}
+				//t.title=t.owner.jiaoyouUser.aliasName;
+				t.candidateUser=[];
+				t.candidateUser.push({jiaoyouUser:t.owner.jiaoyouUser});
+				t.acceptUser=t.owner.jiaoyouUser;
+				console.log("活动详情:"+JSON.stringify(result.data));
+				if(window.api){
+					t.$db. updateActiveState(t.datingId,t.$store.state.userId,t.owner.state)
+					t.$store.dispatch("getConversationList")
+				}
+			}catch(e){
+				console.log(e);
+			}
+		},
+		getExpContent(content){
+			const t=this;
+			let imgArr2=content.match(/\[.+?\]/g);
+			if(imgArr2){
+				imgArr2.map(item1=>{
+					emotion.map(emo=>{
+						if(emo.text==item1){
+							content = content.replace(item1,'<img class="imgcontent" src="static/emotion/'+emo.name+'.png"/>');
+						}
+					})
+				})
+			}
+			return content;
+		},
+		setMessage(type,text,imgUrl,audio,location,duration){
+			const _t = this;
+			//发送消息
+			const tp = type==1?"PRIVATE":type==2?"GROUP":type==3?"CHATROOM":type==4?"DISCUSSION":"SYSTEM ";//1单聊2群组3聊天室4讨论组5系统
+			let sendObj={}
+			if(text){
+				let extras = {
+					actType:_t.$route.query.id
+				}
+				sendObj={
+					groupId: _t.datingId,
+					chatType:2,
+					msgType: 0,
+					extras,
+					msgContent:text,
+				}
+				this.$util.sendSocket(sendObj,function(data,err,per){
+					if(_t.$store.state.isBrowser){
+						let name="",icon="",activeType='',activeState='';
+					  if(_t.owner){
+						name="一起"+_t.owner.datingThemes==1?'去旅行':_t.owner.datingThemes==2?'吃饭':_t.owner.datingThemes==3?'看电影':_t.owner.datingThemes==4?'唱歌':_t.owner.datingThemes==5?'运动':_t.owner.datingTitle+"-"+_t.owner.jiaoyouUser.aliasName;
+						icon=_t.owner.coverimgImages?_t.owner.coverimgImages:_t.owner.jiaoyouUser.headimgAttachmentId;
+						activeType=_t.owner.activityMethod;
+						activeState=_t.owner.state;
+					  }
+						if(data){
+						  _t.$util.handleWebMessageList(_t.datingId,type,icon,name,0,text,data.data.createDate,data.data.msgId,_t.$store.state.userId,_t.$store.state.userId,activeState,activeType)
+						  _t.$util.handleWebMessage(_t.datingId,type,'','',_t.$store.state.userId,text,data.data.createDate,'',_t.$store.state.userId,null,null,null,data.data.msgId,null,null)
+						}
+						if(err){
+						  _t.$util.handleWebMessageList(_t.datingId,type,icon,name,0,text,new Date().getTime(),new Date().getTime(),_t.$store.state.userId,_t.$store.state.userId,activeState,activeType)
+						  _t.$util.handleWebMessage(_t.datingId,type,'','',_t.$store.state.userId,text,new Date().getTime(),err.message,_t.$store.state.userId,null,null,null,new Date().getTime(),null,null)
+						} 
+						let dataChats=_t.$store.state.webMessageStorage[_t.datingId];
+						_t.$store.commit('CHANGECHATROOMMESSAGELIST',dataChats)
+					}else{
+						if(data){
+						  _t.saveMessage(type,text,imgUrl,audio,location,'',text,data.data.msgId,null,null)
+						}
+						if(err){
+						   _t.saveMessage(type,text,imgUrl,audio,location,err.message,text,new Date().getTime(),null,null)
+						}
+					}
+					if(per){
+					  console.log(per)
+					}
+				  });
+			}else if(audio){
+			  let extras = {
+				duration:duration,
+				voicePath:audio,
+				actType:_t.$route.query.id
+			  }
+			  sendObj={
+				groupId: _t.datingId,
+				chatType:2,
+				msgType: 2,
+				msgContent: "",
+				extras:extras
+			  }
+			  this.$util.sendSocket(sendObj,function(data,err,per){
+				if(data){
+				  if(api.systemType=="ios"){
+					_t.saveMessage(type,text,imgUrl,audio,location,duration,'[语音]',data.data.msgId,null,null)
+				  }else{
+					let extras = JSON.parse(data.data.extras);
+					_t.saveMessage(type,text,imgUrl,extras.voicePath,location,duration,'[语音]',data.data.msgId,null,null)
+				  }
+				}
+				if(err){
+				  _t.saveMessage(type,text,imgUrl,audio,location,err.message,'[语音]',new Date().getTime(),null,null) 
+				}
+			  });
+			}
+      },
+      saveMessage(type,text,imgUrl,audio,location,status,tip,messageId,lon,lat,giftObj){//保存消息到本地
+        let _t= this;
+        let remark = status;
+       //
+        let icon=this.owner.coverimgImages?this.owner.coverimgImages:this.owner.jiaoyouUser.headimgAttachmentId;
+        // let name=this.owner.datingTitle+"-"+this.owner.jiaoyouUser.aliasName
+        let name="一起"+this.owner.datingThemes==1?'去旅行':this.owner.datingThemes==2?'吃饭':this.owner.datingThemes==3?'看电影':this.owner.datingThemes==4?'唱歌':this.owner.datingThemes==5?'运动':this.owner.datingTitle+"-"+this.owner.jiaoyouUser.aliasName
+        let activeType=this.owner.activityMethod;
+		
+        _t.$db.insertOrUpdateUnreadCountName(_t.datingId,type,icon,name,1,tip,new Date().getTime(),messageId,_t.$store.state.userId,_t.$store.state.userId,this.owner.state,activeType);
+		
+		if(giftObj){
+			_t.$db.insertGift(_t.datingId,type,(_t.$store.state.userInfo.headimgAttachmentId),_t.$store.state.userInfo.aliasName,_t.$store.state.userId,new Date().getTime(),remark,_t.$store.state.userId,messageId,giftObj.giftId,giftObj.giftImage,giftObj.giftName,giftObj.giftJiaobi,JSON.stringify(giftObj.text))
+        }else{
+           _t.$db.insertConversation(_t.datingId,type,(_t.$store.state.userInfo.headimgAttachmentId),_t.$store.state.userInfo.aliasName,_t.$store.state.userId,text,new Date().getTime(),remark,_t.$store.state.userId,location,imgUrl,audio,messageId,lon,lat)
+        }
+		
+       
+		
+        _t.getNewMessageList();
+       // _t.$store.dispatch("getConversationList")
+      },
+	  getNewMessageList(status){
+		  console.log("进入getNewMessageList")
+        let _t = this;
+		let dataChats;
+		if(_t.$store.state.isBrowser){
+			dataChats=this.$store.state.webMessageStorage[_t.datingId]||[];
+		}else{
+			dataChats=this.$db.getConversation(this.datingId,this.$store.state.userId,this.limit)||[];		
+		}
+		//console.log("ddddddddddddddd:"+JSON.stringify(dataChats));
+		_t.$store.commit('CHANGECHATROOMMESSAGELIST',dataChats);
+        this.$db.resetCount(this.datingId,this.$store.state.userId);
+        this.$store.dispatch('getConversationList')
+		//_t.$nextTick(()=>{//滚动到底部
+		//	$(".jy_act_lt").animate({"scrollTop":$(".jy_act_lt_list").outerHeight(true)},500);
+		//})
+      },
+   async quitChatRoom(){
+		const t=this;
+		t.$store.commit('CHANGECURRENTCHATROOMID',null);
+		t.$store.commit('CHANGECHATROOMMESSAGELIST',[]);//清空聊天记录
+		try{
+			const result=await t.$server.actLeave({
+				datingDetailsId:t.datingId,
+			});
+		}catch(e){
+			console.log(JSON.stringify(e));
+		}
+    },
+		async actStatus(){//获取活动状态
+			const t=this;
+			try{
+				console.log("开始请求活动状态");
+				let	result = await t.$server.actStatus({
+					datingDetailsId:t.datingId
+				});
+				console.log("请求活动状态成功:"+t.tmp+":"+JSON.stringify(result.data));
+				if(t.tmp=='qy'){
+					t.totalCount=result.data.data.totalCount||0;	
+				}
+				t.onlineUser=result.data.data.onlineUser||[];
+				t.chatRoomInfo=result.data.data;
+				if(result.data.data.state==5){//活动结束
+					//if(t.tmp=='qy'){
+					//	t.totalCount=result.data.data.totalCount||0;	
+					//}
+					t.isActEnd=true;
+					t.actStatusRes=true;//不显示结果弹窗
+				}
+			}catch(e){
+				console.log(JSON.stringify(e));
+			}
+		},
+		async addPrice(){//竞缘加价
+			const t=this;
+			t.showJpPrice=false;
+			//t.isActEnd=true;
+			console.log("竞拍id:"+t.datingId);
+			//let result={data:""};
+			t.isloading=true;
+			try{
+				console.log("竞拍价:"+(parseInt(t.chatRoomInfo.currentBidding)+t.jpPrice))
+				const result = await t.$server.jyAddPrice({
+					jiaobi:parseInt(t.chatRoomInfo.currentBidding)+t.jpPrice,
+					datingActivityId:t.datingId
+				});
+				t.$vux.toast.show({
+					type:"success",
+					text: "加价成功",
+					position:"middle",
+					width:"auto",
+				});
+			}catch(e){
+				console.log("异常:"+JSON.stringify(e));
+				t.$vux.toast.show({
+					type:"cancel",
+					text: e&&e.message||e,
+					position:"middle",
+					width:"auto",
+				});
+			}
+			t.isloading=false;
+		},
+    }
+  }
+</script>
+<style lang="scss" scoped>
+@import "@sass/base.scss";
+	.input-div {
+		position:relative!important;background:transparent!important;border-top:0!important;
+		.input{
+			height:1.44rem!important;line-height:1.44rem!important;
+			input{
+				padding:0 0.1rem;@include bgcolor(#ccc,0.2);border-radius:0.1rem;
+			}
+			div i{
+				
+			}
+		}
+	}
+   .jy_lt_right{
+    .jy_lt_msg{
+      position: relative;
+      .remark{
+        position: absolute;
+		width:100%;
+		text-align:right;
+		right:100%;
+		margin-right:0.1rem;
+        bottom: 0;
+        font-size: 0.3rem;
+        color:#c6c6c6;
+      }
+    }
+  }
+  .jy_lt_left{
+    .jy_lt_msg{
+      position: relative;
+      .remark{
+        position: absolute;
+        left:100%;
+		width:100%;
+		margin-left:0.1rem;
+        bottom: 0;
+        font-size: 0.3rem;
+        color:#c6c6c6;
+      }
+    }
+  }
+  .vedio-cls{
+    position: absolute;
+    z-index: 10;
+    left: 0;
+    top:0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.6);
+    div{
+      text-align: center;
+      color: #FFF;
+    }
+    div:first-child{
+      display: inline-block;
+      margin-left: 50%;
+      width: 200px;
+      height: 80px;
+      transform:translateX(-50%);
+      margin-top: 70%;
+      position:relative;
+      span{
+        width:5px;
+        height: 5px;
+        bottom:20px;
+        position:absolute;
+        background:#46a91e;
+        animation: bodong 0.5s infinite  ease;
+      }
+
+      span:first-child{
+        left:83.5px;
+        animation-delay:.3s;
+      }
+
+      span:nth-child(2){
+        left:90.5px;
+        animation-delay:.4s;
+
+      }
+      span:nth-child(3){
+        left:97.5px;
+        animation-delay:.6s;
+      }
+      span:nth-child(4){
+        left:104.5px;
+        animation-delay:.8s;
+      }
+      span:nth-child(5){
+        left:111.5px;
+        animation-delay:1s;
+      }
+
+      @keyframes bodong{
+        0%{height:5px; }
+        30%{height:15px; }
+        60%{height:20px; }
+        80%{height:15px; }
+        100%{height:5px; }
+      }
+    }
+  }
+</style>

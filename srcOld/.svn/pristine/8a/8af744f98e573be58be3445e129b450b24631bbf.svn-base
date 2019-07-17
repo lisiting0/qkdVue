@@ -1,0 +1,579 @@
+<template>
+  <div class="main">
+    <Loading v-if="isloading"></Loading>
+    <div class="header">
+      <div class="top">
+        <Back class="left"><i class="iconfont">&#xe613;</i></Back><a class="right"><i class="iconfont">&#xe679;</i></a>{{title}}
+      </div>
+    </div>
+    <div class="myscoll" ref="scroll" @scroll="scroll($event)" :style="{'margin-top':marginTop+'px','max-height':myScrollerHeight+'px'}">
+      <div class="scroll-loading">
+        <img v-show="isPullingDown" src="../betterscroll/loading/loading.gif">
+      </div>
+      <div v-for="item in chats" :key="item.id">
+        <div class="message-cls">
+          <p v-if="item.showTime">{{item.datetime}}</p>
+          <div class="left" v-if="$store.state.userInfo.userId!=item.userId">
+            <!--<img v-cache-src="item.icon"/>-->
+            <img :src="item.icon"/>
+            <div><p>{{item.name}}</p>
+              <div>
+                <div class="arrow">
+                  <em></em><span></span>
+                </div>
+                <div v-html="item.message">
+                </div>
+              </div>
+            </div>
+          </div>
+          <div class="right" v-else>
+            <div><p>{{item.name}}</p>
+              <div>
+                <div class="arrow">
+                  <em></em><span></span>
+                </div>
+                <div v-html="item.message">
+                </div>
+              </div>
+            </div>
+            <img :src="item.icon"/>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div v-show="showVedio" class="vedio-cls">
+      <div>
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+      <div>松开发送，上滑取消</div>
+    </div>
+  </div>
+</template>
+<script>
+  import s1 from '../../images/s5.jpg';
+  import s2 from '../../images/s6.jpg';
+  import s3 from '../../images/s7.jpg';
+  import s4 from '../../images/s8.jpg';
+  import Loading from '../loading.vue';
+  import Back from '@other/back.vue';
+  import chats from './chatWindow.data';
+  import emotion from '@/assets/emotion/emotion';
+
+  import Scroll from '@/components/betterscroll/scroll/scroll.vue'
+
+  let fontsize = parseInt(document.documentElement.style.fontSize);
+  export default {
+    name: 'chatWindow',
+    data () {
+      console.log(this.$store.state.userInfo.userId)
+      return {
+        transitionDuration:0,
+        translateY:0,
+        layoutType:1,
+        isPullingDown:false,
+        myScrollerHeight:0,
+        showPopover:false,
+        title:'',
+        imgs:{s1:s1,s2:s2,s3:s3,s4:s4},
+        isloading:false,
+        dataChats:chats.chats,
+        UIChatBox:null,
+        inputBarHeight:0,
+        panelHeight:0,
+        marginTop:0,
+        showVedio:false,
+        oldScrollHeight:0,
+        oldScrollTop:0,
+      }
+    },
+    computed: {
+      chats:function(){
+        let cloneObj = this.$utils.deepCopy(this.dataChats);
+        for(let i=1;i<cloneObj.length;i++){
+          let time = (Date.parse((cloneObj[i].datetime).replace(/-/g,"/")))-(Date.parse((cloneObj[i-1].datetime).replace(/-/g,"/")));
+          console.log(time+"------")
+          if(time<180000){
+            cloneObj[i].showTime=false;
+          }
+        }
+        return cloneObj.map(item=>{
+          let content = item.message.replace(/[<>]/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c];});
+          content = content.replace(/\r|\n/g,'<br/>');
+          let imgArr2=content.match(/\[.+?\]/g);
+          if(imgArr2){
+            imgArr2.map(item1=>{
+              emotion.map(emo=>{
+                if(emo.text==item1){
+                  content = content.replace(item1,'<img class="imgcontent" src="/static/emotion/'+emo.name+'.png"/>');
+                }
+              })
+            })
+          }
+          item.message=content;
+          return item;
+        })
+      },
+      pullDownRefreshObj: function () {
+        return this.pullDownRefresh ? {
+          threshold: parseInt(this.pullDownRefreshThreshold),
+          stop: parseInt(this.pullDownRefreshStop)
+        } : false
+      },
+      pullUpLoadObj: function () {
+        return this.pullUpLoad ? {
+          threshold: parseInt(this.pullUpLoadThreshold)
+        } : false
+      }
+    },
+    components: {
+      Loading,
+      Scroll,
+	  Back,
+    },
+    beforeRouteEnter (to, from, next) {//进入组件前
+      setTimeout(()=>{//模拟获取数据,显示loading
+        next();
+      },300);
+    },
+    beforeRouteLeave (to, from, next) {
+      if(window.api){
+        window.api.removeEventListener({
+          name: 'swipedown'
+        });
+      }
+      this.UIChatBox.close();
+      this.isloading=true;
+      next();
+    },
+    created (){
+
+    },
+    destroyed () {
+    },
+    watch:{
+      myScrollerHeight(){
+        console.log('myScrollerHeight'+this.myScrollerHeight)
+      },
+      inputBarHeight(){
+        if(this.$refs.scroll.scrollHeight>this.myScrollerHeight){
+          this.marginTop = -(parseInt(this.inputBarHeight)+parseInt(this.panelHeight)-$api.getStorage('UIChatBoxHeight'))
+        }else{
+          this.marginTop = -(parseInt(this.inputBarHeight)+parseInt(this.panelHeight)-$api.getStorage('UIChatBoxHeight')-this.myScrollerHeight+this.$refs.scroll.scrollHeight)
+          this.marginTop=this.marginTop>0?0:this.marginTop;
+        }
+      },
+      panelHeight(){
+        if(this.$refs.scroll.scrollHeight>this.myScrollerHeight){
+          this.marginTop = -(parseInt(this.inputBarHeight)+parseInt(this.panelHeight)-$api.getStorage('UIChatBoxHeight'))
+        }else{
+          this.marginTop = -(parseInt(this.inputBarHeight)+parseInt(this.panelHeight)-$api.getStorage('UIChatBoxHeight')-this.myScrollerHeight+this.$refs.scroll.scrollHeight)
+          this.marginTop=this.marginTop>0?0:this.marginTop;
+        }
+      }
+    },
+    mounted () {
+      const _t = this
+      if(window.api){
+        window.api.addEventListener({
+          name:'swipedown'
+        }, function(ret, err){
+          _t.UIChatBox&&_t.UIChatBox.closeKeyboard();
+          _t.UIChatBox&&_t.UIChatBox.closeBoard();
+        });
+      }
+      this.title=this.$route.query.name;
+      this.inputBarHeight =$api.getStorage('UIChatBoxHeight')||0;
+      this.myScrollerHeight = document.body.clientHeight-$(".header").height()-(0.75)*fontsize-3-this.inputBarHeight;
+
+      this.$nextTick(()=>{
+        this.$refs.scroll.scrollTop = this.$refs.scroll.scrollHeight-this.myScrollerHeight;
+        this.oldScrollHeight = this.$refs.scroll.scrollHeight;
+      })
+
+      this.UIChatBox = window.api.require('UIChatBox');
+      this.UIChatBox.addEventListener({
+        target: 'inputBar',
+        name: 'move'
+      }, (ret, err)=> {
+        if (ret) {
+          this.panelHeight = parseInt(ret.panelHeight)
+          console.log(this.panelHeight)
+        }
+      });
+      this.UIChatBox.addEventListener({
+        target: 'recordBtn',
+        name: 'press'
+      }, (ret, err)=> {
+        if (ret) {
+          this.showVedio=true;
+        }
+      });
+      this.UIChatBox.addEventListener({
+        target: 'recordBtn',
+        name: 'press_cancel'
+      }, (ret, err)=> {
+        if (ret) {
+          console.log('松开')
+          this.showVedio=false;
+        }
+      });
+      this.UIChatBox.addEventListener({
+        target: 'recordBtn',
+        name: 'move_out'
+      }, (ret, err)=> {
+        if (ret) {
+          console.log('上划')
+          this.showVedio=false;
+        }
+      });
+      this.UIChatBox.addEventListener({
+        target: 'inputBar',
+        name: 'change'
+      }, (ret, err)=> {
+        if (ret) {
+          if(!$api.getStorage('UIChatBoxHeight')){
+            $api.setStorage('UIChatBoxHeight',ret.inputBarHeight);
+            this.myScrollerHeight = document.body.clientHeight-$(".header").height()-(0.75)*fontsize-3-ret.inputBarHeight;
+          }
+          this.inputBarHeight = parseInt(ret.inputBarHeight);
+        }
+      });
+      this.UIChatBox.open({
+        placeholder: '',
+        maxRows: 4,
+        emotionPath: 'widget://image/emotion',
+        texts: {
+          recordBtn: {
+            normalTitle: '按住 说话',
+            activeTitle: '松开 结束'
+          },
+          sendBtn: {
+            title: '发送'
+          }
+        },
+        styles: {
+          inputBar: {
+            borderColor: '#d9d9d9',
+            bgColor: '#f2f2f2'
+          },
+          inputBox: {
+            borderColor: '#B3B3B3',
+            bgColor: '#FFFFFF'
+          },
+          emotionBtn: {
+            normalImg: 'widget://image/face.png',
+          },
+          extrasBtn: {
+            normalImg: 'widget://image/plus.png'
+          },
+          keyboardBtn: {                      //JSON对象；键盘按钮样式
+            normalImg: 'widget://image/keyboard.png'
+          },
+          speechBtn: {
+            normalImg: 'widget://image/voice.png',
+          },
+          recordBtn: {
+            normalBg: '#fff',
+            activeBg: '#c4c4c4',
+            color: '#000',
+            size: 14
+          },
+          indicator: {
+            target: 'both',
+            color: '#c4c4c4',
+            activeColor: '#9e9e9e'
+          },
+          sendBtn: {
+            titleColor: '#4cc518',
+            bg: '#f2f2f2',
+            activeBg: '#46a91e',
+            titleSize: 14
+          }
+        },
+        extras: {
+          titleSize: 12,
+          titleColor: '#a3a3a3',
+          btns: [{
+            title: '图片',
+            normalImg: 'widget://image/photo.png',
+            activeImg: 'widget://image/photo.png'
+          }, {
+            title: '拍照',
+            normalImg: 'widget://image/camero.png',
+            activeImg: 'widget://image/camero.png'
+          }, {
+            title: '位置',
+            normalImg: 'widget://image/location.png',
+            activeImg: 'widget://image/location.png'
+          }]
+        }
+      }, function(ret, err) {
+        if(ret.eventType=="send"){
+          _t.dataChats.push({
+            id:_t.dataChats.length+1,
+            icon:_t.$store.state.userInfo.icon,
+            userId:_t.$store.state.userInfo.userId,
+            name:'小萝莉',
+            message:ret.msg,
+            video:null,
+            img:null,
+            audio:null,
+            datetime:_t.$utils.format(new Date(),'yyyy-MM-dd hh:mm:ss'),
+            showTime:true,
+          })
+          _t.$nextTick(()=>{
+            _t.$refs.scroll.scrollTop = _t.$refs.scroll.scrollHeight-_t.myScrollerHeight;
+            if(_t.$refs.scroll.scrollTop<0){
+
+            }
+            _t.oldScrollHeight = _t.$refs.scroll.scrollHeight;
+          })
+        }
+      });
+    },
+    methods :{
+      scroll(e){
+        if(this.$refs.scroll.scrollTop<this.oldScrollTop){
+          this.UIChatBox&&this.UIChatBox.closeKeyboard();
+          this.UIChatBox&&this.UIChatBox.closeBoard();
+        }
+        this.oldScrollTop = this.$refs.scroll.scrollTop;
+        if(!this.isPullingDown&&this.$refs.scroll.scrollTop<=0){
+          this.isPullingDown=true;
+          this.onPullingDown();
+        }
+      },
+      myscroll(pos){
+        if(pos.y>10){
+          this.UIChatBox&&this.UIChatBox.closeKeyboard();
+          this.UIChatBox&&this.UIChatBox.closeBoard();
+        }
+      },
+      changeLayout(){
+        this.isloading=true;
+        this.layoutType++;
+        if(this.layoutType>3){
+          this.layoutType=1;
+        }
+        this.$nextTick(()=>{
+          this.$refs.scroll.refresh();
+          this.isloading=false;
+        })
+      },
+      onPullingDown() {
+        console.log('下拉刷新')
+        setTimeout(() => {
+          this.isPullingDown=false;
+          this.$nextTick(()=>{
+            this.$refs.scroll.scrollTop = this.$refs.scroll.scrollHeight-this.oldScrollHeight;
+            this.oldScrollHeight = this.$refs.scroll.scrollHeight;
+          })
+        }, 1500)
+      },
+      onPullingUp() {
+        // 更新数据
+        console.log('上拉加载')
+        setTimeout(() => {
+
+          this.$refs.scroll.forceUpdate()
+
+        }, 1500)
+      },
+      onChange (val) {
+        console.log('val change', val)
+      },
+      routerTo(link){
+        console.log(link)
+      },
+      showFilter(){
+        this.showPopover = !this.showPopover;
+      },
+      closePopover(val){
+        this.showPopover = val;
+      },
+      makesure(sex,authentication){
+        console.log(sex)
+        console.log(authentication)
+        this.showPopover = false;
+      }
+    }
+  }
+</script>
+<style scoped lang="scss">
+  .main{
+    padding-bottom:0;
+    &:before{
+      background-color:#3a3845 ;
+    }
+    .header{
+      position: fixed;
+      width: 100%;
+      z-index: 10;
+      .top{
+        background-color:#3a3845 ;
+        color:#FFF;
+        font-size: 0.52rem;
+        position: relative;
+        i{
+          font-size: 0.52rem;
+        }
+        a{
+          position:absolute;
+          padding:3px;
+        }
+        .left{
+          left:0.325rem;
+        }
+        .right{
+          right:0.325rem;
+        }
+      }
+    }
+    .myscoll{
+      padding-top: 1.39rem;
+      overflow-x: hidden;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      font-size: 0.4rem;
+      .scroll-loading{
+        text-align: center;
+        margin-top: 10px;
+        height:25px;
+        line-height: 25px;
+        img{
+          width: 20px;
+          height: 20px;
+        }
+      }
+      .message-cls{
+        margin-bottom: 0.4rem;
+        &>p{
+          text-align: center;
+          color:#ccc;
+        }
+        &>div{
+          display: flex;
+          padding:0 0.32rem;
+          img{
+            width: 1.2rem;
+            height: 1.2rem;
+          }
+          &.left>div{
+            margin-left: 0.32rem;
+            max-width: 6.8rem;
+            color:#666;
+            &>div{
+              position:relative;
+              border: 1px solid #c4c4c4;
+              border-radius: 5px;
+              padding:5px;
+              background-color: #FFF;
+              color:#000;
+              .arrow{ position:absolute; width:10px; height:10px; left:-10px; top:5px; }
+              .arrow *{ display:block; border-width:5px; position:absolute; border-style:dashed dashed dashed solid; font-size:0; line-height:0; }
+              .arrow em{border-color:transparent  #cbcbcb transparent transparent;}
+              .arrow span{border-color:transparent  #FFF transparent transparent; left:1.5px;}
+            }
+          }
+          &.right{
+            justify-content:flex-end;
+            &>div{
+              margin-right: 0.32rem;
+              max-width: 6.8rem;
+              color:#666;
+              p{
+                text-align: right;
+              }
+              &>div{
+                position:relative;
+                border: 1px solid #c4c4c4;
+                border-radius: 5px;
+                padding:5px;
+                background-color: #9EEA6A;
+                color:#000;
+                .arrow{ position:absolute; width:10px; height:10px; right:-10px; top:5px; }
+                .arrow *{ display:block; border-width:5px; position:absolute; border-style:dashed solid dashed dashed; font-size:0; line-height:0; }
+                .arrow em{border-color:transparent  transparent transparent #cbcbcb;}
+                .arrow span{border-color:transparent  transparent transparent #9EEA6A; right:1.5px;}
+              }
+            }
+          }
+
+        }
+      }
+
+    }
+    .vedio-cls{
+      position: absolute;
+      left: 0;
+      top:0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.6);
+      div{
+        text-align: center;
+        color: #FFF;
+      }
+      div:first-child{
+        display: inline-block;
+        margin-left: 50%;
+        width: 200px;
+        height: 80px;
+        transform:translateX(-50%);
+        margin-top: 70%;
+        position:relative;
+         span{
+          width:5px;
+          height: 5px;
+          bottom:20px;
+          position:absolute;
+          background:#46a91e;
+          -webkit-animation: bodong 0.5s infinite  ease;
+        }
+
+         span:first-child{
+          left:83.5px;
+          -webkit-animation-delay:.3s;
+        }
+
+         span:nth-child(2){
+          left:90.5px;
+          -webkit-animation-delay:.4s;
+
+        }
+         span:nth-child(3){
+          left:97.5px;
+          -webkit-animation-delay:.6s;
+        }
+         span:nth-child(4){
+          left:104.5px;
+          -webkit-animation-delay:.8s;
+        }
+         span:nth-child(5){
+          left:111.5px;
+          -webkit-animation-delay:1s;
+        }
+
+        @-webkit-keyframes bodong{
+          0%{height:5px; }
+          30%{height:15px; }
+          60%{height:20px; }
+          80%{height:15px; }
+          100%{height:5px; }
+        }
+      }
+    }
+  }
+</style>
+<style scoped>
+  .myscoll >>> .imgcontent{
+    width: 0.4rem;
+    height: 0.4rem;
+    vertical-align: middle;
+  }
+</style>
+

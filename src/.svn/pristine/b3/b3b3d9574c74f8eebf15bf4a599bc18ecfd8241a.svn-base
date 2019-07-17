@@ -1,0 +1,207 @@
+<template>
+<div class="main jy_all_top jy_transaction">
+	<Loading v-if="isloading"></Loading>
+	<div class="header">
+		<div class="top">
+			<Back class="left"><i class="iconfont">&#xe613;</i></Back><a class="right"><i class="iconfont">&#xe679;</i></a><p>交易记录</p>
+		</div>
+	</div>
+	<dl class="jy_gift_list">
+		<dt><em id="menu_bar"></em><i v-for="item,index in menu" @click.stop="tabMenu($event,index)">{{item}}</i></dt>
+		<dd>
+			<myScroller :style="$store.state.isBrowser?'padding:2.75rem 0 0;':'padding:3.65rem 0 0;'" :infinite="infinite" :noDataText="noDataText" :refresh="refresh" :loadRefresh="loadRefresh" :loadInfinite="loadInfinite" ref="myScroller" :showbg="showbg">
+			<ul class="jy_transaction_list" v-if="transObj">
+				<template v-for="item,index in transObj">
+					<li class="jy_tran_date">
+						<h4>{{index}}</h4>
+					</li>
+					<template v-if="tabIndex==1">
+						<li v-for="val in item.list">
+							<i class="jy_tran_j"></i>
+							<h4>{{val.remarks}}</h4>
+							<p>{{val.createDate}}</p>
+							<em>-{{val.money}}<p>{{val.payStatus==1?'等待支付':val.payStatus==2?'支付失败':val.payStatus==3?'支付成功':''}}</p></em>
+						</li>
+					</template>
+					<template v-else>
+						<li v-for="val in item.list">
+							<i :class="val.operate==2?'jy_tran_g':val.operate==1?'jy_tran_y':''"></i>
+							<h4>{{val.channel==0?'打赏':val.channel==1?'提现':'其他'}}</h4>
+							<p>{{val.createDate}}</p>
+							<em>{{val.operate==1?'+':val.operate==2?'-':''}}{{val.amount}}</em>
+						</li>
+					</template>
+				</template>
+			</ul>
+			</myScroller>
+		</dd>
+	</dl>
+</div>
+</template>
+<script>
+import Loading from '@other/loading.vue';
+import Back from '@other/back.vue';
+import myScroller from '@other/myScroller.vue';
+export default {
+	name: 'transaction',
+	data () {
+		return {
+			isloading:false,
+			menu:["余额","现金"],
+			pageNo:1,
+			transList:null,
+			transObj:null,
+			isRead:false,
+			isEnd:false,
+			loadRefresh:true,//下拉刷新
+			loadInfinite:true, //上拉加载
+			isRefresh:false,
+			tabIndex:0,
+			noDataText:"",
+			showbg:true,
+		}
+	},
+	components: {
+		Loading,
+		Back,
+		myScroller,
+	},
+	watch:{
+		transList(val){//计算收入/支出
+			const t=this;
+			let transObj=t.transObj&&t.$utils.deepCopy(t.transObj)||{};
+			if(!val){
+				return false;
+			}
+			val.forEach((v,i)=>{
+				let month=t.Fn.timeFormat(v.createDate,"yyyy年MM月");
+				if(!transObj[month]){
+					transObj[month]={list:[]};
+				}
+				transObj[month].list.push(v);
+			});
+			t.showbg=false;
+			t.transObj=transObj;
+		},
+		isEnd(val){
+			const t=this;
+			if(val){
+				t.$refs.myScroller.finishInfinite(true);
+			}else{
+				//t.$refs.myScroller.scrollTo(1);
+				t.$refs.myScroller.finishInfinite(false);
+			}
+		},
+	},
+	mounted () {
+		const t=this;
+		$("body").addClass("gray");
+		t.tabMenu($("#menu_bar").siblings("i").eq(0)[0],t.tabIndex);
+	},
+	destroyed () {
+		$("body").removeClass("gray");
+	},
+	methods:{
+		tabMenu(e,index){
+			const t=this;
+			if(t.isRead){
+				return false;
+			}
+			let target=e.target||e;
+			let menu_bar=document.getElementById("menu_bar");
+			menu_bar.style.cssText="transform:translateX("+(target.offsetLeft+target.offsetWidth/2)+"px);"+(e.target?"transition-duration:500ms":"transition-duration:0ms");
+			if(e.target&&t.tabIndex!=index){
+				t.getMyRechargeList(index);
+			}
+		},
+		async getMyRechargeList(index){
+			const t=this;
+			if(t.isRead){
+				return false;
+			}
+			t.isRead=true;
+			t.noDataText='正在加载...';
+			if(t.isRefresh||t.tabIndex!=index){
+				if(t.tabIndex!=index){//切换
+					t.transList=null;
+					t.transObj=null;
+					t.isEnd=false;//必需,要不然在切换时不显示加载效果
+					t.$refs.myScroller.scrollTo(1);
+				}
+				t.pageNo=1;
+				t.tabIndex=index;		
+			}
+			try{
+				let result;
+				let isRefresh={};
+				if(t.isRefresh){
+					isRefresh={isRefresh:true};
+				}
+				if(t.tabIndex==1){
+					result=await t.$server.myRechargeList({
+						page:t.pageNo,
+						...isRefresh,
+						rows:t.$store.state.pageSize,
+					//	payType:0,
+					});
+				}else{
+					result=await t.$server.cashRecordList({
+						...isRefresh,
+						page:t.pageNo,
+						rows:t.$store.state.pageSize,
+					});
+				}
+				if(!t.transList||t.pageNo==1){
+					t.transList=[];
+					t.transObj={};
+				}
+				if(result.data.list){
+					t.transList.push(...result.data.list);
+				}
+				if(result.data.count<=t.$store.state.pageSize*t.pageNo||result.data.list.length<t.$store.state.pageSize){//判断是否最后一页
+					t.noDataText='已加载全部数据';
+					t.isEnd=true;
+				}else{
+					
+					t.isEnd=false;
+					//t.$refs.myScroller.finishInfinite(false);
+				}
+				t.pageNo++;
+			}catch(e){
+				t.noDataText='加载异常,请重试';
+				t.isEnd=true;
+			}
+			t.isRead=false;
+			//t.isloading=false;
+			t.isRefresh=false;
+		},
+		infinite(done) {//上拉加载(防止初始内容不满一屏会无限加载)
+			const t=this;
+			if(t.isEnd){
+				done(true);
+				return false;
+			}
+			if(t.isRead){//必需,要不然在切换时不显示加载效果
+				return false;
+			}
+			console.log("加载");
+			t.getMyRechargeList(t.tabIndex).then(()=>{
+				if(t.isEnd){
+					done(true);
+				}else{
+					done();
+				}
+			});
+		},
+		refresh(done) {//下拉刷新
+			const t=this;
+			console.log("刷新");
+			t.isRefresh=true;
+			t.getMyRechargeList(t.tabIndex).then((res)=>{
+				done();
+			});
+		},
+		
+	}
+}
+</script>

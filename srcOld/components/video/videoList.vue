@@ -1,0 +1,237 @@
+<template>
+  <div class="main jy_all_top">
+    <Loading v-if="isloading"></Loading>
+    <div class="header">
+      <div class="top">
+        <Back class="left"><i class="iconfont">&#xe613;</i></Back>恋爱视频
+      </div>
+    </div>
+    <myScroller :style="$store.state.isBrowser?'padding:1.4rem 0 0;':'padding:2.18rem 0 0;'" :infinite="infinite" :refresh="refresh" :loadRefresh="loadRefresh" :loadInfinite="loadInfinite" :touchmove="touchmove" ref="myScroller">
+    <div class="videoScroll">
+        <div class="swiper_container" id="swiper_container">
+          <swiper loop auto :show-dots="false" height="3rem" v-model="currIndex">
+            <swiper-item v-for="(item,index) in swiperList" :key="index"><img src="../../images/video_bg.png"></swiper-item>
+          </swiper>
+        </div>
+        <dl class="video_panel">
+          <dt>
+            <ul>
+              <li @click="getList(1)" :class="{cur:active==1}">恋爱技巧</li>
+              <li @click="getList(2)" :class="{cur:active==2}">女生篇</li>
+              <li @click="getList(3)" :class="{cur:active==3}">男生篇</li>
+            </ul>
+          </dt>
+          <dd>
+            <ul class="video_ul" v-if="listArr">
+              <li @click="open(item.path.replace(/\\/g,'/'),item.cover.replace(/\\/g,'/'))" v-for="item in listArr" :style="'background-image:url('+getFullPath(item.cover.replace(/\\/g,'/'))+');'">
+                <div>{{item.name.replace(".mp4","")}}</div>
+              </li>
+              <!--<li @click="open('http://192.168.0.231:8088/static/video/02.mp4')">-->
+                <!--<p>这里是视频标题</p>-->
+              <!--</li>-->
+              <!--<li @click="open('http://192.168.0.231:8088/static/video/03.mp4')">-->
+                <!--<p>这里是视频标题</p>-->
+              <!--</li>-->
+              <!--<li @click="open('http://192.168.0.231:8088/static/video/04.mp4')">-->
+                <!--<p>这里是视频标题</p>-->
+              <!--</li>-->
+            </ul>
+          </dd>
+        </dl>
+    </div>
+    </myScroller>
+    <div class="fixed" v-show="indexListFixed" :style="$store.state.isBrowser?'top:1.2rem;':'top:2rem;'">
+      <dl class="video_panel">
+        <dt>
+          <ul>
+            <li :class="{cur:active==1}" @click="getList(1)">恋爱技巧</li>
+            <li :class="{cur:active==2}" @click="getList(2)">女生篇</li>
+            <li :class="{cur:active==3}" @click="getList(3)">男生篇</li>
+          </ul>
+        </dt>
+      </dl>
+    </div>
+    <div v-transfer-dom>
+      <popup class="dialog-video" height="100%" :hide-on-blur="true" :popup-style="{zIndex:999}" v-model="showVideo">
+        <div class="video-panel" style="position: relative;width: 100%;height: 100%;background-color: #000;">
+          <p @click="close" style="text-align: right;padding: 0.2rem;"><i class="iconfont" style="font-size: 0.8rem;color: #ffffff;">&#xe7de;</i></p>
+          <video id="my_video" style="object-fit: fill; width: 100%; height: 92%;position: fixed;bottom: 0;" preload="load" playsinline webkit-playsinline autoplay
+                 x-webkit-airplay="allow" airplay="allow" x5-video-player-type="h5" x5-vide o-player-fullscreen="true" src="" controls="controls"></video>
+        </div>
+      </popup>
+    </div>
+  </div>
+</template>
+
+<script>
+  import Loading from '@other/loading.vue';
+  import Back from '@other/back.vue';
+  import {Swiper,SwiperItem,TransferDom,Popup} from 'vux';
+  import myScroller from '@other/myScroller.vue';
+  export default {
+    name: "videoList",
+    directives: {
+      TransferDom
+    },
+    components: {
+      Loading,
+      Back,
+      Swiper,
+      SwiperItem,
+      myScroller,
+      Popup,
+    },
+    data() {
+      return {
+        isloading: false,
+        marginTop: 0,
+        indexListFixed: false,
+        currIndex: 0,
+        swiperList:[
+          'http://192.168.0.250/userfiles/20181211/LVDZPGkK7DENX4QbKm2bK4knaLXqr1.jpg',
+        ],
+        active: 1,
+        videoSrc: '',
+        videoCover:'',
+        listArr:[],
+        showVideo: false,
+        //分页参数
+        pageNo: 1,
+        isRead: false,
+        isEnd: false,
+        loadRefresh:true,//下拉刷新
+        loadInfinite:true, //上拉加载
+      }
+    },
+    computed: {
+    },
+    watch:{
+      isEnd(val) {
+        const t=this;
+        if(val){
+          t.$refs.myScroller.finishInfinite(true);
+        }else{
+          t.$refs.myScroller.finishInfinite(false);
+        }
+      },
+    },
+    created() {
+
+    },
+    destroyed() {
+    },
+    mounted() {
+    },
+    methods: {
+      getFullPath (path) {
+        return this.$utils.getFullPath(path)
+      },
+      touchmove (left,mtop,zoom,height) {
+        let offsetTop = document.querySelector('#swiper_container').scrollHeight;
+        if (mtop>= offsetTop) {
+          this.indexListFixed = true;
+        } else {
+          this.indexListFixed = false;
+        }
+      },
+      async getList(active,flag) {
+        const _this = this;
+        _this.indexListFixed = false
+        if (_this.isRead) {
+          return false;
+        }
+        _this.isRead = true;
+        if (_this.isRefresh || flag || _this.active!=active) {
+          _this.pageNo = 1;
+          if (flag) {
+            _this.isloading = true;
+          }
+        }
+        try{
+          let data = null;
+          if (!_this.listArr || _this.isRefresh || flag || _this.active != active) {
+            _this.$refs.myScroller.scrollTo(1);
+            _this.listArr = [];
+            _this.active = active;
+          }
+          if(_this.active == 1){
+            data = {
+              url : 'media/恋爱心理',
+              page: _this.pageNo,
+              rows: _this.$store.state.pageSize
+            }
+          }else if(_this.active == 2){
+            data = {
+              url : "media/女生篇",
+              page: _this.pageNo,
+              rows: _this.$store.state.pageSize
+            }
+          }else{
+            data = {
+              url : "media/男生篇",
+              page: _this.pageNo,
+              rows: _this.$store.state.pageSize
+            }
+          }
+		  //if(data&&data.url){
+		//	data.url=encodeURI(data.url);
+		 // }
+          let result = await _this.$server.searchMedia(data);
+          if(result.data.data.list){
+            _this.listArr.push(...result.data.data.list);
+            _this.videoSrc = _this.getFullPath(_this.listArr[0].path.replace(/\\/g,'/'));
+            _this.videoCover = _this.getFullPath(_this.listArr[0].cover.replace(/\\/g,'/'));
+          }
+          if (result.data.data.count <= _this.$store.state.pageSize * _this.pageNo || result.data.data.list.length < _this.$store.state.pageSize) {//判断是否最后一页
+            _this.isEnd = true;
+          } else {
+            _this.isEnd = false;
+            _this.$refs.myScroller.finishInfinite(false);
+          }
+        }catch (e) {
+			_this.isEnd=true;
+          console.log(e)
+        }
+        _this.isRead = false;
+        _this.isloading = false;
+        _this.isRefresh = false;
+        _this.pageNo++;
+      },
+      infinite(done) {//上拉加载(防止初始内容不满一屏会无限加载)
+        const t=this;
+        if(t.isEnd){
+          done(true);
+          return false;
+        }
+        console.log("加载");
+        t.getList(t.active).then(()=>{
+          if(t.isEnd){
+            done(true);
+          }else{
+            done();
+          }
+        });
+      },
+      refresh(done) {//下拉刷新
+        const t=this;
+        console.log("刷新");
+        t.isRefresh=true;
+        t.getList(t.active).then((res)=>{
+          done();
+        });
+      },
+      open(url,cover){
+        this.showVideo = true;
+        document.getElementById('my_video').src= this.getFullPath(url);//更改视频源
+        document.getElementById('my_video').poster= this.getFullPath(cover);//更改视频源
+      },
+      close(){
+        document.getElementById("my_video").src= "";//更改视频源
+        this.showVideo=false;
+      }
+    }
+  }
+</script>
+<style scoped>
+
+</style>

@@ -1,0 +1,61 @@
+<template>
+  <div class="main jy_all_top">
+    <Loading v-if="isloading"></Loading>
+    <div class="header">
+      <div class="top">
+        <Back class="left"><i class="iconfont">&#xe613;</i></Back>
+        <p>普通和合伙人招商</p>
+      </div>
+    </div>
+    <div class="image_div" style="margin-top: 1.42rem;">
+      <img src="static/activityDetailStatic/ptzs/ptzs_01.jpg" alt="">
+      <img src="static/activityDetailStatic/ptzs/ptzs_02.jpg" alt="">
+      <img src="static/activityDetailStatic/ptzs/ptzs_03.jpg" alt="">
+      <img src="static/activityDetailStatic/ptzs/ptzs_04.jpg" alt="">
+      <img src="static/activityDetailStatic/ptzs/ptzs_05.jpg" alt="">
+      <img src="static/activityDetailStatic/ptzs/ptzs_06.jpg" alt="">
+      <img src="static/activityDetailStatic/ptzs/ptzs_07.jpg" alt="">
+      <img src="static/activityDetailStatic/ptzs/ptzs_08.jpg" alt="">
+      <img src="static/activityDetailStatic/ptzs/ptzs_09.jpg" alt="">
+    </div>
+  </div>
+</template>
+
+<script>
+  import Loading from '@other/loading.vue';
+  import Back from '@other/back.vue';
+
+  export default {
+    name: "ordinaryInvestment",//静态详情页面
+    components: {
+      Loading,
+      Back,
+    },
+    data() {
+      return {
+        isloading: false,
+      }
+    },
+    watch: {},
+    computed: {},
+    mounted() {
+
+    },
+    destroyed() {
+    },
+    methods: {}
+  }
+</script>
+
+<style scoped lang="scss">
+  .image_div {
+    font-size: 0;
+    overflow: hidden;
+    background-color: #FFF;
+    img {
+      width: 100%;
+      display: block;
+    }
+  }
+
+</style>

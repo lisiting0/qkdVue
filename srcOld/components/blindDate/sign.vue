@@ -1,0 +1,87 @@
+<template>
+	<div class="main jy_all_top jy_state_top">
+		
+	</div>
+</template>
+<script>
+  export default {
+    name: 'sign',
+    data () {
+		return {
+			datingId:null,
+		}
+    },
+    computed: {
+      
+    },
+    components: {
+      
+    },
+    watch:{
+		
+    },
+    mounted () {
+		const t=this;
+		t.datingId=t.$route.query.id;
+		t.sign();
+    },
+	destroyed(){
+		
+	},
+    methods :{
+		async sign(){
+			const t=this;
+			if(!t.datingId){
+				t.$vux.toast.show({
+					type:"cancel",
+					text: "缺少活动id",
+					position:"middle",
+					width:"auto",
+				});
+				t.$router.replace({name:'registrationActivity'});
+				return false;
+			}
+			try{
+				const result =await t.$server.blindDateSignIn({
+					datingActivityId:t.datingId
+				});
+				t.$vux.toast.show({
+					type:"success",
+					text: "签到成功,您是"+result.data.data.ext.extInt+"号",
+					position:"middle",
+					width:"auto",
+				});
+				let extras={
+					hasSign:true,
+					userId:t.$store.state.userInfo.id,
+					type:'sign',
+					extInt:result.data.data.ext.extInt,
+				}
+				let sendObj={
+					groupId: t.datingId,
+					chatType:2,
+					msgType: 7,
+					msgContent: 'broad',
+					extras:extras
+				}
+				t.$util.sendSocket(sendObj,function(data,err,per){
+					
+				});
+				t.$router.replace({name:'blindDateNew',query:{id:t.datingId}});
+			}catch(e){
+				if(e.status===112030){//已经签到过
+					t.$router.replace({name:'blindDateNew',query:{id:t.datingId}});
+				}else{
+					t.$router.replace({name:'activityDetail',query:{id:t.datingId}});
+				}
+				t.$vux.toast.show({
+					type:"cancel",
+					text: e.message,
+					position:"middle",
+					width:"auto",
+				});
+			}
+		},
+    }
+  }
+</script>

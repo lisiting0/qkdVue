@@ -1,0 +1,1373 @@
+<template>
+  <div class="main">
+    <Loading v-if="isloading"></Loading>
+    <div class="header">
+      <div class="top">
+        <Back class="left"><i class="iconfont">&#xe613;</i></Back><a @click="handle" class="right"><i class="iconfont">&#xe679;</i></a>{{title}}
+      </div>
+    </div>
+    <div class="myscoll" v-pan="pan" ref="scroll" @scroll="scroll($event)" :style="{'margin-top':marginTop+'px','max-height':myScrollerHeight+'px'}">
+      <div class="scroll-loading">
+        <img v-show="isPullingDown" src="../betterscroll/loading/loading.gif">
+      </div>
+      <div v-for="item in chats" :key="item.id">
+        <div class="message-cls">
+          <p v-if="item.showTime">{{$utils.getMessageTimeFromNow(item.time)}}</p>
+          <div class="left" v-if="$store.state.userId!=item.userId">
+            <!--<img v-cache-src="item.icon"/>-->
+            <i class="backImageCover" :style="'background-image:url('+$utils.getFullPath(item.bicon)+');width:1rem;height:1rem;'"></i>
+            <div>
+              <!--<p>{{item.bname}}</p>-->
+              <div :class="{giftDiv:item.giftId}" @click="setActiveItem(item)" class="hairlines">
+                <div class="arrow">
+                  <em></em><span></span>
+                </div>
+                <template v-if="item.message">
+                  <div v-html="item.message">
+                  </div>
+                </template>
+                <template v-else-if="item.location">
+                  <div @click="$common.openMap(item.lon,item.lat,item.location)" @touchstart="touchstart($event)" @touchend="touchend($event)">
+                    <div>当前位置:</div>
+                    <a style="color:rgb(0, 0, 238)">{{item.location}}</a>
+                  </div>
+                </template>
+                <template v-else-if="item.img">
+                  <img @click="showPhoto(item.img)" @load="imgOnload" :src="item.img" :onerror="errorImg">
+                </template>
+                <template v-else-if="item.audio">
+                  <voice-playback @listenChildMethod="listenChildMethod" :animation="activeItem.id==item.id" :path="item.audio" ></voice-playback>
+                </template>
+                <template v-else-if="item.giftId">
+                  <div>
+                    <div>
+                      <p>收到礼物 {{item.giftName}} </p>
+                      <p>{{item.giftJiaobi}} 乾坤币</p>
+                    </div>
+                    <img class="giftImg" @load="imgOnload" :src="item.giftImage"/>
+                  </div>
+                </template>
+              </div>
+            </div>
+            <div class="remark">{{item.remark}}</div>
+          </div>
+          <div class="right" v-else>
+            <div class="remark">{{item.remark}}</div>
+            <div>
+              <!--<p>{{item.bname}}</p>-->
+              <div :class="{giftDiv:item.giftId}" @click="setActiveItem(item)" class="hairlines">
+                <div class="arrow">
+                  <em></em><span></span>
+                </div>
+                <template v-if="item.message">
+                  <div v-html="item.message">
+                  </div>
+                </template>
+                <template v-else-if="item.location">
+                  <div @click="$common.openMap(item.lon,item.lat,item.location)" @touchstart="touchstart($event)" @touchend="touchend($event)">
+                    <div>当前位置:</div>
+                    <a style="color:rgb(0, 0, 238)">{{item.location}}</a>
+                  </div>
+                </template>
+                <template v-else-if="item.img">
+                  <img @click="showPhoto(item.img)" @load="imgOnload" :src="item.img" :onerror="errorImg">
+                </template>
+                <template v-else-if="item.audio">
+                  <voice-playback @listenChildMethod="listenChildMethod" :animation="activeItem.id==item.id" :path="item.audio" rotateType="1"></voice-playback>
+                </template>
+                <template v-else-if="item.giftId">
+                  <div>
+                    <img class="giftImg" @load="imgOnload" :src="item.giftImage"/>
+                    <div>
+                      <p>送出 {{item.giftName}} 给对方</p>
+                      <p>{{item.giftJiaobi}} 乾坤币</p>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+            <i class="backImageCover" :style="'background-image:url('+$utils.getFullPath(item.bicon)+');width:1rem;height:1rem;'"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div v-show="showVedio" class="vedio-cls">
+      <div>
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+      <div>松开发送，上滑取消</div>
+    </div>
+    <transition enter-active-class="slideInUp" leave-active-class="slideOutUp">
+      <gift v-show="showGift" @sendGift="sendGift" :name="title" :giftUserId="targetId" @close="sendGift" :list="giftList" :showShop="true"></gift>
+    </transition>
+  </div>
+</template>
+<script>
+  import errImg from '../../images/errImg.png';
+  import Loading from '@other/loading.vue';
+  import Back from '@other/back.vue';
+  import gift from '../plugs/gift';
+  import emotion from '@/assets/emotion/emotion';
+  import {getImage,takePhoto} from '@/utils/photoUtils';
+
+  import Scroll from '@/components/betterscroll/scroll/scroll.vue'
+  import VoicePlayback from '@/components/plugs/voicePlayback'
+
+  let fontsize = parseInt(document.documentElement.style.fontSize);
+  export default {
+    name: 'chatWindow',
+    data () {
+      return {
+        notificationStatus:false,
+        showGift:false,
+        giftList:[],
+        inMyBlackList:false,
+        transitionDuration:0,
+        translateY:0,
+        layoutType:1,
+        isPullingDown:false,
+        limit:1000,
+        getMoreList:true,
+        myScrollerHeight:0,
+        showPopover:false,
+        animation:false,
+        activeItem:{},
+        title:'',
+        targetId:null,
+        imgs:{errImg:errImg},
+        errorImg:'this.src="' + require('../../images/errImg.png') + '"',
+        isloading:false,
+        dataChats:[],
+        UIChatBox:null,
+        inputBarHeight:0,
+        panelHeight:0,
+        marginTop:0,
+        showVedio:false,
+        oldScrollHeight:0,
+        oldScrollTop:0,
+        allowRecording:false,
+      }
+    },
+    computed: {
+      datetimes:function(){
+        return (datetime)=>{
+          // return this.$utils.getMessageTimeFromNow(this.$utils.format(new Date(Number(datetime)),'yyyy-MM-dd hh:mm:ss'),new Date(),this.now);
+          return this.$utils.format(new Date(Number(datetime)),'yyyy-MM-dd hh:mm:ss');
+        }
+      },
+      chats:function(){
+        console.log("进来计算属性了，"+JSON.stringify(this.dataChats))
+        if(this.dataChats.length==0){
+          return [];
+        }
+        let cloneObj = this.$utils.deepCopy(this.dataChats);
+        for(let i=1;i<cloneObj.length;i++){
+          let time = (Date.parse((cloneObj[i].time).replace(/-/g,"/")))-(Date.parse((cloneObj[i-1].time+'').replace(/-/g,"/")));
+          if(time<180000){
+            cloneObj[i].showTime=false;
+          }else{
+            cloneObj[i].showTime=true;
+          }
+        }
+        cloneObj[0].showTime=true;
+        return cloneObj.map(item=>{
+          if(!item.message){
+            return item;
+          }
+          let content = item.message.replace(/[<>]/g,function(c){return {'<':'&lt;','>':'&gt;','&':'&amp;','"':'&quot;'}[c];});
+          content = content.replace(/\r|\n/g,'<br/>');
+          let imgArr2=content.match(/\[.+?\]/g);
+          if(imgArr2){
+            imgArr2.map(item1=>{
+              emotion.map(emo=>{
+                if(emo.text==item1){
+                  content = content.replace(item1,'<img class="imgcontent" src="static/emotion/'+emo.name+'.png"/>');
+                }
+              })
+            })
+          }
+          item.message=content;
+          return item;
+        })
+      },
+      pullDownRefreshObj: function () {
+        return this.pullDownRefresh ? {
+          threshold: parseInt(this.pullDownRefreshThreshold),
+          stop: parseInt(this.pullDownRefreshStop)
+        } : false
+      },
+      pullUpLoadObj: function () {
+        return this.pullUpLoad ? {
+          threshold: parseInt(this.pullUpLoadThreshold)
+        } : false
+      },
+      listenGetNewMessage() {
+        return this.$store.state.getNewMessage;
+      }
+    },
+    components: {
+      Loading,
+      Scroll,
+      VoicePlayback,
+	  Back,
+      gift
+    },
+    beforeRouteLeave (to, from, next) {
+      if(window.api){
+        window.api.removeEventListener({
+          name: 'swipedown'
+        });
+      }
+      this.UIChatBox&&this.UIChatBox.close();
+      next();
+    },
+    created (){
+
+    },
+    destroyed () {
+    },
+    watch:{
+      listenGetNewMessage(newV){
+        console.log("newV:"+newV)
+        if(newV==true){
+          this.$store.commit('CHANGEGETNEWMESSAGE',false)
+          this.getNewMessageList();
+        }
+      },
+      activeItem(newv){//监听当前选中的消息体对象
+        console.log(newv);
+      },
+      myScrollerHeight(){
+        // console.log('myScrollerHeight'+this.myScrollerHeight)
+      },
+      inputBarHeight(){
+        if(this.$refs.scroll.scrollHeight>this.myScrollerHeight){
+          this.marginTop = -(parseInt(this.inputBarHeight)+parseInt(this.panelHeight)-$api.getStorage('UIChatBoxHeight'))
+        }else{
+          this.marginTop = -(parseInt(this.inputBarHeight)+parseInt(this.panelHeight)-$api.getStorage('UIChatBoxHeight')-this.myScrollerHeight+this.$refs.scroll.scrollHeight)
+          this.marginTop=this.marginTop>0?0:this.marginTop;
+        }
+      },
+      panelHeight(){
+        if(this.$refs.scroll.scrollHeight>this.myScrollerHeight){
+          this.marginTop = -(parseInt(this.inputBarHeight)+parseInt(this.panelHeight)-$api.getStorage('UIChatBoxHeight'))
+        }else{
+          this.marginTop = -(parseInt(this.inputBarHeight)+parseInt(this.panelHeight)-$api.getStorage('UIChatBoxHeight')-this.myScrollerHeight+this.$refs.scroll.scrollHeight)
+          this.marginTop=this.marginTop>0?0:this.marginTop;
+        }
+      }
+    },
+    async mounted () {
+      const _t = this
+      this.title=this.$route.query.name;
+      this.targetId=this.$route.query.id;
+
+      this.inputBarHeight =$api.getStorage('UIChatBoxHeight')||0;
+      this.adjustedHeight=3;
+      this.myScrollerHeight = document.body.clientHeight-$(".header").height()-(0.75)*fontsize-this.adjustedHeight-this.inputBarHeight;
+      this.$nextTick(()=>{
+        this.$refs.scroll.scrollTop = this.$refs.scroll.scrollHeight;
+        this.oldScrollHeight = this.$refs.scroll.scrollHeight;
+      })
+	  
+	if(!window.api){
+		return false;
+	}
+	this.getNewMessageList();
+	this.$store.commit('CHANGEGETNEWMESSAGE',false)
+	this.getGift();
+	this.updateUserInfo();
+	// this.$store.state.rongCloud.getBlacklistStatus({
+  //       userId:this.$route.query.id
+  //     },(ret, err)=>{
+  //       if(ret.status&&ret.result==0){
+  //         this.inMyBlackList = true;
+  //       }
+  //     })
+      this.UIChatBox = window.api.require('UIChatBox');
+      this.UIChatBox.open({
+        placeholder: '',
+        maxRows: 4,
+        emotionPath: 'widget://image/emotion',
+        texts: {
+          recordBtn: {
+            normalTitle: '按住 说话',
+            activeTitle: '松开 结束'
+          },
+          sendBtn: {
+            title: '发送'
+          }
+        },
+        styles: {
+          inputBar: {
+            borderColor: '#d9d9d9',
+            bgColor: '#f2f2f2'
+          },
+          inputBox: {
+            borderColor: '#B3B3B3',
+            bgColor: '#FFFFFF'
+          },
+          emotionBtn: {
+            normalImg: 'widget://image/face.png',
+          },
+          extrasBtn: {
+            normalImg: 'widget://image/plus.png'
+          },
+          keyboardBtn: {                      //JSON对象；键盘按钮样式
+            normalImg: 'widget://image/keyboard.png'
+          },
+          speechBtn: {
+            normalImg: 'widget://image/voice.png',
+            activeImg: 'widget://image/keyboard.png'
+          },
+          recordBtn: {
+            normalBg: '#c6c6c6',
+            activeBg: '#999999',
+            color: '#000',
+            size: 14
+          },
+          indicator: {
+            target: 'both',
+            color: '#c4c4c4',
+            activeColor: '#9e9e9e'
+          },
+          sendBtn: {
+            titleColor: '#4cc518',
+            bg: '#f2f2f2',
+            activeBg: '#46a91e',
+            titleSize: 14
+          }
+        },
+        extras: {
+          titleSize: 12,
+          titleColor: '#a3a3a3',
+          btns: [{
+            title: '图片',
+            normalImg: 'widget://image/photo.png',
+            activeImg: 'widget://image/photo.png'
+          }, {
+            title: '拍照',
+            normalImg: 'widget://image/camero.png',
+            activeImg: 'widget://image/camero.png'
+          }, {
+            title: '位置',
+            normalImg: 'widget://image/location.png',
+            activeImg: 'widget://image/location.png'
+          }, {
+            title: '礼物',
+            normalImg: 'widget://image/gift.png',
+            activeImg: 'widget://image/gift.png'
+          }]
+        },
+      }, function(ret, err) {
+        if(ret.eventType=="send"){
+          if(!ret.msg.trim()){
+            return false;
+          }
+          _t.dataChats.push({
+            id:new Date().getTime(),
+            messageId:null,
+            message:ret.msg,
+            time:_t.$utils.format(new Date(),'yyyy-MM-dd hh:mm:ss'),
+            type:1,
+            userId:_t.$store.state.userId,
+            remark:'发送中',
+            audio:'',
+            bname:_t.$store.state.userInfo.aliasName,
+            bicon:_t.$store.state.userInfo.headimgAttachmentId,
+            targetId:_t.targetId
+          })
+          _t.setMessage(1,ret.msg,null,null,null)
+        }else if(ret.eventType=='clickExtras'){
+          console.log(JSON.stringify(ret))
+          if(ret.index==0){
+            _t.getImages();
+          }else if(ret.index==1){
+            _t.takePhotos();
+          }else if(ret.index==2){
+            _t.sendLocation();
+          }else if(ret.index==3){
+            _t.UIChatBox.closeBoard();
+            _t.UIChatBox.hide();
+            _t.showGift=true;
+            _t.panelHeight = 9*fontsize;
+          }
+
+        }
+      });
+      // this.UIChatBox.addEventListener({
+      //   target: 'inputBar',
+      //   name: 'showExtras'
+      // }, (ret, err)=> {
+      //   if (ret) {
+      //     console.log(JSON.stringify(ret))
+      //
+      //   }
+      // });
+      this.UIChatBox.addEventListener({
+        target: 'inputBar',
+        name: 'move'
+      }, (ret, err)=> {
+        if (ret) {
+          console.log(JSON.stringify(ret))
+          this.panelHeight = parseInt(ret.panelHeight)
+        }
+      });
+      this.UIChatBox.addEventListener({
+        target: 'inputBar',
+        name: 'showRecord'
+      }, ()=> {
+        let resultList = window.api.hasPermission({
+          list:['microphone']
+        });
+        console.log(JSON.stringify(resultList))
+        if(!resultList[0].granted){
+          window.api.requestPermission({
+            list:['microphone']
+          }, function(ret, err){
+            console.log(JSON.stringify(ret))
+            if(ret&&ret.list[0].granted){
+              _t.allowRecording=true;
+            }
+          });
+        }else{
+          _t.allowRecording=true;
+        }
+      });
+      this.UIChatBox.addEventListener({
+        target: 'recordBtn',
+        name: 'press'
+      }, (ret, err)=> {
+        if (ret) {
+          if(!_t.allowRecording){
+            window.api.toast({
+              msg: '请在手机设置中授权应用访问麦克风',
+              duration: 2000,
+              location: 'bottom'
+            });
+            return false;
+          }
+          // console.log('开始录音')
+          window.api.startRecord({
+            path: api.cacheDir+"/"+new Date().getTime()+"-"+_t.$store.state.userId+".amr"
+          });
+          setTimeout(()=>{
+            if(_t.showVedio){
+              window.api.stopRecord(function(ret, err) {
+                if (ret) {
+                  let path = ret.path;
+                  let duration = ret.duration;
+                  console.log(JSON.stringify(ret))
+                  //发送语音消息
+                  _t.setAudio(path,duration)
+                }
+              });
+              this.showVedio=false;
+            }
+          },30000)
+          this.showVedio=true;
+        }
+      });
+      this.UIChatBox.addEventListener({
+        target: 'recordBtn',
+        name: 'press_cancel'
+      }, (ret, err)=> {
+        if (ret) {
+          // console.log('松开')
+          if(this.showVedio){
+            window.api.stopRecord(function(ret, err) {
+              if (ret) {
+                let path = ret.path;
+                let duration = ret.duration;
+                console.log(JSON.stringify(ret))
+                //发送语音消息
+                _t.setAudio(path,duration)
+              }
+            });
+            this.showVedio=false;
+          }
+        }
+      });
+      this.UIChatBox.addEventListener({
+        target: 'recordBtn',
+        name: 'move_out'
+      }, (ret, err)=> {
+        if (ret) {
+          // console.log('上划')
+          if(this.showVedio){
+            window.api.stopRecord(function(ret, err) {
+            });
+            this.showVedio=false;
+          }
+        }
+      });
+      this.UIChatBox.addEventListener({
+        target: 'inputBar',
+        name: 'change'
+      }, (ret, err)=> {
+        if (ret) {
+          if(!$api.getStorage('UIChatBoxHeight')){
+            $api.setStorage('UIChatBoxHeight',ret.inputBarHeight);
+            this.myScrollerHeight = document.body.clientHeight-$(".header").height()-(0.75)*fontsize-this.adjustedHeight-ret.inputBarHeight;
+            this.$nextTick(()=>{
+              this.$refs.scroll.scrollTop = this.$refs.scroll.scrollHeight-this.myScrollerHeight;
+              this.oldScrollHeight = this.$refs.scroll.scrollHeight;
+            })
+          }
+          this.inputBarHeight = parseInt(ret.inputBarHeight);
+        }
+      });
+      this.UIChatBox.value({
+        msg: ' \n'
+      });
+      this.UIChatBox.value({
+        msg: ''
+      });
+      let code=await this.$store.dispatch('conversationNotificationStatus',{
+        conversationType:'PRIVATE',
+        targetId:this.targetId
+      })
+      this.notificationStatus = !code;
+    },
+    methods :{
+      async sendGift(giftObj){
+        let _t=this;
+        this.showGift=false;
+        this.panelHeight=0;
+        this.UIChatBox.show();
+        if(giftObj){
+          this.$vux.loading.show();
+           await this.$server.giveGift({
+             "receiverUser.id":this.targetId,
+             giftId:giftObj.id,
+             amount:1
+           })
+          this.$vux.loading.hide();
+          this.dataChats.push({
+            id:new Date().getTime(),
+            messageId:null,
+            time:this.$utils.format(new Date(),'yyyy-MM-dd hh:mm:ss'),
+            type:1,
+            userId:this.$store.state.userId,
+            remark:'发送中',
+            giftId:giftObj.id,
+            giftImage:this.$utils.getFullPath(giftObj.giftImage),
+            giftName:giftObj.giftName,
+            giftJiaobi:giftObj.jiaobi,
+            bname:this.$store.state.userInfo.aliasName,
+            bicon:this.$store.state.userInfo.headimgAttachmentId,
+            targetId:this.targetId
+          })
+          let extras ={};
+          extras.giftId = giftObj.id
+          extras.giftImage = this.$utils.getFullPath(giftObj.giftImage)
+          extras.giftName = giftObj.giftName
+          extras.giftJiaobi = giftObj.jiaobi
+          let sendObj={
+            targetClientId: _t.targetId,
+            chatType:1,
+            msgType: 7,
+            msgContent: 'gift',
+            extras:extras
+          }
+          this.$util.sendSocket(sendObj,function(data,err,per){
+            if(data){
+              _t.saveMessage(1,null,null,null,null,'','[送出礼物]',data.data.msgId,null,null,sendObj)
+            }
+            if(err){
+              _t.saveMessage(1,null,null,null,null,err.message,'[送出礼物]',new Date().getTime(),null,null,sendObj)
+            }
+          })
+        }
+      },
+      async getGift(){
+        let list = await this.$server.getGiftList()
+        this.giftList = list.data.data||[];
+      },
+      handle(){
+		if(!window.api){
+			return false;
+		}
+        if(this.inMyBlackList){
+          window.api.actionSheet({
+            cancelTitle: '取消',
+            buttons: ['移出黑名单',this.notificationStatus?'取消免打扰':'免打扰']
+          }, async (ret, err)=> {
+            if(ret.buttonIndex==1){
+              //拉黑
+              this.$vux.loading.show();
+              let result = await this.$server. outBlacklist(this.targetId)
+              this.inMyBlackList = false;
+              this.$vux.loading.hide();
+              console.log('result:'+JSON.stringify(result))
+            }else if(ret.buttonIndex==2){
+              let code=await this.$store.dispatch('conversationNotificationStatus',{
+                conversationType:'PRIVATE',
+                targetId:this.targetId,
+                notificationStatus:this.notificationStatus?"NOTIFY":"DO_NOT_DISTURB"
+              })
+              this.notificationStatus = !code;
+              this.$db.updateNotificationStatus(this.targetId,this.$store.state.userId,code)
+              this.$store.dispatch("getConversationList")
+            }
+          });
+        }else{
+          window.api.actionSheet({
+            cancelTitle: '取消',
+            buttons: ['拉黑',this.notificationStatus?'取消免打扰':'免打扰']
+          }, async (ret, err)=> {
+            if(ret.buttonIndex==1){
+              //拉黑
+              this.$vux.loading.show();
+              let result = await this.$server. joinBlacklist(this.targetId)
+              this.inMyBlackList = true;
+              this.$vux.loading.hide();
+              console.log('result:'+JSON.stringify(result))
+            }else if(ret.buttonIndex==2){
+              let code=await this.$store.dispatch('conversationNotificationStatus',{
+                conversationType:'PRIVATE',
+                targetId:this.targetId,
+                notificationStatus:this.notificationStatus?"NOTIFY":"DO_NOT_DISTURB"
+              })
+              this.notificationStatus = !code;
+              this.$db.updateNotificationStatus(this.targetId,this.$store.state.userId,code)
+              this.$store.dispatch("getConversationList")
+            }
+          });
+        }
+      },
+      touchstart(e){
+        let el = e.currentTarget;
+        el.style.backgroundColor='#c2c2c2'
+      },
+      touchend(e){
+        let el = e.currentTarget;
+        el.style.backgroundColor=''
+      },
+      listenChildMethod(){
+        this.activeItem={};
+      },
+      setAudio(path,duration){
+        if(duration<1){
+          this.$vux.toast.show({
+            type:"text",
+            text: '语音时长太短',
+            position:"middle",
+            width:"auto",
+          });
+          return;
+        }
+        let _t=this;
+        _t.dataChats.push({
+          id:new Date().getTime(),
+          messageId:null,
+          message:'',
+          time:_t.$utils.format(new Date(),'yyyy-MM-dd hh:mm:ss'),
+          type:1,
+          userId:_t.$store.state.userId,
+          remark:'发送中',
+          audio:path,
+          bname:_t.$store.state.userInfo.aliasName,
+          bicon:_t.$store.state.userInfo.headimgAttachmentId,
+          targetId:_t.targetId
+        })
+        _t.setMessage(1,null,null,path,null,duration)
+      },
+      imgOnload(){
+        console.log('滚动')
+        this.$refs.scroll.scrollTop = this.$refs.scroll.scrollHeight-this.myScrollerHeight;
+        this.oldScrollHeight = this.$refs.scroll.scrollHeight;
+      },
+      async updateUserInfo(){
+        await this.$store.dispatch("updateUserInfo",this.targetId);
+        this.getNewMessageList()
+      },
+      async sendLocation(){
+        try{
+          this.isloading=true;
+          let result = await this.$store.dispatch("getMylocation")
+          console.log(JSON.stringify(result));
+          let location={
+            lon:result.lon,
+            lat:result.lat,
+            poi:result.address
+          }
+          this.isloading=false;
+          let _t=this;
+          _t.dataChats.push({
+            id:new Date().getTime(),
+            messageId:null,
+            message:'',
+            time:_t.$utils.format(new Date(),'yyyy-MM-dd hh:mm:ss'),
+            type:1,
+            userId:_t.$store.state.userId,
+            remark:'发送中',
+            location:result.address,
+            lon:result.lon,
+            lat:result.lat,
+            bname:_t.$store.state.userInfo.aliasName,
+            bicon:_t.$store.state.userInfo.headimgAttachmentId,
+            targetId:_t.targetId
+          })
+          this.setMessage(1,null,null,null,location,null)
+        }catch(e){
+          this.isloading=false;
+          this.$vux.toast.show({
+            type:"text",
+            text: "获取当前位置失败",
+            position:"middle",
+            width:"auto",
+          });
+        }
+      },
+      setMessage(type,text,imgUrl,audio,location,duration){
+        const _t = this;
+        //发送消息
+        const tp = type==1?"PRIVATE":type==2?"GROUP":type==3?"CHATROOM":type==4?"DISCUSSION":"SYSTEM ";//1单聊2群组3聊天室4讨论组5系统
+        let sendObj={}
+        if(text){
+          sendObj={
+            targetClientId: _t.targetId,
+            chatType:1,
+            msgType: 0,
+            msgContent: text,
+          }
+          this.$util.sendSocket(sendObj,function(data,err,per){
+            if(data){
+              _t.saveMessage(type,text,imgUrl,audio,location,'',text,data.data.msgId,null,null)
+            }
+            if(err){
+              _t.saveMessage(type,text,imgUrl,audio,location,err.message,text,new Date().getTime(),null,null)
+            }
+            if(per){
+              console.log(per)
+            }
+          })
+        }else if(imgUrl){
+          let extras = {
+            imageUrl:imgUrl
+          }
+          sendObj={
+            targetClientId: _t.targetId,
+            chatType:1,
+            msgType: 1,
+            msgContent: '',
+            extras:extras
+          }
+          this.$util.sendSocket(sendObj,function(data,err,per){
+            if(data){
+              _t.saveMessage(type,text,imgUrl,audio,location,'','[图片]',data.data.msgId,null,null)
+            }
+            if(err){
+              _t.saveMessage(type,text,imgUrl,audio,location,err.message,'[图片]',new Date().getTime(),null,null)
+            }
+          })
+        }else if(audio){
+          let extras = {
+            duration:duration,
+            voicePath:audio
+          }
+          sendObj={
+            targetClientId: _t.targetId,
+            chatType:1,
+            msgType: 2,
+            msgContent: '',
+            extras:extras
+          }
+          this.$util.sendSocket(sendObj,function(data,err,per){
+            if(data){
+              console.log(JSON.stringify(data))
+              if(api.systemType=="ios"){
+                _t.saveMessage(type,text,imgUrl,audio,location,duration,'[语音]',data.data.msgId,null,null)
+              }else{
+                let extras = JSON.parse(data.data.extras);
+                _t.saveMessage(type,text,imgUrl,extras.voicePath,location,duration,'[语音]',data.data.msgId,null,null)
+              }
+            }
+            if(err){
+              _t.saveMessage(type,text,imgUrl,audio,location,err.message,'[语音]',new Date().getTime(),null,null)
+            }
+          })
+        }else{
+          let extras = {
+            poi:location.poi,
+            longitude:location.lon,
+            latitude:location.lat
+          }
+          sendObj={
+            targetClientId: _t.targetId,
+            chatType:1,
+            msgType: 6,
+            msgContent: '',
+            extras:extras
+          }
+          this.$util.sendSocket(sendObj,function(data,err,per){
+            if(data){
+              _t.saveMessage(type,text,imgUrl,audio,location.poi,'','[地理位置]',data.data.msgId,location.lon,location.lat)
+            }
+            if(err){
+              _t.saveMessage(type,text,imgUrl,audio,location.poi,err.message,'[地理位置]',new Date().getTime(),location.lon,location.lat)
+            }
+          })
+        }
+
+      },
+      saveMessage(type,text,imgUrl,audio,location,status,tip,messageId,lon,lat,giftObj){
+        //保存消息到本地
+        let _t= this;
+        let remark = status;
+        _t.$db.insertOrUpdateUnreadCount(_t.targetId,1,(_t.$store.state.userInfo.headimgAttachmentId),_t.$store.state.userInfo.aliasName,0,tip,new Date().getTime(),messageId,_t.$store.state.userId,_t.$store.state.userId)
+        if(giftObj){
+          _t.$db.insertGift(_t.targetId,1,(_t.$store.state.userInfo.headimgAttachmentId),_t.$store.state.userInfo.aliasName,_t.$store.state.userId,new Date().getTime(),remark,_t.$store.state.userId,messageId,giftObj.giftId,giftObj.giftImage,giftObj.giftName,giftObj.giftJiaobi)
+        }else{
+          _t.$db.insertConversation(_t.targetId,1,(_t.$store.state.userInfo.headimgAttachmentId),_t.$store.state.userInfo.aliasName,_t.$store.state.userId,text,new Date().getTime(),remark,_t.$store.state.userId,location,imgUrl,audio,messageId,lon,lat)
+        }
+        _t.getNewMessageList();
+        _t.$store.dispatch("getConversationList")
+        _t.$nextTick(()=>{
+          if(_t.$refs.scroll.scrollHeight>_t.myScrollerHeight){
+            _t.$refs.scroll.scrollTop = _t.$refs.scroll.scrollHeight-_t.myScrollerHeight;
+            _t.oldScrollHeight = _t.$refs.scroll.scrollHeight;
+          }else{
+            _t.marginTop = -(parseInt(_t.inputBarHeight)+parseInt(_t.panelHeight)-$api.getStorage('UIChatBoxHeight')-_t.myScrollerHeight+_t.$refs.scroll.scrollHeight)
+            _t.marginTop=_t.marginTop>0?0:_t.marginTop;
+          }
+        })
+      },
+      getNewMessageList(status){
+        let _t = this;
+        this.dataChats=this.$db.getConversation(this.targetId,this.$store.state.userId,this.limit);
+        if(this.dataChats.length<this.limit){
+          this.getMoreList = false
+        }
+        this.$db.resetCount(this.targetId,this.$store.state.userId);
+        this.$store.dispatch('getConversationList')
+        if(status==true){
+          _t.$nextTick(()=>{
+            _t.$refs.scroll.scrollTop = _t.$refs.scroll.scrollHeight-_t.oldScrollHeight;
+            _t.oldScrollHeight = _t.$refs.scroll.scrollHeight;
+          })
+        }else{
+          _t.$nextTick(()=>{
+            if(_t.$refs.scroll.scrollHeight>_t.myScrollerHeight){
+              _t.$refs.scroll.scrollTop = _t.$refs.scroll.scrollHeight-_t.myScrollerHeight;
+              _t.oldScrollHeight = _t.$refs.scroll.scrollHeight;
+            }else{
+              _t.marginTop = -(parseInt(_t.inputBarHeight)+parseInt(_t.panelHeight)-$api.getStorage('UIChatBoxHeight')-_t.myScrollerHeight+_t.$refs.scroll.scrollHeight)
+              _t.marginTop=_t.marginTop>0?0:_t.marginTop;
+            }
+          })
+        }
+        // console.log("this.dataChats:"+JSON.stringify(this.dataChats))
+      },
+      setActiveItem(item){
+        this.activeItem = this.activeItem.id==item.id?{}:item;
+      },
+      async takePhotos(){
+        let _t = this;
+        let url = await takePhoto();
+        if(url){
+          _t.dataChats.push({
+            id:new Date().getTime(),
+            messageId:null,
+            message:'',
+            time:_t.$utils.format(new Date(),'yyyy-MM-dd hh:mm:ss'),
+            type:1,
+            userId:_t.$store.state.userId,
+            remark:'发送中',
+            audio:'',
+            img:url,
+            bname:_t.$store.state.userInfo.aliasName,
+            bicon:_t.$store.state.userInfo.headimgAttachmentId,
+            targetId:_t.targetId
+          })
+          _t.setMessage(1,null,url,null,null)
+          _t.$nextTick(()=>{
+            if(_t.$refs.scroll.scrollHeight>_t.myScrollerHeight){
+              _t.$refs.scroll.scrollTop = _t.$refs.scroll.scrollHeight-_t.myScrollerHeight;
+              _t.oldScrollHeight = _t.$refs.scroll.scrollHeight;
+            }else{
+              _t.marginTop = -(parseInt(_t.inputBarHeight)+parseInt(_t.panelHeight)-$api.getStorage('UIChatBoxHeight')-_t.myScrollerHeight+_t.$refs.scroll.scrollHeight)
+              _t.marginTop=_t.marginTop>0?0:_t.marginTop;
+            }
+          })
+        }
+      },
+      async getImages(){
+        let _t = this;
+        let result = await getImage(1);
+        // alert("获取图片:"+JSON.stringify(result));
+        // return ;
+        if(result){
+          _t.dataChats.push({
+            id:new Date().getTime(),
+            messageId:null,
+            message:'',
+            time:_t.$utils.format(new Date(),'yyyy-MM-dd hh:mm:ss'),
+            type:1,
+            userId:_t.$store.state.userId,
+            remark:'发送中',
+            audio:'',
+            img:result,
+            bname:_t.$store.state.userInfo.aliasName,
+            bicon:_t.$store.state.userInfo.headimgAttachmentId,
+            targetId:_t.targetId
+          })
+          _t.setMessage(1,null,result,null,null)
+          _t.$nextTick(()=>{
+            if(_t.$refs.scroll.scrollHeight>_t.myScrollerHeight){
+              _t.$refs.scroll.scrollTop = _t.$refs.scroll.scrollHeight-_t.myScrollerHeight;
+              _t.oldScrollHeight = _t.$refs.scroll.scrollHeight;
+            }else{
+              _t.marginTop = -(parseInt(_t.inputBarHeight)+parseInt(_t.panelHeight)-$api.getStorage('UIChatBoxHeight')-_t.myScrollerHeight+_t.$refs.scroll.scrollHeight)
+              _t.marginTop=_t.marginTop>0?0:_t.marginTop;
+            }
+          })
+        }
+      },
+      showPhoto(url){
+        let photoBrowser = window.api.require('photoBrowser');
+        photoBrowser.open({
+          images: [
+            url
+          ],
+          placeholderImg: 'widget://image/image.png',
+          bgColor: '#000'
+        }, function(ret, err) {
+          if (ret) {
+            if(ret.eventType=="show"){
+              // window.api.showProgress({
+              //   title: ' ',
+              //   text: ' ',
+              //   modal: false
+              // });
+            }else if(ret.eventType=="loadImgSuccess"){
+              // window.api.hideProgress();
+            }else if(ret.eventType=="loadImgFail"){
+              // window.api.hideProgress();
+              window.api.toast({
+                msg: '图片下载失败',
+                duration: 2000,
+                location: 'middle'
+              });
+            }else if(ret.eventType=="click"){
+              // window.api.hideProgress();
+              photoBrowser.close();
+            }else if(ret.eventType=="longPress"){
+              window.api.actionSheet({
+                cancelTitle: '取消',
+                buttons: ['保存到相册']
+              }, function(ret) {
+                if(ret.buttonIndex==1){
+                  if(api.systemType=="ios"){
+                    photoBrowser.getImage({
+                    }, function(ret) {
+                      if (ret&&ret.path) {
+                        window.api.saveMediaToAlbum({
+                          path: ret.path
+                        }, function(ret,err) {
+                          if (ret && ret.status) {
+                            window.api.toast({
+                              msg: '图片已保存',
+                              duration: 2000,
+                              location: 'middle'
+                            });
+                          } else {
+                            window.api.toast({
+                              msg: '图片保存失败',
+                              duration: 2000,
+                              location: 'middle'
+                            });
+                          }
+                        });
+                      } else {
+                        window.api.toast({
+                          msg: '图片保存失败',
+                          duration: 2000,
+                          location: 'middle'
+                        });
+                      }
+                    });
+                  }else{
+                    let path='fs://photoBrowser'+new Date().getTime()+".png"
+                    window.api.download({
+                      url: url,
+                      savePath: path,
+                      report: true,
+                      cache: true,
+                      allowResume: true
+                    }, function(ret) {
+                      if(ret.state == 1){
+                        window.api.saveMediaToAlbum({
+                          path: path
+                        }, function(ret,err) {
+                          if (ret && ret.status) {
+                            window.api.toast({
+                              msg: '图片已保存',
+                              duration: 2000,
+                              location: 'middle'
+                            });
+                          } else {
+                            window.api.toast({
+                              msg: '图片保存失败',
+                              duration: 2000,
+                              location: 'middle'
+                            });
+                          }
+                        });
+                        let fs = window.api.require('fs');
+                        let ret = fs.rmdirSync({ // 删除文件目录，里面的所有文件将会一起被删除
+                          path: 'fs://photoBrowser/'
+                        });
+                      }else if(ret.state == 2){
+                        window.api.toast({
+                          msg: '图片保存失败',
+                          duration: 2000,
+                          location: 'middle'
+                        });
+                      }
+                    });
+                  }
+                }
+              });
+            }
+          }
+        });
+      },
+      pan(e){
+        if(e.additionalEvent=="pandown"&&this.panelHeight>0){
+          this.UIChatBox&&this.UIChatBox.closeKeyboard();
+          this.UIChatBox&&this.UIChatBox.closeBoard();
+        }
+      },
+      scroll(e){
+        this.oldScrollTop = this.$refs.scroll.scrollTop;
+        if(this.getMoreList==false){
+          return ;
+        }
+        if(!this.isPullingDown&&this.$refs.scroll.scrollTop<=0){
+          this.isPullingDown=true;
+          this.onPullingDown();
+        }
+      },
+      myscroll(pos){
+        if(pos.y>10){
+          this.UIChatBox&&this.UIChatBox.closeKeyboard();
+          this.UIChatBox&&this.UIChatBox.closeBoard();
+        }
+      },
+      changeLayout(){
+        this.isloading=true;
+        this.layoutType++;
+        if(this.layoutType>3){
+          this.layoutType=1;
+        }
+        this.$nextTick(()=>{
+          this.$refs.scroll.refresh();
+          this.isloading=false;
+        })
+      },
+      onPullingDown() {
+        // console.log('下拉刷新')
+        this.limit  = this.limit+1000;
+        this.getNewMessageList(true)
+        this.isPullingDown=false;
+
+
+
+        // setTimeout(() => {
+        //   this.isPullingDown=false;
+        //   this.$nextTick(()=>{
+        //     this.$refs.scroll.scrollTop = this.$refs.scroll.scrollHeight-this.oldScrollHeight;
+        //     this.oldScrollHeight = this.$refs.scroll.scrollHeight;
+        //   })
+        // }, 1500)
+      },
+      onPullingUp() {
+        // 更新数据
+        // console.log('上拉加载')
+        setTimeout(() => {
+
+          this.$refs.scroll.forceUpdate()
+
+        }, 1500)
+      },
+      onChange (val) {
+        // console.log('val change', val)
+      },
+      routerTo(link){
+        // console.log(link)
+      },
+      showFilter(){
+        this.showPopover = !this.showPopover;
+      },
+      closePopover(val){
+        this.showPopover = val;
+      },
+      makesure(sex,authentication){
+        // console.log(sex)
+        // console.log(authentication)
+        this.showPopover = false;
+      }
+    }
+  }
+</script>
+<style scoped lang="scss">
+  .main{
+    padding-bottom:0;
+    &:before{
+      background-color:#3a3845 ;
+    }
+    .header{
+      position: fixed;
+      width: 100%;
+      z-index: 10;
+      .top{
+        background-color:#3a3845 ;
+        color:#FFF;
+        font-size: 0.52rem;
+        position: relative;
+        i{
+          font-size: 0.52rem;
+        }
+        a{
+          position:absolute;
+          padding:3px;
+        }
+        .left{
+          left:0.325rem;
+        }
+        .right{
+          right:0.325rem;
+        }
+      }
+    }
+    .myscoll{
+      padding-top: 1.39rem;
+      overflow-x: hidden;
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      font-size: 0.4rem;
+      .scroll-loading{
+        text-align: center;
+        margin-top: 10px;
+        height:25px;
+        line-height: 25px;
+        img{
+          width: 20px;
+          height: 20px;
+        }
+      }
+      .message-cls{
+        margin-bottom: 0.4rem;
+        &>p{
+          text-align: center;
+          color:#ccc;
+        }
+        &>div{
+          display: flex;
+          padding:0 0.32rem;
+          .remark{
+            display: flex;
+            align-items: flex-end;
+          }
+          &>img{
+            width: 1rem;
+            height: 1rem;
+          }
+          &.left>div{
+            margin-left: 0.32rem;
+            max-width: 6.8rem;
+            color:#666;
+            &>div{
+              position:relative;
+              border: 1px solid #d8d8d8;
+              border-radius: 5px;
+              padding:6px;
+              background-color: #FFF;
+              color:#000;
+              img{
+                max-height: 5rem;
+                max-width: 5rem;
+              }
+              .arrow{ position:absolute; width:10px; height:10px; left:-10px; top:5px; }
+              .arrow *{ display:block; border-width:5px; position:absolute; border-style:dashed dashed dashed solid; font-size:0; line-height:0; }
+              .arrow em{border-color:transparent  #d8d8d8 transparent transparent;}
+              .arrow span{border-color:transparent  #FFF transparent transparent; left:1.5px;}
+            }
+            &>div.giftDiv{
+              background-color: #FFF;
+              &>div{
+                display: flex;
+                div{
+                  p:last-child{
+                    color:#b3b3b3;
+                    text-align: right;
+                  }
+                }
+              }
+              .giftImg{
+                width: 1rem;
+                height: 1rem;
+                margin-left: 0.15rem;
+              }
+            }
+          }
+          &.right{
+            justify-content:flex-end;
+            &>div{
+              margin-right: 0.32rem;
+              max-width: 6.8rem;
+              color:#666;
+              p{
+                text-align: right;
+              }
+              &>div{
+                position:relative;
+                border: 1px solid #81ca5d;
+                border-radius: 5px;
+                padding:6px;
+                background-color: #9EEA6A;
+                color:#000;
+                img{
+                  max-height: 5rem;
+                  max-width: 5rem;
+                }
+                .arrow{ position:absolute; width:10px; height:10px; right:-10px; top:5px; }
+                .arrow *{ display:block; border-width:5px; position:absolute; border-style:dashed solid dashed dashed; font-size:0; line-height:0; }
+                .arrow em{border-color:transparent  transparent transparent #81ca5d;}
+                .arrow span{border-color:transparent  transparent transparent #9EEA6A; right:1.5px;}
+              }
+              &>div.giftDiv{
+                background-color: #FFF;
+                &>div{
+                  display: flex;
+                  div{
+                    p:last-child{
+                      color:#b3b3b3;
+                      text-align: left;
+                    }
+                  }
+                }
+                .giftImg{
+                  width: 1rem;
+                  height: 1rem;
+                  margin-right: 0.15rem;
+                }
+                .arrow{ position:absolute; width:10px; height:10px; right:-10px; top:5px; }
+                .arrow *{ display:block; border-width:5px; position:absolute; border-style:dashed solid dashed dashed; font-size:0; line-height:0; }
+                .arrow em{border-color:transparent  transparent transparent #cbcbcb;}
+                .arrow span{border-color:transparent  transparent transparent #FFF; right:1.5px;}
+              }
+            }
+          }
+
+        }
+      }
+
+    }
+    .vedio-cls{
+      position: absolute;
+      left: 0;
+      top:0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0,0,0,0.6);
+      div{
+        text-align: center;
+        color: #FFF;
+      }
+      div:first-child{
+        display: inline-block;
+        margin-left: 50%;
+        width: 200px;
+        height: 80px;
+        transform:translateX(-50%);
+        margin-top: 70%;
+        position:relative;
+         span{
+          width:5px;
+          height: 5px;
+          bottom:20px;
+          position:absolute;
+          background:#46a91e;
+          animation: bodong 0.5s infinite  ease;
+        }
+
+         span:first-child{
+          left:83.5px;
+          animation-delay:.3s;
+        }
+
+         span:nth-child(2){
+          left:90.5px;
+          animation-delay:.4s;
+
+        }
+         span:nth-child(3){
+          left:97.5px;
+          animation-delay:.6s;
+        }
+         span:nth-child(4){
+          left:104.5px;
+          animation-delay:.8s;
+        }
+         span:nth-child(5){
+          left:111.5px;
+          animation-delay:1s;
+        }
+
+        @keyframes bodong{
+          0%{height:5px; }
+          30%{height:15px; }
+          60%{height:20px; }
+          80%{height:15px; }
+          100%{height:5px; }
+        }
+      }
+    }
+  }
+  .bg{
+    background-color: #f2f2f2;
+  }
+</style>
+<style scoped>
+  .myscoll >>> .imgcontent{
+    width: 0.4rem;
+    height: 0.4rem;
+    vertical-align: middle;
+  }
+  @keyframes slideInUp {
+    from {
+      transform: translate3d(0, 100%, 0);
+    }
+    to {
+      transform: translate3d(0, 0, 0);
+    }
+  }
+
+  @keyframes slideOutUp {
+    from {
+      transform: translate3d(0, 0, 0);
+    }
+    to {
+      transform: translate3d(0, 100%, 0);
+    }
+  }
+
+  .slideInUp {
+    animation-name: slideInUp;
+  }
+
+  .slideOutUp {
+    animation-name: slideOutUp;
+  }
+  .slideOutUp, .slideInUp {
+    animation-duration: 0.7s;
+  }
+</style>
+

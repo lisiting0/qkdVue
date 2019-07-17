@@ -1,0 +1,499 @@
+<template>
+  <div class="main jy_state_pop">
+    <Loading v-if="isloading"></Loading>
+    <div class="header">
+      <div class="top">
+        <Back class="left"><i class="iconfont">&#xe613;</i></Back><a class="right"></a>{{title}}
+      </div>
+    </div>
+    <div class="title">
+      <div>{{place}}</div>
+      <div><span @click="showFilter" :class="{active:showPopover}">筛选</span><i class="iconfont" @click="changeLayout">&#xe615;</i></div>
+    </div>
+    <filtercpt :showPopover="showPopover" @close="showPopover=false" @makesure="makesure"></filtercpt>
+    <div class="myscoll">
+      <scroll ref="scroll" :pullDownRefresh="pullDownRefreshObj" :pullUpLoad="pullUpLoadObj" @pullingDown="onPullingDown" @pullingUp="onPullingUp" :ifinit="ifinit" :style="{height:myScrollerHeight+'px'}" :click="true" >
+        <template v-if="nearArr">
+          <template v-if="nearArr.length>0">
+            <div v-if="layoutType===1" class="content">
+              <div v-for="item in nearArr" :key="item.id" v-if="item.id!=$store.state.userInfo.id">
+                <p @click="toUserInfo(item.id)" :style="{'background-image':'url('+getFullPath(item.headimgAttachmentId)+')'}"></p>
+                <div><img @touchend.stop="openVideo(getFullPath(item.videoUrl))" v-if="item.videoStatus==1" src="../../../images/video.png"/></div>
+                <p><span>{{item.aliasName}}</span><span><i v-if="item.distance">{{item.distance<1000?Fn.toFixed(item.distance)+'m':Fn.toFixed(item.distance/1000)+'km'}}</i></span></p>
+              </div>
+            </div>
+            <div v-if="layoutType===2" class="content1">
+              <div>
+                <div v-for="item ,index in nearArr" v-if="index%2==0&&item.id!=$store.state.userInfo.id" :key="item.id">
+                    <img @click="toUserInfo(item.id)" :src="getFullPath(item.headimgAttachmentId)"/>
+                  <div><img @touchend.stop="openVideo(getFullPath(item.videoUrl))" v-if="item.videoStatus==1" src="../../../images/video.png"/></div>
+                    <p><span>{{item.aliasName}}</span><span><i v-if="item.distance">{{item.distance<1000?Fn.toFixed(item.distance)+'m':Fn.toFixed(item.distance/1000)+'km'}}</i></span></p>
+                </div>
+              </div>
+              <div>
+                <div v-for="item ,index in nearArr" v-if="index%2==1&&item.id!=$store.state.userInfo.id" :key="item.id">
+                    <img @click="toUserInfo(item.id)" :src="getFullPath(item.headimgAttachmentId)"/>
+                  <div><img @touchend.stop="openVideo(getFullPath(item.videoUrl))" v-if="item.videoStatus==1" src="../../../images/video.png"/></div>
+                    <p><span>{{item.aliasName}}</span><span><i v-if="item.distance">{{item.distance<1000?Fn.toFixed(item.distance)+'m':Fn.toFixed(item.distance/1000)+'km'}}</i></span></p>
+                </div>
+              </div>
+            </div>
+            <div v-if="layoutType===3" class="content2">
+          <div>
+            <div v-for="item ,index in nearArr" v-if="index%3==0&&item.id!=$store.state.userInfo.id" :key="item.id" @click="toUserInfo(item.id)">
+              <div :style="{'background-image':'url('+getFullPath(item.headimgAttachmentId)+')'}"><img @touchend.stop="openVideo(getFullPath(item.videoUrl))" v-if="item.videoStatus==1" src="../../../images/video.png"/></div>
+              <p><span>{{item.aliasName}}</span><span><i v-if="item.distance">{{item.distance<1000?Fn.toFixed(item.distance)+'m':Fn.toFixed(item.distance/1000)+'km'}}</i></span></p>
+            </div>
+          </div>
+          <div>
+            <div v-for="item ,index in nearArr" v-if="index%3==1&&item.id!=$store.state.userInfo.id" :key="item.id" @click="toUserInfo(item.id)">
+              <div :style="{'background-image':'url('+getFullPath(item.headimgAttachmentId)+')'}"><img @touchend.stop="openVideo(getFullPath(item.videoUrl))" v-if="item.videoStatus==1" src="../../../images/video.png"/></div>
+              <p><span>{{item.aliasName}}</span><span><i v-if="item.distance">{{item.distance<1000?Fn.toFixed(item.distance)+'m':Fn.toFixed(item.distance/1000)+'km'}}</i></span></p>
+            </div>
+          </div>
+          <div>
+            <div v-for="item ,index in nearArr" v-if="index%3==2&&item.id!=$store.state.userInfo.id" :key="item.id" @click="toUserInfo(item.id)">
+              <div :style="{'background-image':'url('+getFullPath(item.headimgAttachmentId)+')'}"><img @touchend.stop="openVideo(getFullPath(item.videoUrl))" v-if="item.videoStatus==1" src="../../../images/video.png"/></div>
+              <p><span>{{item.aliasName}}</span><span><i v-if="item.distance">{{item.distance<1000?Fn.toFixed(item.distance)+'m':Fn.toFixed(item.distance/1000)+'km'}}</i></span></p>
+            </div>
+          </div>
+        </div>
+          </template>
+          <template v-else>
+            <div class="no-data">暂无数据</div>
+          </template>
+        </template>
+      </scroll>
+    </div>
+  </div>
+</template>
+<script>
+  import Loading from '@other/loading.vue';
+	import Back from '@other/back.vue';
+  import Scroll from '@/components/betterscroll/scroll/scroll.vue'
+  import Filtercpt from './filtercpt'
+
+  let fontsize = parseInt(document.documentElement.style.fontSize);
+  export default {
+    name: 'nearbyPeople',
+    data () {
+      return {
+        isloading:false,
+        layoutType:1,
+        pullDownRefresh: true,
+        pullDownRefreshThreshold: 60,
+        pullDownRefreshStop: 40,
+        pullUpLoad: true,
+        pullUpLoadThreshold: 0,
+        ifinit:false,
+        myScrollerHeight:0,
+        showPopover:false,
+        title:'',
+        activity:{1:'旅行',2:'吃饭',3:'电影',4:'唱歌',5:'运动',99:'其他' },
+        activityMethod:["选缘","抢缘","竞缘","中缘","配缘","寻觅对象"],
+        place: '',
+        nearArr:[],
+        //分页参数
+        page:1,
+        rows:20,
+      }
+    },
+    computed: {
+      pullDownRefreshObj: function () {
+        return this.pullDownRefresh ? {
+          threshold: parseInt(this.pullDownRefreshThreshold),
+          stop: parseInt(this.pullDownRefreshStop)
+        } : false
+      },
+      pullUpLoadObj: function () {
+        return this.pullUpLoad ? {
+          threshold: parseInt(this.pullUpLoadThreshold)
+        } : false
+      },
+      handleRoute(){
+        return this.$store.state.handleRoute;
+      },
+    },
+    watch:{
+      handleRoute(newV){
+        if(!newV){
+          this.showPopover=false;
+        }
+      },
+      showPopover(newV){
+        let status = this.showPopover
+        this.$store.commit("CHANGEHANDLEROUTE",status)
+      },
+    },
+    components: {
+      Loading,
+      Scroll,
+      Filtercpt,
+	    Back,
+    },
+    created (){
+
+    },
+    destroyed () {
+    },
+    mounted () {
+      this.title=this.$route.query.title;
+      this.getList(this.layoutType);
+      this.myScrollerHeight = document.body.clientHeight-$(".header").height()-$(".title").height()-(0.75)*parseInt(document.documentElement.style.fontSize)-3;
+      this.$nextTick(function () {
+          this.ifinit = true;
+      })
+    },
+    methods :{
+      openVideo(path){
+        if(path){
+          this.$utils.moviePlay(path)
+        }
+      },
+      getFullPath (path) {
+        return this.$utils.getFullPath(path)
+      },
+      toUserInfo(id){
+        this.$router.push({
+          path: "userInfo",
+          query: {
+            id: id
+          }
+        })
+      },
+      changeLayout(){
+        this.isloading=true;
+        this.layoutType++;
+        if(this.layoutType>3){
+          this.layoutType=1;
+        }
+        this.$nextTick(()=>{
+          this.$refs.scroll.refresh();
+          this.isloading=false;
+        })
+      },
+      routerTo(link){
+        console.log(link)
+      },
+      showFilter(){
+        this.showPopover = !this.showPopover;
+      },
+      makesure(sex,authentication){
+        console.log(JSON.stringify(sex))
+        console.log(JSON.stringify(authentication))
+        let data = {
+          sex:sex,
+          idStatus:authentication&&authentication.idcard,
+          houseStatus:authentication&&authentication.house,
+          carStatus:authentication&&authentication.car,
+          healthyStatus:authentication&&authentication.health,
+          videoStatus:authentication&&authentication.video,
+        }
+        this.getList(this.layoutType,data,true);
+        this.showPopover = false;
+      },
+      async onPullingDown() {
+        // 模拟更新数据
+        console.log('下拉刷新')
+        this.$refs.scroll.openPullUp()
+        let totalPage = await this.getList(this.layoutType,null,true)
+      },
+      async onPullingUp() {
+        // 更新数据
+        console.log('上拉加载')
+        let totalPage = await this.getList(this.layoutType)
+      },
+      refresh(done) {//下拉刷新
+        console.log("刷新 ");
+        setTimeout(()=>{
+          console.log("刷新完成");
+          done();
+        },1000);
+      },
+      infinite(done){
+        console.log("加载 ");
+        setTimeout(()=>{
+          console.log("加载完成");
+          done(true);
+        },1000);
+      },
+      clickShare() {
+        this.showShare = !this.showShare;
+      },
+      async getList(layoutType,search,PullingDown) {
+        try{
+          const _this = this;
+          if(_this.layoutType!=layoutType){
+            this.page = 1;
+            _this.nearArr=[];
+            this.$refs.scroll.openPullUp()
+            console.log("打开上拉加载")
+          }
+          if(PullingDown){
+            this.page = 1;
+          }
+          _this.layoutType = layoutType;
+          this.$vux.loading.show();
+          let loc = await this.$store.dispatch("getMylocation");
+          if(location!=1){
+            if(loc.province&&loc.city){
+              this.place= loc.province.substring(0,2) + ' ' + loc.city.substring(0,2)
+            }
+          }
+          let data = Object.assign({
+            latitude:loc.lat||'',
+            longitude: loc.lon||'',
+            page:this.page,
+            rows:this.rows
+          },search)
+          let result = await _this.$server.nearUser(data);
+          this.page++
+          if(PullingDown){
+            _this.nearArr=[];
+          }
+          if(result.data.list){
+            _this.nearArr.push(...result.data.list);
+          }
+          //console.log(JSON.stringify(_this.nearArr));
+          this.$vux.loading.hide()
+          this.$refs.scroll.forceUpdate()
+          if(this.page>result.data.totalPage){
+            console.log("关闭上拉加载")
+            this.$refs.scroll.closePullUp()
+          }
+          return Promise.resolve(result.data.totalPage)
+        }catch (e) {
+          console.log(e)
+          return Promise.reject("error")
+        }
+      },
+    }
+  }
+</script>
+<style scoped lang="scss">
+  .main{
+    padding-bottom:0;
+    &:before{
+      background-color:#3a3845 ;
+    }
+    .header{
+      position: fixed;
+      width: 100%;
+      z-index: 10;
+      .top{
+        background-color:#3a3845 ;
+        color:#FFF;
+        font-size: 0.52rem;
+        position: relative;
+        i{
+          font-size: 0.52rem;
+        }
+        a{
+          position:absolute;
+          padding:3px;
+        }
+        .left{
+          left:0.325rem;
+        }
+        .right{
+          right:0.325rem;
+        }
+      }
+    }
+    .title{
+      font-size: 0.4rem;
+      margin-top: 1.39rem;
+      padding:0 0.4rem;
+      height: 1rem;
+      line-height: 1rem;
+      background-color: #fff;
+      position: relative;
+      border-bottom: 1px solid #f2f2f2;
+      div{
+        display: inline-block;
+        color:#9a9a9d;
+        i{
+          position: relative;
+          font-size: 0.35rem;
+          padding:0 0.4rem;
+          margin-left: 0.3rem;
+          display: inline-block;
+          height: 100%;
+          &::before{
+            position: absolute;
+            content:"";
+            display:inline-block;
+            z-index:99;
+            left:0;
+            top:0.2rem;
+            width:1px;
+            height:0.6rem;
+            background-color:#eaeaea;
+          }
+        }
+      }
+      div:last-child{
+        position: absolute;
+        right: 0;
+        span{
+          display: inline-block;
+          height: 100%;
+          padding:0 0.2rem;
+        }
+        span.active{
+          color:#4c7ffe;
+        }
+      }
+    }
+    .myscoll{
+      background-color: #f8f8fc;
+      .content{
+        display: flex;
+        flex-wrap:wrap;
+        &>div{
+          width: 20%;
+          margin:0.2rem 2.45% 0;
+          position:relative;
+          p:first-child{
+            border-radius: 4px;
+            width: 100%;
+            padding-bottom: 100%;
+            background-size: cover;
+            background-position:center;
+            background-repeat:no-repeat;
+          }
+          img{
+            position: absolute;
+            width: 0.75rem;
+            height: 0.75rem;
+            right:0rem;
+            bottom: 0.7rem;
+          }
+          p:last-child{
+            position: relative;
+            height: 0.7rem;
+            line-height: 0.7rem;
+            span:first-child{
+              display: inline-block;
+              width: 50%;
+              font-size: 0.28rem;
+              overflow: hidden;
+              white-space: nowrap;/*不换行*/
+              text-overflow:ellipsis;/*超出部分文字以...显示*/
+            }
+            span:last-child{
+              position: absolute;
+              right: 0;
+              font-size: 0.24rem;
+              color:#FFF;
+              i{
+                width: auto;
+                height: 0.3rem;
+                line-height: 0.3rem;
+                background-color: #ff84ac;
+                border-radius: 3px;
+                vertical-align: middle;
+                padding: 0.05rem;
+              }
+            }
+          }
+        }
+      }
+      .content1{
+        padding:0.3rem 0.175rem 0;
+        display: flex;
+        justify-content: space-between;
+        &>div{
+          width: 5.1rem;
+          &>div{
+            background-color: #f2f2f2;
+            border-radius: 5px;
+            margin-bottom: 0.2rem;
+            overflow: hidden;
+            position: relative;
+            &>img:first-child{
+              width: 100%;
+            }
+            div{
+              img{
+                position: absolute;
+                width: 0.75rem;
+                height: 0.75rem;
+                right:0rem;
+                bottom: 1.6rem;
+              }
+            }
+            p{
+              padding:0 0.15rem;
+              height: 1.4rem;
+              line-height: 1.4rem;
+              display: flex;
+              justify-content: space-between;
+              span{
+                overflow: hidden;
+                white-space: nowrap;/*不换行*/
+                text-overflow:ellipsis;/*超出部分文字以...显示*/
+                font-size: 0.36rem;
+              }
+              span:first-child{
+                width: 50%;
+              }
+              i{
+                color:#ff03a9;
+              }
+            }
+          }
+        }
+      }
+      .content2{
+        padding:0.32rem 0.33rem 0;
+        display: flex;
+        justify-content: space-between;
+        &>div{
+          width: 2.92rem;
+          &:first-child,&:last-child{
+            margin-top: 1.62rem;
+          }
+          &>div{
+            margin-bottom: 0.2rem;
+            overflow: hidden;
+            div{
+              position: relative;
+              width: 2.92rem;
+              height: 2.92rem;
+              border-radius: 50%;
+              background-size: cover;
+              background-position: center;
+              img{
+                width: 0.75rem;
+                position:absolute;
+                bottom:0;
+                right: 0;
+              }
+            }
+            p{
+              padding:0 0.15rem;
+              height: 1.4rem;
+              line-height: 1.4rem;
+              display: flex;
+              justify-content: space-between;
+              span{
+                overflow: hidden;
+                white-space: nowrap;/*不换行*/
+                text-overflow:ellipsis;/*超出部分文字以...显示*/
+                font-size: 0.36rem;
+              }
+              span:first-child{
+                width: 50%;
+              }
+              i{
+                color:#ff03a9;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+</style>
+

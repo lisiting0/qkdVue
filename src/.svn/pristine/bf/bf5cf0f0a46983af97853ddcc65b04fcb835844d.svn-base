@@ -1,0 +1,137 @@
+<template>
+	<div class="main jy_all_top jy_earn jy_state_top">
+		<Loading v-if="isloading"></Loading>
+		<div class="header">
+			<div class="top">
+				<Back class="left" v-if="!isShow"><i class="iconfont">&#xe613;</i></Back><a class="right"></a><p>任务中心</p>
+			</div>
+		</div>
+		<dl v-for="objv in eventList" :key="objv.value" class="jy_earn_list">
+			<dt>
+        <p>{{objv.label}}</p>
+        <p>{{objv.description}}</p>
+      </dt>
+			<dd>
+				<ul class="jy_earn_tlist">
+					<li v-for="item in objv.arr" :key="item.id">
+						<i class="jy_earn_timg" :bgImg="$utils.getFullPath(item.icon)"></i>
+            <div>
+              <p><span>{{item.name}}</span><span>+{{item.amount}}</span></p>
+              <p>{{item.remark}}</p>
+            </div>
+            <a v-if="item.finished==1" style="background-color: #e9e9e9">已完成</a>
+            <shop v-else-if="item.classId==16" :tag="'a'">{{item.btnName}}</shop>
+            <a v-else @click="toLink(item.linkUrl)">{{item.btnName}}</a>
+					</li>
+				</ul>
+			</dd>
+		</dl>
+    <!--<dl class="jy_earn_list">-->
+      <!--<dt>-->
+        <!--<p>常规任务</p>-->
+        <!--<p>完成常规任务，领取巨额乾坤币，Come on...</p>-->
+      <!--</dt>-->
+      <!--<dd>-->
+        <!--<ul class="jy_earn_tlist">-->
+          <!--<li v-for="item in changguiarr" :key="item.id">-->
+            <!--<i class="jy_earn_timg" :bgImg="$utils.getFullPath(item.icon)"></i>-->
+            <!--<h4>{{item.name}}<span>+{{item.amount}}</span></h4>-->
+            <!--<p>{{item.remark}}</p>-->
+            <!--<a v-if="item.finished==1" style="background-color: #e9e9e9">已完成</a>-->
+            <!--<a v-else @click="toLink(item.linkUrl)">{{item.btnName}}</a>-->
+          <!--</li>-->
+        <!--</ul>-->
+      <!--</dd>-->
+    <!--</dl>-->
+	</div>
+</template>
+<script>
+	import Loading from '@other/loading.vue';
+	import Back from '@other/back.vue';
+  import shop from '@other/shop.vue';
+	export default {
+	name: 'recharge',
+	data () {
+		return {
+			isloading:false,
+      meiriarr:[],
+      changguiarr:[],
+      meiriType:[2,11,16,32],
+      eventList:[],
+      isShow: false,
+		}
+	},
+    components: {
+      Loading,
+	  Back,
+      shop
+    },
+	destroyed () {
+		$("body").removeClass("gray");
+	},
+    watch:{
+
+    },
+    async mounted () {
+      this.isShow = this.$route.query.isShow;
+      const t=this;
+      let arr=[]
+      $("body").addClass("gray");
+      let apiDict = await this.$server. apiDict({
+        type:"reward_events_type"
+      })
+      arr = apiDict.data.data;
+      let result = await this.$server.getRewardEventList({
+        enable:1
+      })
+      if(result.data.list&&result.data.list.length>0){
+        result.data.list.forEach(v=>{
+          arr.forEach(item=>{
+            if(item.value==v.type){
+              if(item.arr){
+                item.arr.push(v)
+              }else{
+                item.arr=[v]
+              }
+            }
+          })
+        })
+      }
+      this.eventList = arr;
+      console.log( this.eventList)
+      t.$nextTick(()=>{
+        t.setBgImg();
+      })
+    },
+    methods :{
+		setBgImg(){
+			$("a,i,em,li,div").each(function(){//加载背景图片
+				const bgimg=$(this).attr("bgImg");
+				if(bgimg){
+					$(this).css({"background-image":"url("+bgimg+")"});
+					$(this).attr("bgImg","");
+				}
+			});
+		},
+      toLink(url){
+        if(url){
+          let query = {
+            showBack:true
+          }
+          if(url.indexOf('?')!=-1){
+            let querystr = url.split("?")[1]
+            let queryArr = querystr.split("&");
+            queryArr.map(v=>{
+              query[v.split("=")[0]] = v.split("=")[1]
+            })
+          }
+          this.$router.push({
+            path: "/"+url,
+            query:query
+          })
+        }
+      }
+    }
+  }
+</script>
+

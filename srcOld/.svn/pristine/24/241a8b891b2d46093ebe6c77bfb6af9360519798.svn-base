@@ -1,0 +1,285 @@
+<template>
+	<div class="main jy_all_top jy_bill">
+		<Loading v-if="isloading"></Loading>
+		<div class="header">
+			<div class="top">
+				<Back class="left"><i class="iconfont">&#xe613;</i></Back><!--<a class="right"><i class="iconfont">&#xe679;</i></a>--><p>账单</p>
+			</div>
+		</div>
+		<ul class="jy_bill_t">
+			<!--<li class="jy_bill_t_r">搜索</li>-->
+			<li :class="showSel?'cur':''" @click="showSel=!showSel">筛选</li>
+			<!--<li @click="showSel=!showSel">分类</li>-->
+		</ul>
+		<div class="jy_scroll">
+		<myScroller :style="$store.state.isBrowser?'padding:2.82rem 0 0;':'padding:3.57rem 0 0;'" :noDataText="noDataText" :infinite="infinite" :refresh="refresh" :loadRefresh="loadRefresh" :loadInfinite="loadInfinite" ref="myScroller">
+			<ul class="jy_bill_list" v-if="billObj">
+				<template v-for="item,index in billObj">
+				<li class="jy_bill_date">
+					<h4>{{index==month?'本月':index}}</h4>
+					<p>支出 ￥{{Fn.toFixed(item.out||0)}}　　收入 ￥{{Fn.toFixed(item.in||0)}}</p>
+				</li>
+				<li v-for="val in item.list">
+					<h4><em :class="{off:val.operate==2}">{{val.operate==1?'+':'-'}}{{val.jiaobiAmount}}</em>{{val.channel!=11?typeList[val.channel]:objList[val.objectId]}}</h4>
+					<p><!--<em>支付成功</em>-->{{val.createDate}}</p>
+				</li>
+				</template>
+			</ul>
+		</myScroller>
+		</div>
+		<div v-transfer-dom>
+			<popup v-model="showSel" position="top" :popup-style="{zIndex:596,paddingTop:'3.57rem'}" :should-scroll-top-on-show="true">
+				<div class="jy_bill_sel">
+					<p class="jy_bill_sel_tit">快捷筛选</p>
+					<ul class="jy_bill_sel_list">
+						<li v-for="item,index in typeList" :class="index==typeIndex?'cur':''" @click.stop="typeIndex=index">{{item}}</li>
+					</ul>
+					<p class="jy_bill_sel_tit">金额</p>
+					<div class="jy_bill_sel_input">
+						<input type="number" autofocus @blur="blur($event)" @focus="focus($event)" v-model="minPrice" placeholder="最低">
+						<input type="number" autofocus @blur="blur($event)" @focus="focus($event)" v-model="maxPrice" placeholder="最高">
+					</div>
+					<a class="jy_bill_sel_btn" @click="showSel=false,getBill(true)">完成</a>
+				</div>
+			</popup>
+		</div>
+	</div>
+</template>
+<script>
+	import Loading from '@other/loading.vue';
+	import Back from '@other/back.vue';
+	import myScroller from '@other/myScroller.vue';
+	import {Popup,TransferDom} from 'vux';
+	export default {
+	name: 'bill',
+	data () {
+		return {
+			isloading:false,
+			showSel:false,
+			pageNo:1,
+			billList:null,
+			billObj:null,
+			typeList:{"0":"全部","1":"打赏","2":"签到","3":"推广","4":"充值","5":"中奖","6":"活动消耗","7":"购物","8":"活动置顶","9":"活动报名","10":"抽奖","11":"任务"},
+			objList:{"2":"每日签到","11":"每日首充","16":"每日商城首购","32":"每日首次送礼","25":"完善资料","20":"第一次充值","17":"缴纳保证金","31":"认证资料"},
+			typeIndex:0,
+			month:new Date().getMonth()+1+"月",//本月
+			isRead:false,
+			isEnd:false,
+			loadRefresh:true,//下拉刷新
+			loadInfinite:true, //上拉加载
+			isRefresh:false,
+			minPrice:'',
+			curMinPrice:'',
+			maxPrice:'',
+			curMaxPrice:'',
+			noDataText:"",
+		}
+	},
+	directives: {
+		TransferDom,
+	},
+    components: {
+      Loading,
+	  Back,
+	  myScroller,
+	  Popup,
+    },
+	destroyed () {
+		$("body").removeClass(" fullscreen");
+	},
+    computed:{
+      handleRoute(){
+        return this.$store.state.handleRoute;
+      },
+    },
+    watch:{
+      handleRoute(newV){
+        if(!newV){
+          this.showSel=false;
+        }
+      },
+      showSel(newV){
+        let status = this.showSel
+        this.$store.commit("CHANGEHANDLEROUTE",status)
+      },
+		async billList(val){//计算收入/支出
+			const t=this;
+			let billObj={};
+			if(!val){
+				return false;
+			}
+			for(let i=0;i<val.length;i++){
+				let month=t.Fn.timeFormat(val[i].createDate,"MM")+"月";
+				if(!t.billObj||!t.billObj[month]){
+					t.billObj={}
+					t.billObj[month]={list:[]};
+					t.billObj[month]["list"]=val;
+				}
+				if(!billObj[month]){
+					billObj[month]={list:[],in:t.billObj&&t.billObj[month]?t.billObj[month]["in"]:null,out:t.billObj&&t.billObj[month]?t.billObj[month]["out"]:null};
+				}
+				if(billObj[month]["in"]==null||billObj[month]["out"]==null){
+					try{
+						billObj[month]["in"]=0;
+						billObj[month]["out"]=0;
+						//(function(_month){
+							let isRefresh={};
+							if(t.isRefresh){
+								isRefresh={isRefresh:true};
+							}
+							await t.$server.recordCount({
+								...isRefresh,
+								date:t.Fn.timeFormat(val[i].createDate,"yyyy-MM-dd"),
+							}).then((res)=>{
+								console.log(month);
+								//t.$set(t.billObj[mon],"in",res.data.data.incomeCount||0);
+								//t.$set(t.billObj[mon],"out",res.data.data.payCount||0);
+								billObj[month]["in"]=res.data.data.incomeCount||0;
+								billObj[month]["out"]=res.data.data.payCount||0;
+								//console.log(JSON.stringify(res.data.data));
+							})
+							
+						//}(month))
+					}catch(e){
+						console.log(e);
+					}
+				}
+				billObj[month].list.push(val[i]);
+			}
+			t.billObj=billObj;	
+			t.isRefresh=false;	
+		},
+		isEnd(val){
+			const t=this;
+			if(val){
+				t.$refs.myScroller.finishInfinite(true);
+			}else{
+				//t.$refs.myScroller.scrollTo(1);
+				t.$refs.myScroller.finishInfinite(false);
+			}
+		},
+		maxPrice(val){
+			if(val&&typeof val=='string'){
+				if(val.match(/^0\d+/)&&val.match(/^0\d+/)[0]){//先排除0开头不跟小数点的
+					console.log("sdf")
+					this.maxPrice = val.match(/^0\d*/)[0].split("")[1];
+				}else{
+					this.maxPrice = val.match(/^\d+\.?\d*/)&&val.match(/^\d+\.?\d*/)[0];
+				}  
+			}
+		},
+		minPrice(val){
+			if(val&&typeof val=='string'){
+				if(val.match(/^0\d+/)&&val.match(/^0\d+/)[0]){//先排除0开头不跟小数点的
+					console.log("sdf")
+					this.minPrice = val.match(/^0\d*/)[0].split("")[1];
+				}else{
+					this.minPrice = val.match(/^\d+\.?\d*/)&&val.match(/^\d+\.?\d*/)[0];
+				}
+			}
+		},
+    },
+    mounted () {
+		const t=this;
+		$("body").addClass(" fullscreen");
+	//	t.getBill();
+    },
+    methods:{
+		focus(e){
+			e.target.setAttribute("type","text");
+		},
+		blur(e){
+			e.target.setAttribute("type","number");
+		},
+		async getBill(flag){
+			const t=this;
+			if(t.isRead){
+				return false;
+			}
+			t.isRead=true;
+			t.noDataText='正在加载...';
+			if(t.isRefresh||flag){
+				t.pageNo=1;
+				if(flag){
+					t.$refs.myScroller.scrollTo(1);
+					t.isloading=true;
+					t.curMinPrice=t.minPrice;
+					t.curMaxPrice=t.maxPrice;
+				}
+			}
+			let price={},type={};
+			if(t.curMinPrice!=''){//最低
+				price["beginJiaobiAmount"]=t.curMinPrice;
+			}
+			if(t.curMaxPrice!=''){//最高
+				price["endJiaobiAmount"]=t.curMaxPrice;
+			}
+			if(t.typeIndex!=0){
+				type["channel"]=t.typeIndex;
+			}
+			try{
+				let isRefresh={};
+				if(t.isRefresh){
+					isRefresh={isRefresh:true};
+				}
+				const result=await t.$server.getBill({
+					...type,
+					...price,
+					...isRefresh,
+					page:t.pageNo,
+					rows:t.$store.state.pageSize
+				});
+				if(!t.billList||t.isRefresh||flag){
+					t.billList=[];
+					t.billObj=null;
+				}
+				if(result.data.list){
+					t.billList.push(...result.data.list);	
+				}
+				if(result.data.count<=t.$store.state.pageSize*t.pageNo||result.data.list.length<t.$store.state.pageSize){//判断是否最后一页
+					t.noDataText='已加载全部数据';
+					t.isEnd=true;
+				}else{
+					t.isEnd=false;
+					//t.$refs.myScroller.finishInfinite(false);
+				}
+				t.pageNo++;
+			}catch(e){
+				t.noDataText="加载异常,请重试";
+				t.isEnd=true;
+				t.isRefresh=false;	
+				console.log(e)
+			}
+			t.isRead=false;
+			t.isloading=false;	
+		},
+		infinite(done) {//上拉加载(防止初始内容不满一屏会无限加载)
+			const t=this;
+			if(t.isEnd){
+				done(true);
+				return false;
+			}
+			//if(t.isRead){
+			//	return false;
+			//}
+			console.log("加载");
+			t.getBill().then(()=>{
+				if(t.isEnd){
+					done(true);
+				}else{
+					done();
+				}
+			});
+		},
+		refresh(done) {//下拉刷新
+			const t=this;
+			console.log("刷新");
+			t.isRefresh=true;
+			t.getBill().then((res)=>{
+				done();
+			});
+		},
+    }
+  }
+</script>
+
